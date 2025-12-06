@@ -1,4 +1,7 @@
 parser grammar HTMLParser;
+@header{
+    antlr
+}
 options {
     tokenVocab=HTMLLexer;
 }
@@ -25,10 +28,5 @@ voidElement
     : TAG_OPEN TAG_NAME attribute* TAG_SLASH_CLOSE //<name att=.. />
     ;
 attribute
-    : TAG_NAME (TAG_EQUALS attributeValue)?
-    ;
-attributeValue:
-      ATTR_VALUE_DOUBLE
-    | ATTR_VALUE_SINGLE
-    | ATTR_VALUE_UNQUOTED
+    : TAG_NAME (TAG_EQUALS ATTVALUE_VALUE)?
     ;

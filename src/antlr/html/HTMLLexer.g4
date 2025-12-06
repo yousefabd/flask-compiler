@@ -60,17 +60,18 @@ STYLE_SHORT_BODY: .*? '</>' -> popMode;
 
 mode ATTVALUE;
 
-ATTR_VALUE_DOUBLE:
-      '"' ~[<"]* '"'
-    -> popMode
-;
+ATTVALUE_VALUE: ' '* ATTRIBUTE -> popMode;
 
-ATTR_VALUE_SINGLE:
-      '\'' ~[<']* '\''
-    -> popMode
-;
+ATTRIBUTE: DOUBLE_QUOTE_STRING | SINGLE_QUOTE_STRING | ATTCHARS | HEXCHARS | DECCHARS;
 
-ATTR_VALUE_UNQUOTED:
-      [^\t\r\n >]+
-    -> popMode
-;
+fragment ATTCHARS: ATTCHAR+ ' '?;
+
+fragment ATTCHAR: '-' | '_' | '.' | '/' | '+' | ',' | '?' | '=' | ':' | ';' | '#' | [0-9a-zA-Z];
+
+fragment HEXCHARS: '#' [0-9a-fA-F]+;
+
+fragment DECCHARS: [0-9]+ '%'?;
+
+fragment DOUBLE_QUOTE_STRING: '"' ~[<"]* '"';
+
+fragment SINGLE_QUOTE_STRING: '\'' ~[<']* '\'';
