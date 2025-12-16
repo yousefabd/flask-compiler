@@ -1,17 +1,37 @@
+import antlr.python.pylexer;
+import antlr.python.pyparser;
+import org.antlr.v4.runtime.*;
+import org.antlr.v4.runtime.tree.*;
+
+import java.io.IOException;
+
+
 // Press Shift twice to open the Search Everywhere dialog and type `show whitespaces`,
 // then press Enter. You can now see whitespace characters in your code.
 public class Main {
-    public static void main(String[] args) {
-        // Press Alt+Enter with your caret at the highlighted text to see how
-        // IntelliJ IDEA suggests fixing it.
-        System.out.printf("Hello and welcome!");
+    public static void main(String[] args) throws IOException {
+        // اقرأ ملف بايثون
+        CharStream input = CharStreams.fromFileName("test.py");
 
-        // Press Shift+F10 or click the green arrow button in the gutter to run the code.
-        for (int i = 1; i <= 5; i++) {
+        // مرره على الـ Lexer
+        pylexer lexer = new pylexer(input);
+        CommonTokenStream tokens = new CommonTokenStream(lexer);
 
-            // Press Shift+F9 to start debugging your code. We have set one breakpoint
-            // for you, but you can always add more by pressing Ctrl+F8.
-            System.out.println("i = " + i);
-        }
+//        lexer.getAllTokens().forEach(t -> {
+//            System.out.printf("Token %-15s Text='%s'%n",
+//                    pyparser.VOCABULARY.getSymbolicName(t.getType()),
+//                    t.getText().replace("\n","\\n"));
+//        });
+
+
+        // مرره على الـ Parser
+        pyparser parser = new pyparser(tokens);
+
+        // استدعِ القاعدة العليا (مثلاً file_input)
+        ParseTree tree = parser.prog();
+
+        // اطبع الـ Parse Tree
+        System.out.println(tree.toStringTree(parser));
+
     }
 }
