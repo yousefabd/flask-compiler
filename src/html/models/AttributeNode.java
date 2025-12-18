@@ -3,7 +3,7 @@ package html.models;
 import java.util.Objects;
 import java.util.Optional;
 
-public class AttributeNode {
+public class AttributeNode implements Node {
     private final String name;
     private final String value;
 
@@ -18,6 +18,6 @@ public class AttributeNode {
 
     @Override
     public String toString() {
-        return value == null ? name : name + "=\"" + value + "\"";
+        return value == null ? name : name + "=" + value;
     }
 }
