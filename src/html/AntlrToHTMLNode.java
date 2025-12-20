@@ -11,23 +11,27 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class AntlrToHTMLNode extends HTMLParserBaseVisitor<Node> {
-    List<String> sematicErrors;
 
-    public AntlrToHTMLNode(List<String> sematicErrors) {
-        this.sematicErrors = sematicErrors;
-    }
 
     @Override
     public Node visitVoidElement(HTMLParser.VoidElementContext ctx) {
         String tagName = ctx.TAG_NAME().getText();
+        int line = ctx.TAG_NAME().getSymbol().getLine();
 
-        return new ElementNode(tagName, ElementNode.Type.Void);
+        var element =  new ElementNode(tagName, ElementNode.Type.Void, line);
+        for (var attribute : ctx.attribute()) {
+            element.AddAttribute(visitAttribute(attribute));
+        }
+        return element;
     }
 
     @Override
     public Node visitNormalElement(HTMLParser.NormalElementContext ctx) {
-        String tagName = ctx.beginTag().TAG_NAME().getText();
-        ElementNode elementNode = new ElementNode(tagName, ElementNode.Type.Normal);
+        var tagToken = ctx.beginTag().TAG_NAME().getSymbol();
+        String tagName = tagToken.getText();
+        int line = tagToken.getLine();
+
+        ElementNode elementNode = new ElementNode(tagName, ElementNode.Type.Normal,line);
         for (var attribute : ctx.beginTag().attribute()) {
             elementNode.AddAttribute(visitAttribute(attribute));
         }
@@ -40,11 +44,12 @@ public class AntlrToHTMLNode extends HTMLParserBaseVisitor<Node> {
     @Override
     public AttributeNode visitAttribute(HTMLParser.AttributeContext ctx) {
         String name = ctx.TAG_NAME().getText();
+        int line = ctx.TAG_NAME().getSymbol().getLine();
         String value = null;
         if (ctx.ATTVALUE_VALUE() != null) {
             value = ctx.ATTVALUE_VALUE().getText();
         }
-        return new AttributeNode(name, value);
+        return new AttributeNode(name, value, line);
     }
 
     @Override
@@ -54,7 +59,13 @@ public class AntlrToHTMLNode extends HTMLParserBaseVisitor<Node> {
         } else if (ctx.voidElement() != null) {
             return visitVoidElement(ctx.voidElement());
         }
-        return new TextNode(ctx.TEXT().getText());
+        String text = ctx.TEXT().getText();
+        if(text.trim().isEmpty()){
+            return null;
+        }
+        int line = ctx.TEXT().getSymbol().getLine();
+        text = text.trim().replaceAll("[\\t\\n\\r]+", " ");
+        return new TextNode(text, line);
     }
 
 }

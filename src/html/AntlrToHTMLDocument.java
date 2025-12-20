@@ -17,7 +17,7 @@ public class AntlrToHTMLDocument extends HTMLParserBaseVisitor<HTMLDocument> {
             sematicErrors.add("HTML Document can only have one root element.");
             return null;
         } else {
-            AntlrToHTMLNode nodeVisitor = new AntlrToHTMLNode(sematicErrors);
+            AntlrToHTMLNode nodeVisitor = new AntlrToHTMLNode();
             ElementNode root = (ElementNode) nodeVisitor.visitElement(ctx.element(0));
             document = new HTMLDocument(root);
             return document;
