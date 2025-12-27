@@ -2,41 +2,35 @@ package html;
 
 import antlr.html.HTMLParser;
 import antlr.html.HTMLParserBaseVisitor;
-import html.models.AttributeNode;
-import html.models.ElementNode;
-import html.models.Node;
-import html.models.TextNode;
-
-import java.util.ArrayList;
-import java.util.List;
+import html.models.*;
 
 public class AntlrToHTMLNode extends HTMLParserBaseVisitor<Node> {
 
 
     @Override
-    public Node visitVoidElement(HTMLParser.VoidElementContext ctx) {
+    public VoidElementNode visitVoidElement(HTMLParser.VoidElementContext ctx) {
         String tagName = ctx.TAG_NAME().getText();
         int line = ctx.TAG_NAME().getSymbol().getLine();
 
-        var element =  new ElementNode(tagName, ElementNode.Type.Void, line);
+        var element =  new VoidElementNode(tagName, line);
         for (var attribute : ctx.attribute()) {
-            element.AddAttribute(visitAttribute(attribute));
+            element.addAttribute(visitAttribute(attribute));
         }
         return element;
     }
 
     @Override
-    public Node visitNormalElement(HTMLParser.NormalElementContext ctx) {
+    public NormalElementNode visitNormalElement(HTMLParser.NormalElementContext ctx) {
         var tagToken = ctx.beginTag().TAG_NAME().getSymbol();
         String tagName = tagToken.getText();
         int line = tagToken.getLine();
 
-        ElementNode elementNode = new ElementNode(tagName, ElementNode.Type.Normal,line);
+        NormalElementNode elementNode = new NormalElementNode(tagName, line);
         for (var attribute : ctx.beginTag().attribute()) {
-            elementNode.AddAttribute(visitAttribute(attribute));
+            elementNode.addAttribute(visitAttribute(attribute));
         }
         for (var element : ctx.element()) {
-            elementNode.AddChild(visitElement(element));
+            elementNode.addChild(visitElement(element));
         }
         return elementNode;
     }
@@ -53,7 +47,7 @@ public class AntlrToHTMLNode extends HTMLParserBaseVisitor<Node> {
     }
 
     @Override
-    public Node visitElement(HTMLParser.ElementContext ctx) {
+    public ElementNode visitElement(HTMLParser.ElementContext ctx) {
         if (ctx.normalElement() != null) {
             return visitNormalElement(ctx.normalElement());
         } else if (ctx.voidElement() != null) {

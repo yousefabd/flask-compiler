@@ -3,10 +3,9 @@ package html.models;
 import java.util.Objects;
 import java.util.Optional;
 
-public class AttributeNode implements Node {
+public class AttributeNode extends Node {
     private final String name;
     private final String value;
-    private final int line;
 
 
     public AttributeNode(String name, String value,int line) {
@@ -17,7 +16,6 @@ public class AttributeNode implements Node {
 
     public String name() { return name; }
     public Optional<String> value() { return Optional.ofNullable(value); }
-    public int getLine() { return line; }
 
     @Override
     public String toString() {

@@ -1,6 +1,6 @@
 package html.models;
 
-public class TextNode implements Node {
+public class TextNode extends ElementNode {
     private String textContent;
     private final int line;
 
@@ -21,6 +21,6 @@ public class TextNode implements Node {
         this.textContent = textContent;
     }
     public String toString() {
-        return textContent + '\n';
+        return textContent;
     }
 }

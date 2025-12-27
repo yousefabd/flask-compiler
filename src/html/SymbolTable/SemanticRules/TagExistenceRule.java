@@ -2,6 +2,8 @@ package html.SymbolTable.SemanticRules;
 
 import html.models.ElementNode;
 import html.models.Node;
+import html.models.NormalElementNode;
+import html.models.VoidElementNode;
 
 import java.util.List;
 import java.util.Set;
@@ -18,18 +20,19 @@ public class TagExistenceRule implements ISemanticRule {
     );
 
     @Override
-    public void validate(Node root, List<String> errors) {
+    public void validate(ElementNode root, List<String> errors) {
         visit(root, errors);
     }
 
-    private void visit(Node node, List<String> errors) {
-        if (node instanceof ElementNode element) {
+    private void visit(ElementNode node, List<String> errors) {
+        if (node instanceof VoidElementNode element) {
 
             if (!VALID_TAGS.contains(element.getTagName())) {
                 errors.add("Unknown HTML tag: <" + element.getTagName() + ">" + " at line " + element.getLine());
             }
-
-            for (Node child : element.getChildren()) {
+            if(!(node instanceof NormalElementNode normalElement))
+                return;
+            for (ElementNode child : normalElement.getChildren()) {
                 visit(child, errors);
             }
         }

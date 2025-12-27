@@ -1,8 +1,6 @@
 package html.SymbolTable;
 
-import html.models.AttributeNode;
-import html.models.ElementNode;
-import html.models.Node;
+import html.models.*;
 
 import java.util.List;
 
@@ -21,7 +19,7 @@ public class SymbolTableBuilder {
     }
 
     private void visit(Node node) {
-        if (!(node instanceof ElementNode element)) return;
+        if (!(node instanceof VoidElementNode element)) return;
 
         for (AttributeNode attr : element.getAttributes()) {
             if (attr.name().equalsIgnoreCase("id")
@@ -52,8 +50,8 @@ public class SymbolTableBuilder {
                 }
             }
         }
-
-        for (Node child : element.getChildren()) {
+        if(!(element instanceof NormalElementNode normalElement)) return;
+        for (ElementNode child : normalElement.getChildren()) {
             visit(child);
         }
     }

@@ -1,7 +1,9 @@
 package html.SymbolTable.SemanticRules;
 
 import html.SymbolTable.SymbolTable;
+import html.models.ElementNode;
 import html.models.Node;
+import html.models.VoidElementNode;
 
 import java.util.List;
 
@@ -13,7 +15,7 @@ public class BrokenReferenceRule implements ISemanticRule{
     }
 
     @Override
-    public void validate(Node root, List<String> errors) {
+    public void validate(ElementNode root, List<String> errors) {
 
         for (SymbolTable.Reference ref : table.references) {
             if (!table.ids.containsKey(ref.id)) {

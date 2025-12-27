@@ -1,9 +1,11 @@
 package html.SymbolTable.SemanticRules;
 
+import html.models.ElementNode;
 import html.models.Node;
+import html.models.VoidElementNode;
 
 import java.util.List;
 
 public interface ISemanticRule {
-    public void validate(Node root, List<String> errors);
+    public void validate(ElementNode root, List<String> errors);
 }

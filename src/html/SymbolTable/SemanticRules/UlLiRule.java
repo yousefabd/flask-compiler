@@ -2,18 +2,20 @@ package html.SymbolTable.SemanticRules;
 
 import html.models.ElementNode;
 import html.models.Node;
+import html.models.NormalElementNode;
+import html.models.VoidElementNode;
 
 import java.util.List;
 
 public class UlLiRule implements ISemanticRule{
 
     @Override
-    public void validate(Node root, List<String> errors) {
+    public void validate(ElementNode root, List<String> errors) {
         visit(root, null, errors);
     }
 
-    private void visit(Node node, ElementNode parent, List<String> errors) {
-        if (node instanceof ElementNode element) {
+    private void visit(ElementNode node, VoidElementNode parent, List<String> errors) {
+        if (node instanceof VoidElementNode element) {
             if (parent != null &&
                     parent.getTagName().equals("ul") &&
                     !element.getTagName().equals("li")) {
@@ -24,8 +26,9 @@ public class UlLiRule implements ISemanticRule{
                         " at line " + element.getLine()
                 );
             }
-
-            for (Node child : element.getChildren()) {
+            if(!(element instanceof NormalElementNode normalElement))
+                return;
+            for (ElementNode child : normalElement.getChildren()) {
                 visit(child, element, errors);
             }
         }

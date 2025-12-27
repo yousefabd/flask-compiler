@@ -2,9 +2,7 @@ package html;
 
 import html.models.ElementNode;
 import html.models.Node;
+import html.models.NormalElementNode;
 
-public record HTMLDocument(ElementNode root) implements Node {
-    public int getLine(){
-        return root.getLine();
-    }
+public record HTMLDocument(NormalElementNode root) {
 }

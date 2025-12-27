@@ -1,5 +1,9 @@
 package html.models;
 
-public interface Node {
-    int getLine();
+public abstract class Node {
+    protected int line;
+    public int getLine() {
+        return line;
+    }
+
 }

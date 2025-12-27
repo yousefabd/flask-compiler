@@ -2,7 +2,7 @@ package html;
 
 import antlr.html.HTMLParser;
 import antlr.html.HTMLParserBaseVisitor;
-import html.models.ElementNode;
+import html.models.NormalElementNode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,11 +16,14 @@ public class AntlrToHTMLDocument extends HTMLParserBaseVisitor<HTMLDocument> {
         if(ctx.element().size() > 1){
             sematicErrors.add("HTML Document can only have one root element.");
             return null;
-        } else {
-            AntlrToHTMLNode nodeVisitor = new AntlrToHTMLNode();
-            ElementNode root = (ElementNode) nodeVisitor.visitElement(ctx.element(0));
-            document = new HTMLDocument(root);
-            return document;
         }
+        AntlrToHTMLNode nodeVisitor = new AntlrToHTMLNode();
+        var root = nodeVisitor.visitElement((ctx.element(0)));
+        if(! (root instanceof NormalElementNode)){
+            sematicErrors.add("HTML root should only be a normal element.");
+            return null;
+        }
+        document = new HTMLDocument((NormalElementNode) root);
+        return document;
     }
 }
