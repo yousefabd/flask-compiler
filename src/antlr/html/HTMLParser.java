@@ -1,6 +1,5 @@
-// Generated from C:/Users/LEGION/Desktop/Compiler/Project/flask-compiler/src/antlr/html/HTMLParser.g4 by ANTLR 4.13.2
+// Generated from C:/Users/youus/IdeaProjects/flask-compiler/src/antlr/html/HTMLParser.g4 by ANTLR 4.13.2
 package antlr.html;
-
 import org.antlr.v4.runtime.atn.*;
 import org.antlr.v4.runtime.dfa.DFA;
 import org.antlr.v4.runtime.*;
@@ -19,9 +18,9 @@ public class HTMLParser extends Parser {
 		new PredictionContextCache();
 	public static final int
 		COMMENT=1, WS=2, SCRIPT_OPEN=3, STYLE_OPEN=4, TAG_OPEN=5, TEXT=6, TAG_CLOSE=7, 
-		TAG_SLASH_CLOSE=8, TAG_SLASH=9, TAG_EQUALS=10, TAG_NAME=11, TAG_WHITESPACE=12, 
-		SCRIPT_BODY=13, SCRIPT_SHORT_BODY=14, STYLE_BODY=15, STYLE_SHORT_BODY=16, 
-		ATTVALUE_VALUE=17, ATTRIBUTE=18;
+		TAG_SLASH_CLOSE=8, TAG_SLASH=9, TAG_EQUALS=10, TAG_ACCEPTED_NAME=11, CHAR_NAME=12, 
+		TAG_WHITESPACE=13, SCRIPT_BODY=14, SCRIPT_SHORT_BODY=15, STYLE_BODY=16, 
+		STYLE_SHORT_BODY=17, ATTVALUE_VALUE=18, ATTRIBUTE=19;
 	public static final int
 		RULE_htmlDocument = 0, RULE_element = 1, RULE_normalElement = 2, RULE_beginTag = 3, 
 		RULE_endTag = 4, RULE_voidElement = 5, RULE_attribute = 6;
@@ -42,9 +41,9 @@ public class HTMLParser extends Parser {
 	private static String[] makeSymbolicNames() {
 		return new String[] {
 			null, "COMMENT", "WS", "SCRIPT_OPEN", "STYLE_OPEN", "TAG_OPEN", "TEXT", 
-			"TAG_CLOSE", "TAG_SLASH_CLOSE", "TAG_SLASH", "TAG_EQUALS", "TAG_NAME", 
-			"TAG_WHITESPACE", "SCRIPT_BODY", "SCRIPT_SHORT_BODY", "STYLE_BODY", "STYLE_SHORT_BODY", 
-			"ATTVALUE_VALUE", "ATTRIBUTE"
+			"TAG_CLOSE", "TAG_SLASH_CLOSE", "TAG_SLASH", "TAG_EQUALS", "TAG_ACCEPTED_NAME", 
+			"CHAR_NAME", "TAG_WHITESPACE", "SCRIPT_BODY", "SCRIPT_SHORT_BODY", "STYLE_BODY", 
+			"STYLE_SHORT_BODY", "ATTVALUE_VALUE", "ATTRIBUTE"
 		};
 	}
 	private static final String[] _SYMBOLIC_NAMES = makeSymbolicNames();
@@ -307,7 +306,7 @@ public class HTMLParser extends Parser {
 	@SuppressWarnings("CheckReturnValue")
 	public static class BeginTagContext extends ParserRuleContext {
 		public TerminalNode TAG_OPEN() { return getToken(HTMLParser.TAG_OPEN, 0); }
-		public TerminalNode TAG_NAME() { return getToken(HTMLParser.TAG_NAME, 0); }
+		public TerminalNode TAG_ACCEPTED_NAME() { return getToken(HTMLParser.TAG_ACCEPTED_NAME, 0); }
 		public TerminalNode TAG_CLOSE() { return getToken(HTMLParser.TAG_CLOSE, 0); }
 		public List<AttributeContext> attribute() {
 			return getRuleContexts(AttributeContext.class);
@@ -344,11 +343,11 @@ public class HTMLParser extends Parser {
 			setState(36);
 			match(TAG_OPEN);
 			setState(37);
-			match(TAG_NAME);
+			match(TAG_ACCEPTED_NAME);
 			setState(41);
 			_errHandler.sync(this);
 			_la = _input.LA(1);
-			while (_la==TAG_NAME) {
+			while (_la==CHAR_NAME) {
 				{
 				{
 				setState(38);
@@ -378,7 +377,7 @@ public class HTMLParser extends Parser {
 	public static class EndTagContext extends ParserRuleContext {
 		public TerminalNode TAG_OPEN() { return getToken(HTMLParser.TAG_OPEN, 0); }
 		public TerminalNode TAG_SLASH() { return getToken(HTMLParser.TAG_SLASH, 0); }
-		public TerminalNode TAG_NAME() { return getToken(HTMLParser.TAG_NAME, 0); }
+		public TerminalNode TAG_ACCEPTED_NAME() { return getToken(HTMLParser.TAG_ACCEPTED_NAME, 0); }
 		public TerminalNode TAG_CLOSE() { return getToken(HTMLParser.TAG_CLOSE, 0); }
 		public EndTagContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
@@ -410,7 +409,7 @@ public class HTMLParser extends Parser {
 			setState(47);
 			match(TAG_SLASH);
 			setState(48);
-			match(TAG_NAME);
+			match(TAG_ACCEPTED_NAME);
 			setState(49);
 			match(TAG_CLOSE);
 			}
@@ -429,7 +428,7 @@ public class HTMLParser extends Parser {
 	@SuppressWarnings("CheckReturnValue")
 	public static class VoidElementContext extends ParserRuleContext {
 		public TerminalNode TAG_OPEN() { return getToken(HTMLParser.TAG_OPEN, 0); }
-		public TerminalNode TAG_NAME() { return getToken(HTMLParser.TAG_NAME, 0); }
+		public TerminalNode TAG_ACCEPTED_NAME() { return getToken(HTMLParser.TAG_ACCEPTED_NAME, 0); }
 		public TerminalNode TAG_SLASH_CLOSE() { return getToken(HTMLParser.TAG_SLASH_CLOSE, 0); }
 		public List<AttributeContext> attribute() {
 			return getRuleContexts(AttributeContext.class);
@@ -466,11 +465,11 @@ public class HTMLParser extends Parser {
 			setState(51);
 			match(TAG_OPEN);
 			setState(52);
-			match(TAG_NAME);
+			match(TAG_ACCEPTED_NAME);
 			setState(56);
 			_errHandler.sync(this);
 			_la = _input.LA(1);
-			while (_la==TAG_NAME) {
+			while (_la==CHAR_NAME) {
 				{
 				{
 				setState(53);
@@ -498,7 +497,7 @@ public class HTMLParser extends Parser {
 
 	@SuppressWarnings("CheckReturnValue")
 	public static class AttributeContext extends ParserRuleContext {
-		public TerminalNode TAG_NAME() { return getToken(HTMLParser.TAG_NAME, 0); }
+		public TerminalNode CHAR_NAME() { return getToken(HTMLParser.CHAR_NAME, 0); }
 		public TerminalNode TAG_EQUALS() { return getToken(HTMLParser.TAG_EQUALS, 0); }
 		public TerminalNode ATTVALUE_VALUE() { return getToken(HTMLParser.ATTVALUE_VALUE, 0); }
 		public AttributeContext(ParserRuleContext parent, int invokingState) {
@@ -528,7 +527,7 @@ public class HTMLParser extends Parser {
 			enterOuterAlt(_localctx, 1);
 			{
 			setState(61);
-			match(TAG_NAME);
+			match(CHAR_NAME);
 			setState(64);
 			_errHandler.sync(this);
 			_la = _input.LA(1);
@@ -555,7 +554,7 @@ public class HTMLParser extends Parser {
 	}
 
 	public static final String _serializedATN =
-		"\u0004\u0001\u0012C\u0002\u0000\u0007\u0000\u0002\u0001\u0007\u0001\u0002"+
+		"\u0004\u0001\u0013C\u0002\u0000\u0007\u0000\u0002\u0001\u0007\u0001\u0002"+
 		"\u0002\u0007\u0002\u0002\u0003\u0007\u0003\u0002\u0004\u0007\u0004\u0002"+
 		"\u0005\u0007\u0005\u0002\u0006\u0007\u0006\u0001\u0000\u0005\u0000\u0010"+
 		"\b\u0000\n\u0000\f\u0000\u0013\t\u0000\u0001\u0000\u0001\u0000\u0001\u0001"+
@@ -592,7 +591,7 @@ public class HTMLParser extends Parser {
 		"65\u0001\u0000\u0000\u00007:\u0001\u0000\u0000\u000086\u0001\u0000\u0000"+
 		"\u000089\u0001\u0000\u0000\u00009;\u0001\u0000\u0000\u0000:8\u0001\u0000"+
 		"\u0000\u0000;<\u0005\b\u0000\u0000<\u000b\u0001\u0000\u0000\u0000=@\u0005"+
-		"\u000b\u0000\u0000>?\u0005\n\u0000\u0000?A\u0005\u0011\u0000\u0000@>\u0001"+
+		"\f\u0000\u0000>?\u0005\n\u0000\u0000?A\u0005\u0012\u0000\u0000@>\u0001"+
 		"\u0000\u0000\u0000@A\u0001\u0000\u0000\u0000A\r\u0001\u0000\u0000\u0000"+
 		"\u0006\u0011\u0019\u001f)8@";
 	public static final ATN _ATN =

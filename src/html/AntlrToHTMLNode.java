@@ -9,8 +9,8 @@ public class AntlrToHTMLNode extends HTMLParserBaseVisitor<Node> {
 
     @Override
     public VoidElementNode visitVoidElement(HTMLParser.VoidElementContext ctx) {
-        String tagName = ctx.TAG_NAME().getText();
-        int line = ctx.TAG_NAME().getSymbol().getLine();
+        String tagName = ctx.TAG_ACCEPTED_NAME().getText();
+        int line = ctx.TAG_ACCEPTED_NAME().getSymbol().getLine();
 
         var element =  new VoidElementNode(tagName, line);
         for (var attribute : ctx.attribute()) {
@@ -21,7 +21,7 @@ public class AntlrToHTMLNode extends HTMLParserBaseVisitor<Node> {
 
     @Override
     public NormalElementNode visitNormalElement(HTMLParser.NormalElementContext ctx) {
-        var tagToken = ctx.beginTag().TAG_NAME().getSymbol();
+        var tagToken = ctx.beginTag().TAG_ACCEPTED_NAME().getSymbol();
         String tagName = tagToken.getText();
         int line = tagToken.getLine();
 
@@ -37,8 +37,8 @@ public class AntlrToHTMLNode extends HTMLParserBaseVisitor<Node> {
 
     @Override
     public AttributeNode visitAttribute(HTMLParser.AttributeContext ctx) {
-        String name = ctx.TAG_NAME().getText();
-        int line = ctx.TAG_NAME().getSymbol().getLine();
+        String name = ctx.CHAR_NAME().getText();
+        int line = ctx.CHAR_NAME().getSymbol().getLine();
         String value = null;
         if (ctx.ATTVALUE_VALUE() != null) {
             value = ctx.ATTVALUE_VALUE().getText();

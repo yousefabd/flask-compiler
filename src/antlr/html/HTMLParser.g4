@@ -1,7 +1,5 @@
 parser grammar HTMLParser;
-@header{
-    antlr
-}
+
 options {
     tokenVocab=HTMLLexer;
 }
@@ -19,14 +17,14 @@ normalElement
     : beginTag element* endTag
     ;
 beginTag
-    : TAG_OPEN TAG_NAME attribute* TAG_CLOSE //<name att=..>
+    : TAG_OPEN TAG_ACCEPTED_NAME  attribute* TAG_CLOSE //<name att=..>
     ;
 endTag
-    : TAG_OPEN TAG_SLASH TAG_NAME TAG_CLOSE //</name>
+    : TAG_OPEN TAG_SLASH TAG_ACCEPTED_NAME  TAG_CLOSE //</name>
     ;
 voidElement
-    : TAG_OPEN TAG_NAME attribute* TAG_SLASH_CLOSE //<name att=.. />
+    : TAG_OPEN TAG_ACCEPTED_NAME  attribute* TAG_SLASH_CLOSE //<name att=.. />
     ;
 attribute
-    : TAG_NAME (TAG_EQUALS ATTVALUE_VALUE)?
+    : CHAR_NAME (TAG_EQUALS ATTVALUE_VALUE)?
     ;

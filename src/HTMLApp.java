@@ -31,7 +31,6 @@ public class HTMLApp {
         new SymbolTableBuilder(table,errors).build(document.root());
 
         List<ISemanticRule> rules = List.of(
-                new TagExistenceRule(),
                 new UlLiRule(),
                 new BrokenReferenceRule(table)
         );

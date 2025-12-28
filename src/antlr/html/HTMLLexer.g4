@@ -19,16 +19,23 @@ TAG_SLASH_CLOSE: '/>' -> popMode;
 TAG_SLASH: '/';
 
 TAG_EQUALS: '=' -> pushMode(ATTVALUE);
-
-TAG_NAME: TAG_NameStartChar TAG_NameChar*;
+TAG_ACCEPTED_NAME
+    : 'html' | 'head' | 'body'
+    | 'div' | 'span' | 'p'
+    | 'ul' | 'li'
+    | 'a' | 'img'
+    | 'form' | 'input' | 'label'
+    | 'h1' | 'h2' | 'h3'
+    ;
+CHAR_NAME: NameStartChar NameChar*;
 
 TAG_WHITESPACE: [ \t\r\n] -> channel(HIDDEN);
 
 fragment DIGIT: [0-9];
 fragment HEXDIGIT: [a-fA-F0-9];
 
-fragment TAG_NameChar:
-      TAG_NameStartChar
+fragment NameChar:
+      NameStartChar
     | '-'
     | '_'
     | '.'
@@ -38,7 +45,7 @@ fragment TAG_NameChar:
     | '\u203F'..'\u2040'
 ;
 
-fragment TAG_NameStartChar:
+fragment NameStartChar:
       [a-zA-Z:]
     | '\u2070'..'\u218F'
     | '\u2C00'..'\u2FEF'
