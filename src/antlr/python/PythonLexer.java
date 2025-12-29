@@ -1,4 +1,4 @@
-// Generated from C:/Users/yahia/IdeaProjects/flaskcomp/grammars/python/pylexer.g4 by ANTLR 4.13.2
+// Generated from C:/Users/yahia/IdeaProjects/flaskcomp/grammars/python/PythonLexer.g4 by ANTLR 4.13.2
 
     package antlr.python;
 
@@ -12,7 +12,7 @@ import org.antlr.v4.runtime.dfa.DFA;
 import org.antlr.v4.runtime.misc.*;
 
 @SuppressWarnings({"all", "warnings", "unchecked", "unused", "cast", "CheckReturnValue", "this-escape"})
-public class pylexer extends MidLexBase {
+public class PythonLexer extends MidLexBase {
 	static { RuntimeMetaData.checkVersion("4.13.2", RuntimeMetaData.VERSION); }
 
 	protected static final DFA[] _decisionToDFA;
@@ -120,13 +120,13 @@ public class pylexer extends MidLexBase {
 	}
 
 
-	public pylexer(CharStream input) {
+	public PythonLexer(CharStream input) {
 		super(input);
 		_interp = new LexerATNSimulator(this,_ATN,_decisionToDFA,_sharedContextCache);
 	}
 
 	@Override
-	public String getGrammarFileName() { return "pylexer.g4"; }
+	public String getGrammarFileName() { return "PythonLexer.g4"; }
 
 	@Override
 	public String[] getRuleNames() { return ruleNames; }

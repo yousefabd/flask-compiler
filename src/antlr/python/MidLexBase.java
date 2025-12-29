@@ -1,5 +1,5 @@
 package antlr.python;
-import antlr.python.pyparser;
+import antlr.python.PythonParser;
 import org.antlr.v4.runtime.*;
 
 import java.util.ArrayDeque;
@@ -34,7 +34,7 @@ public abstract class MidLexBase extends Lexer {
             }
 
             // أرسل NEWLINE إضافي
-            this.emit(commonToken(pyparser.NEWLINE, "\n"));
+            this.emit(commonToken(PythonParser.NEWLINE, "\n"));
 
             // أرسل كل الـ DEDENT اللازمة
             while (!indents.isEmpty()) {
@@ -43,7 +43,7 @@ public abstract class MidLexBase extends Lexer {
             }
 
             // أرسل EOF مرة أخرى
-            this.emit(commonToken(pyparser.EOF, "<EOF>"));
+            this.emit(commonToken(PythonParser.EOF, "<EOF>"));
         }
 
         Token next = super.nextToken();
@@ -56,7 +56,7 @@ public abstract class MidLexBase extends Lexer {
     }
 
     private Token createDedent() {
-        CommonToken dedent = commonToken(pyparser.DEDENT, "");
+        CommonToken dedent = commonToken(PythonParser.DEDENT, "");
         dedent.setLine(lastToken.getLine());
         return dedent;
     }
@@ -94,7 +94,7 @@ public abstract class MidLexBase extends Lexer {
         if (opened > 0 || (nextnext != -1 && (next == '\r' || next == '\n' || next == '\f' || next == '#'))) {
             skip();
         } else {
-            emit(commonToken(pyparser.NEWLINE, newLine));
+            emit(commonToken(PythonParser.NEWLINE, newLine));
 
             int indent = getIndentationCount(spaces);
             int previous = indents.isEmpty() ? 0 : indents.peek();
@@ -103,7 +103,7 @@ public abstract class MidLexBase extends Lexer {
                 skip();
             } else if (indent > previous) {
                 indents.push(indent);
-                emit(commonToken(pyparser.INDENT, spaces));
+                emit(commonToken(PythonParser.INDENT, spaces));
             } else {
                 while (!indents.isEmpty() && indents.peek() > indent) {
                     emit(createDedent());

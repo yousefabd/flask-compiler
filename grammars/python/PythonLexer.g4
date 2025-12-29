@@ -1,4 +1,5 @@
-lexer grammar pylexer;
+lexer grammar PythonLexer;
+
 @header{
     package antlr.python;
 }
