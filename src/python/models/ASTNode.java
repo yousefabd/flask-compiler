@@ -16,7 +16,7 @@ public abstract class ASTNode {
 
 
     public String describe() {
-        return nodeName + " (line " + line + ")";
+        return getSimpleName() + " (line " + line + ")";
     }
 
     public abstract List<ASTNode> getChildren();

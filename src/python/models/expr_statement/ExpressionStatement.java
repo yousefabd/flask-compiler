@@ -19,6 +19,11 @@ public class ExpressionStatement extends SmallStatement {
         this.haveEquals = haveEquals;
     }
 
+    public boolean HaveEquals()
+    {
+        return this.haveEquals == Operation.EQUALS;
+    }
+
     public ExpressionStatement(ArrayList<Condition> conditions, int line) {
         super("ExpressionStatement", line);
         this.conditions = conditions;

@@ -3,6 +3,7 @@ package python.models.compound_statement;
 import java.util.ArrayList;
 
 import python.models.ASTNode;
+import python.models.root.SimpleStatement;
 import python.models.root.Statement;
 
 public class Body extends ASTNode{
@@ -42,5 +43,10 @@ public class Body extends ASTNode{
         ArrayList<ASTNode> res = new ArrayList<>();
         res.addAll(statements);
         return res;
+    }
+
+    public boolean isSimple()
+    {
+        return statements.size() == 1 && statements.get(0) instanceof SimpleStatement;
     }
 }

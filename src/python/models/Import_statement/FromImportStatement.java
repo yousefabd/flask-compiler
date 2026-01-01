@@ -6,7 +6,7 @@ import python.models.ASTNode;
 import python.models.atom_statement.ID;
 import python.models.enums.Operation;
 
-public class FromImportStatement extends ASTNode {
+public class FromImportStatement extends ImportStatement {
     public ArrayList<ID> dottedName;
     public ArrayList<ID> targets;
     public Operation star;

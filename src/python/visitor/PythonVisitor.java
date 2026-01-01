@@ -5,6 +5,7 @@ import java.util.ArrayList;
 
 import antlr.python.PythonParser; 
 import antlr.python.PythonParserBaseVisitor;
+
 import org.antlr.v4.runtime.misc.Pair;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
@@ -61,8 +62,12 @@ public class PythonVisitor extends PythonParserBaseVisitor<Object> {
             Pair<Condition, Body> elif = visitElif_clause(elifCtx);
             ist.addCondBody(elif.a, elif.b);
         }
-        Body els = visitElse_clause(ctx.else_clause());
-        ist.addElse(els);
+        if(ctx.else_clause() != null)
+        {
+            Body els = visitElse_clause(ctx.else_clause());
+            ist.addElse(els);
+        }
+        
         return ist;
     }
 
@@ -70,7 +75,11 @@ public class PythonVisitor extends PythonParserBaseVisitor<Object> {
     public WhileStatement visitWhileStatement(PythonParser.WhileStatementContext ctx) {
         Condition cnd = (Condition) visit(ctx.cond());
         Body bd = visitBody(ctx.body());
-        Body els = visitElse_clause(ctx.else_clause());
+        Body els = null;
+        if(ctx.else_clause() != null)
+        {
+            els = visitElse_clause(ctx.else_clause());
+        }
         return new WhileStatement(cnd, bd, els, ctx.getStart().getLine());
     }
 
@@ -79,9 +88,14 @@ public class PythonVisitor extends PythonParserBaseVisitor<Object> {
         ArrayList<ID> iters = visitIter(ctx.iter());
         Expression expr = (Expression) visit(ctx.expr());
         Body bd = visitBody(ctx.body());
-        Body els = visitElse_clause(ctx.else_clause());
-        return new ForStatement(iters,expr,bd,els,ctx.getStart().getLine());
+        Body els = null;
+        if(ctx.else_clause() != null)
+        {
+            els = visitElse_clause(ctx.else_clause());
+        }
+        return new ForStatement(iters, expr, bd, els, ctx.getStart().getLine());
     }
+
 
     @Override
     public DecoratorStatement visitDecoratorStatement(PythonParser.DecoratorStatementContext ctx) {
@@ -547,7 +561,7 @@ public class PythonVisitor extends PythonParserBaseVisitor<Object> {
     public Body visitBody(PythonParser.BodyContext ctx) {
         Body bd = new Body(ctx.getStart().getLine());
         if (ctx.simple_stmt() != null) {
-            Statement stmt = (Statement) visit(ctx.simple_stmt());
+            Statement stmt = visitSimple_stmt(ctx.simple_stmt());
             bd.addStatement(stmt);
         }
         if (ctx.stmt() != null && !ctx.stmt().isEmpty()) {

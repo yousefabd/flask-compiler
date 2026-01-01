@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import python.models.ASTNode;
 import python.models.atom_statement.ID;
 
-public class SimpleImportStatement extends ASTNode {
+public class SimpleImportStatement extends ImportStatement {
 
     public ArrayList<ID> dottedName;
 

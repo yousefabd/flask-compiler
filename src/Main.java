@@ -7,6 +7,8 @@ import antlr.python.PythonLexer;
 import antlr.python.PythonParser;
 import python.models.root.Program;
 import python.printer.ASTPrinter;
+import python.symbol_table.SymbolTable;
+import python.symbol_table.SymbolTableBuilder;
 import python.visitor.PythonVisitor;
 import java.io.IOException; 
 
@@ -44,6 +46,13 @@ public class Main {
         ASTPrinter printer = new ASTPrinter();
         System.out.println("AST:");
         printer.printTree(prog);
+
+        SymbolTable symtab = new SymbolTable();
+        SymbolTableBuilder stb = new SymbolTableBuilder(symtab);
+
+        stb.build(prog);   
+        System.out.println(symtab);
+
 
     }
 

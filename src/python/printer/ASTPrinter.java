@@ -19,7 +19,7 @@ public class ASTPrinter {
     }
 
     public void printNode(ASTNode node, int indent) {
-        String pad = "  ".repeat(indent);
+        String pad = "|    ".repeat(indent);
         System.out.println(pad + node.describe() + " "  + node.toString());
     }
 }
