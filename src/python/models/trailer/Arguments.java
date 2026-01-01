@@ -1,5 +1,9 @@
 package python.models.trailer;
 
-public abstract class Arguments {
-    
+import python.models.ASTNode;
+
+public abstract class Arguments extends ASTNode {
+    protected Arguments(String name, int line) {
+        super("Arguments." + name, line);
+    }
 }

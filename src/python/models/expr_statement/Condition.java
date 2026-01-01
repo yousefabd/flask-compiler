@@ -1,4 +1,9 @@
 package python.models.expr_statement;
 
-public abstract class Condition {
+import python.models.ASTNode;
+
+public abstract class Condition extends ASTNode {
+    protected Condition(String name, int line) {
+        super("Condition." + name, line);
+    }
 }

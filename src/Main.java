@@ -1,57 +1,54 @@
-import org.antlr.v4.runtime.*;
-import org.antlr.v4.runtime.tree.*;
-import antlr.jinja2.Jinja2Parser;
-import antlr.jinja2.Jinja2Lexer;
-import java.io.IOException;
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.tree.ParseTree;
+
+import antlr.python.PythonLexer;
+import antlr.python.PythonParser;
+import python.models.root.Program;
+import python.printer.ASTPrinter;
+import python.visitor.PythonVisitor;
+import java.io.IOException; 
 
 
 // Press Shift twice to open the Search Everywhere dialog and type `show whitespaces`,
 // then press Enter. You can now see whitespace characters in your code.
 public class Main {
-    public static void main(String[] args) throws IOException {
-        // اقرأ ملف بايثون
-        CharStream input = CharStreams.fromFileName("test.py");
-        CharStream inputJ = CharStreams.fromFileName("test.txt");
 
-        // مرره على الـ Lexer
-        pylexer lexer = new pylexer(input);
+    public static void python() throws IOException
+    {
+         // 1. اقرأ الملف أو النص
+        CharStream input = CharStreams.fromFileName("test.py");
+        // CharStream input = CharStreams.fromString("a = 5 + 3");
+
+        // 2. Lexer
+        PythonLexer lexer = new PythonLexer(input);
         CommonTokenStream tokens = new CommonTokenStream(lexer);
 
-//        lexer.getAllTokens().forEach(t -> {
-//            System.out.printf("Token %-15s Text='%s'%n",
-//                    pyparser.VOCABULARY.getSymbolicName(t.getType()),
-//                    t.getText().replace("\n","\\n"));
-//        });
+        // 3. Parser
+        PythonParser parser = new PythonParser(tokens);
+        // System.out.println("Parser class = " + parser.getClass().getName());
 
+        ParseTree tree = parser.prog();
 
-//        // مرره على الـ Parser
-//        pyparser parser = new pyparser(tokens);
-//
-//        // استدعِ القاعدة العليا (مثلاً file_input)
-//        ParseTree tree = parser.prog();
-//
-//        // اطبع الـ Parse Tree
-//        System.out.println(tree.toStringTree(parser));
+         // 4. استدعاء نقطة البداية في النحو
+        // PythonParser.ProgContext tree = parser.prog();~
 
+        // 5. Visitor لبناء الـ AST
+        PythonVisitor visitor = new PythonVisitor();
+        Program prog = (Program) visitor.visit(tree);
 
-        /* ----------    Jinja2    ----------*/
+        
 
-        Jinja2Lexer lexerJ = new Jinja2Lexer(inputJ);
-        CommonTokenStream tokensJ = new CommonTokenStream(lexerJ);
-//        lexerJ.getAllTokens().forEach(t -> {
-//            System.out.printf("Token %-15s Text='%s'%n",
-//                    Jinja2Parser.VOCABULARY.getSymbolicName(t.getType()),
-//                    t.getText().replace("\n","\\n"));
-//        });
+        // System.out.println("AST:\n" + prog.toString());
+        ASTPrinter printer = new ASTPrinter();
+        System.out.println("AST:");
+        printer.printTree(prog);
 
+    }
 
-               Jinja2Parser parserJ = new Jinja2Parser(tokens);
-
-        // استدعِ القاعدة العليا (مثلاً file_input)
-        ParseTree tree = parserJ.template();
-
-        // اطبع الـ Parse Tree
-        System.out.println(tree.toStringTree(parserJ));
-
+    public static void main(String[] args) throws IOException 
+    {
+        python();
     }
 }

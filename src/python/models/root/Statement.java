@@ -1,4 +1,10 @@
 package python.models.root;
 
-public abstract class Statement {
+import python.models.ASTNode;
+
+public abstract class Statement extends ASTNode {
+    protected Statement(String name, int line)
+    {
+        super("Statement." + name, line);
+    }
 }

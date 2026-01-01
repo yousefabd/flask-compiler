@@ -13,14 +13,14 @@ options {
 prog : (NEWLINE | stmt)* EOF;
 
 stmt
-    : simple_stmt # SimpleStatement
-    | compound_stmt # CompoundStatment
+    : simple_stmt            #SimpleStatement
+    | compound_stmt          #CompoundStatement
     ;
 
 compound_stmt
-    : IF cond COLON body elif_clause* else_clause? # IfStatment
-    | WHILE cond COLON body else_clause?           # WhileStatment
-    | FOR iter IN expr COLON body else_clause?     # ForStatment
+    : IF cond COLON body elif_clause* else_clause? # IfStatement
+    | WHILE cond COLON body else_clause?           # WhileStatement
+    | FOR iter IN expr COLON body else_clause?     # ForStatement
     | decorator* (funcdef)                         # DecoratorStatement
     ;
 
@@ -74,17 +74,12 @@ return_stmt
     ;
 
 import_stmt
-    : IMPORT dotted_name                        #SimpleImport
-    | FROM dotted_name IMPORT import_targets    #FromImport
+    : IMPORT dotted_name                                   #SimpleImport
+    | FROM dotted_name IMPORT (STAR | (ID (COMMA ID)*))    #FromImport
     ;
 
 dotted_name
     : ID (DOT ID)*
-    ;
-
-import_targets
-    : STAR
-    | ID (COMMA ID)*
     ;
 
 /***************************** expr_stmt and its variants *****************************/
@@ -94,7 +89,7 @@ expr_stmt
     ;
 
 condlist
-    : cond (COMMA cond)* COMMA?
+    : cond (COMMA cond)* COMMA? // should not be empty
     ;
 
 cond
@@ -138,21 +133,17 @@ atom
     | ID                                #IDAtom
     | TRUE                              #BoolAtom
     | FALSE                             #BoolAtom
-    | MINUS? number                     #NumberAtom
+    | MINUS? INTEGER                    #IntegerAtom
+    | MINUS? FLOAT                      #FloatAtom
     | NONE                              #NoneAtom
     | STRING                            #StringAtom
-    ;
-
-number
-    : INTEGER
-    | FLOAT
     ;
 
 /*************************** the trailer and its variants ***************************/
 
 trailer
     : DOT ID arguments?
-    | arguments
+    | arguments 
     ;
 
 arguments
@@ -176,8 +167,6 @@ subscriptlist
 
 iter: ID (COMMA ID)*;
 
-// call_expr: ID OPEN_PAREN arglist? CLOSE_PAREN;
-
 /****************************** function definition ******************************/
 
 funcdef
@@ -194,9 +183,13 @@ def_parameter
 
 /****************************** else if else & body ******************************/
 
-elif_clause: ELIF cond COLON body;
+elif_clause
+    : ELIF cond COLON body
+    ;
 
-else_clause: ELSE COLON body;
+else_clause
+    : ELSE COLON body
+    ;
 
 body: simple_stmt
     | NEWLINE INDENT stmt+ DEDENT
@@ -205,12 +198,12 @@ body: simple_stmt
 /************************** list dictionary set **************************/
 
 list
-    : expr (COMMA expr)*
+    : expr (COMMA expr)*                        #ListDef
     ;
 
 dicorset
-    : expr (COMMA expr)*
-    | expr COLON expr (COMMA expr COLON expr)*
+    : expr (COMMA expr)*                        #SetDef
+    | expr COLON expr (COMMA expr COLON expr)*  #DictionaryDef
     ;
 
 /****************************** decorator ******************************/
@@ -218,20 +211,4 @@ dicorset
 decorator
     : AT  dotted_name (OPEN_PAREN arglist? CLOSE_PAREN)? NEWLINE
     ;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
