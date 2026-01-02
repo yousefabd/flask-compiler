@@ -2,6 +2,8 @@ package css.models.declarations;
 
 import css.models.Node;
 
+import java.util.List;
+
 public class Declaration extends Node {
     private final Property property;
     private final Value value;
@@ -23,4 +25,8 @@ public class Declaration extends Node {
         return important;
     }
 
+    @Override
+    public List<Node> getChildren() {
+        return List.of(property,value);
+    }
 }

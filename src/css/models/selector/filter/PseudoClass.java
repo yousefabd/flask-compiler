@@ -1,6 +1,10 @@
 package css.models.selector.filter;
 
+import css.models.Node;
 import css.models.selector.filter.pseudoargs.PseudoArgument;
+
+import java.util.ArrayList;
+import java.util.List;
 
 // class:
 public class PseudoClass extends SelectorFilter{
@@ -16,5 +20,14 @@ public class PseudoClass extends SelectorFilter{
     }
     public PseudoArgument getArgument() {
         return argument;
+    }
+
+    @Override
+    public List<Node> getChildren() {
+        var children = new ArrayList<PseudoArgument>();
+        if(argument!= null){
+            children.add(argument);
+        }
+        return new ArrayList<>(children);
     }
 }

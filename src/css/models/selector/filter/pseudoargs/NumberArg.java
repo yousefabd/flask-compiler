@@ -1,5 +1,9 @@
 package css.models.selector.filter.pseudoargs;
 
+import css.models.Node;
+
+import java.util.List;
+
 public class NumberArg extends PseudoArgument{
     private final double value;
 
@@ -10,5 +14,10 @@ public class NumberArg extends PseudoArgument{
 
     public double getValue() {
         return value;
+    }
+
+    @Override
+    public List<Node> getChildren() {
+        return List.of();
     }
 }

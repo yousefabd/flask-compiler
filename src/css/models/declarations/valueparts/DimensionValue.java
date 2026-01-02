@@ -2,6 +2,8 @@ package css.models.declarations.valueparts;
 
 import css.models.Node;
 
+import java.util.List;
+
 public class DimensionValue extends ValuePart {
     private final NumberValue number;
     private final String unit;
@@ -27,5 +29,10 @@ public class DimensionValue extends ValuePart {
     @Override
     public String toString() {
         return number + unit;
+    }
+
+    @Override
+    public List<Node> getChildren() {
+        return List.of(number);
     }
 }

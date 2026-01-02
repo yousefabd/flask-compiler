@@ -2,6 +2,8 @@ package css.models.declarations.valueparts;
 
 import css.models.Node;
 
+import java.util.List;
+
 public class HexColorValue extends ValuePart {
     private final String hex; // normalized without '#'
 
@@ -42,5 +44,10 @@ public class HexColorValue extends ValuePart {
     @Override
     public String toString() {
         return "#" + hex;
+    }
+
+    @Override
+    public List<Node> getChildren() {
+        return List.of();
     }
 }

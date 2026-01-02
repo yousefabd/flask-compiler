@@ -63,11 +63,11 @@ public interface CSSParserVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitSibling(CSSParser.SiblingContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link CSSParser#simpleSelectorSequence}.
+	 * Visit a parse tree produced by {@link CSSParser#selectorSequence}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitSimpleSelectorSequence(CSSParser.SimpleSelectorSequenceContext ctx);
+	T visitSelectorSequence(CSSParser.SelectorSequenceContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link CSSParser#typeSelector}.
 	 * @param ctx the parse tree
@@ -99,11 +99,26 @@ public interface CSSParserVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitAttributeSelector(CSSParser.AttributeSelectorContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link CSSParser#pseudo}.
+	 * Visit a parse tree produced by the {@code PseudoClass}
+	 * labeled alternative in {@link CSSParser#pseudo}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitPseudo(CSSParser.PseudoContext ctx);
+	T visitPseudoClass(CSSParser.PseudoClassContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code PseudoClassWithArgs}
+	 * labeled alternative in {@link CSSParser#pseudo}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitPseudoClassWithArgs(CSSParser.PseudoClassWithArgsContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code PseudoElement}
+	 * labeled alternative in {@link CSSParser#pseudo}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitPseudoElement(CSSParser.PseudoElementContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link CSSParser#pseudoArgument}.
 	 * @param ctx the parse tree
@@ -146,4 +161,10 @@ public interface CSSParserVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitFunction_(CSSParser.Function_Context ctx);
+	/**
+	 * Visit a parse tree produced by {@link CSSParser#ws}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitWs(CSSParser.WsContext ctx);
 }

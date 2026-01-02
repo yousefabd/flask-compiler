@@ -1,5 +1,8 @@
 package css.models.declarations.valueparts;
 
+import css.models.Node;
+
+import java.util.ArrayList;
 import java.util.List;
 
 public final class FunctionValue extends ValuePart {
@@ -18,5 +21,13 @@ public final class FunctionValue extends ValuePart {
 
     public List<ValuePart> getArguments() {
         return arguments;
+    }
+
+    @Override
+    public List<Node> getChildren() {
+        List<Node> children = new ArrayList<>(1 + arguments.size());
+        children.add(name);
+        children.addAll(arguments);
+        return children;
     }
 }

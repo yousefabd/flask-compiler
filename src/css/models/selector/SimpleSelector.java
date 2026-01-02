@@ -3,6 +3,7 @@ package css.models.selector;
 import css.models.Node;
 import css.models.selector.filter.SelectorFilter;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class SimpleSelector extends Node {
@@ -20,4 +21,11 @@ public class SimpleSelector extends Node {
         return filters;
     }
 
+    @Override
+    public List<Node> getChildren() {
+        List<Node> children = new ArrayList<>();
+        if (elementSelector != null) children.add(elementSelector);
+        children.addAll(filters);
+        return children;
+    }
 }

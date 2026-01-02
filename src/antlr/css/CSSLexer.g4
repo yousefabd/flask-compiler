@@ -40,8 +40,11 @@ DIMENSION
     : NUMBER IDENT
     ;
 
+fragment HEXDIGIT : [0-9a-fA-F];
+
 HEX
-    : '#' [0-9a-fA-F]{3,6}
+    : '#' HEXDIGIT HEXDIGIT HEXDIGIT
+      (HEXDIGIT HEXDIGIT HEXDIGIT)?
     ;
 
 /* --- Identifiers --- */

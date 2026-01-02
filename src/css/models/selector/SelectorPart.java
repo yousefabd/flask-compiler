@@ -1,7 +1,9 @@
 package css.models.selector;
 
 import css.models.Node;
-import css.models.enums.Combinator;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class SelectorPart extends Node {
     private final Combinator combinator; // null for first part
@@ -17,5 +19,13 @@ public class SelectorPart extends Node {
     }
     public SimpleSelector getSelector() {
         return selector;
+    }
+
+    @Override
+    public List<Node> getChildren() {
+        List<Node> children = new ArrayList<>();
+        if (combinator != null) children.add(combinator);
+        children.add(selector);
+        return children;
     }
 }

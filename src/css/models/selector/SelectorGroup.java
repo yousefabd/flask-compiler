@@ -2,6 +2,7 @@ package css.models.selector;
 
 import css.models.Node;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class SelectorGroup extends Node {
@@ -12,5 +13,10 @@ public class SelectorGroup extends Node {
     }
     public List<Selector> getSelectors() {
         return selectors;
+    }
+
+    @Override
+    public List<Node> getChildren() {
+        return new ArrayList<>(selectors);
     }
 }

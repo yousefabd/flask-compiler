@@ -1,5 +1,9 @@
 package css.models.selector;
 
+import css.models.Node;
+
+import java.util.List;
+
 public final class TypeSelector extends ElementSelector {
     public final String tagName;
 
@@ -7,5 +11,10 @@ public final class TypeSelector extends ElementSelector {
     {
         this.tagName = tagName;
         this.line = line;
+    }
+
+    @Override
+    public List<Node> getChildren() {
+        return List.of();
     }
 }

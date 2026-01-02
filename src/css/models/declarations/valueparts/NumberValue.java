@@ -2,6 +2,8 @@ package css.models.declarations.valueparts;
 
 import css.models.Node;
 
+import java.util.List;
+
 public final class NumberValue extends ValuePart {
 
     private final String raw;
@@ -22,5 +24,10 @@ public final class NumberValue extends ValuePart {
     @Override
     public String toString() {
         return raw;
+    }
+
+    @Override
+    public List<Node> getChildren() {
+        return List.of();
     }
 }

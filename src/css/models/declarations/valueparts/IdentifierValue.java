@@ -2,6 +2,8 @@ package css.models.declarations.valueparts;
 
 import css.models.Node;
 
+import java.util.List;
+
 public class IdentifierValue extends ValuePart {
     private final String name;
 
@@ -17,5 +19,10 @@ public class IdentifierValue extends ValuePart {
     @Override
     public String toString() {
         return name;
+    }
+
+    @Override
+    public List<Node> getChildren() {
+        return List.of();
     }
 }

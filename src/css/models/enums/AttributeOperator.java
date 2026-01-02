@@ -1,5 +1,5 @@
 package css.models.enums;
 
 public enum AttributeOperator {
-    EQUALS, PREFIX, SUFFIX, SUBSTRING
+    EQUALS, PREFIX, SUFFIX, SUBSTRING, BOOLEAN
 }

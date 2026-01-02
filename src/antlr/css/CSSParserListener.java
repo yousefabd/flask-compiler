@@ -96,15 +96,15 @@ public interface CSSParserListener extends ParseTreeListener {
 	 */
 	void exitSibling(CSSParser.SiblingContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link CSSParser#simpleSelectorSequence}.
+	 * Enter a parse tree produced by {@link CSSParser#selectorSequence}.
 	 * @param ctx the parse tree
 	 */
-	void enterSimpleSelectorSequence(CSSParser.SimpleSelectorSequenceContext ctx);
+	void enterSelectorSequence(CSSParser.SelectorSequenceContext ctx);
 	/**
-	 * Exit a parse tree produced by {@link CSSParser#simpleSelectorSequence}.
+	 * Exit a parse tree produced by {@link CSSParser#selectorSequence}.
 	 * @param ctx the parse tree
 	 */
-	void exitSimpleSelectorSequence(CSSParser.SimpleSelectorSequenceContext ctx);
+	void exitSelectorSequence(CSSParser.SelectorSequenceContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link CSSParser#typeSelector}.
 	 * @param ctx the parse tree
@@ -156,15 +156,41 @@ public interface CSSParserListener extends ParseTreeListener {
 	 */
 	void exitAttributeSelector(CSSParser.AttributeSelectorContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link CSSParser#pseudo}.
+	 * Enter a parse tree produced by the {@code PseudoClass}
+	 * labeled alternative in {@link CSSParser#pseudo}.
 	 * @param ctx the parse tree
 	 */
-	void enterPseudo(CSSParser.PseudoContext ctx);
+	void enterPseudoClass(CSSParser.PseudoClassContext ctx);
 	/**
-	 * Exit a parse tree produced by {@link CSSParser#pseudo}.
+	 * Exit a parse tree produced by the {@code PseudoClass}
+	 * labeled alternative in {@link CSSParser#pseudo}.
 	 * @param ctx the parse tree
 	 */
-	void exitPseudo(CSSParser.PseudoContext ctx);
+	void exitPseudoClass(CSSParser.PseudoClassContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code PseudoClassWithArgs}
+	 * labeled alternative in {@link CSSParser#pseudo}.
+	 * @param ctx the parse tree
+	 */
+	void enterPseudoClassWithArgs(CSSParser.PseudoClassWithArgsContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code PseudoClassWithArgs}
+	 * labeled alternative in {@link CSSParser#pseudo}.
+	 * @param ctx the parse tree
+	 */
+	void exitPseudoClassWithArgs(CSSParser.PseudoClassWithArgsContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code PseudoElement}
+	 * labeled alternative in {@link CSSParser#pseudo}.
+	 * @param ctx the parse tree
+	 */
+	void enterPseudoElement(CSSParser.PseudoElementContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code PseudoElement}
+	 * labeled alternative in {@link CSSParser#pseudo}.
+	 * @param ctx the parse tree
+	 */
+	void exitPseudoElement(CSSParser.PseudoElementContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link CSSParser#pseudoArgument}.
 	 * @param ctx the parse tree
@@ -235,4 +261,14 @@ public interface CSSParserListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitFunction_(CSSParser.Function_Context ctx);
+	/**
+	 * Enter a parse tree produced by {@link CSSParser#ws}.
+	 * @param ctx the parse tree
+	 */
+	void enterWs(CSSParser.WsContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link CSSParser#ws}.
+	 * @param ctx the parse tree
+	 */
+	void exitWs(CSSParser.WsContext ctx);
 }

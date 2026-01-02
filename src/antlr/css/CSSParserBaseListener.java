@@ -113,13 +113,13 @@ public class CSSParserBaseListener implements CSSParserListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterSimpleSelectorSequence(CSSParser.SimpleSelectorSequenceContext ctx) { }
+	@Override public void enterSelectorSequence(CSSParser.SelectorSequenceContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitSimpleSelectorSequence(CSSParser.SimpleSelectorSequenceContext ctx) { }
+	@Override public void exitSelectorSequence(CSSParser.SelectorSequenceContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
@@ -185,13 +185,37 @@ public class CSSParserBaseListener implements CSSParserListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterPseudo(CSSParser.PseudoContext ctx) { }
+	@Override public void enterPseudoClass(CSSParser.PseudoClassContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitPseudo(CSSParser.PseudoContext ctx) { }
+	@Override public void exitPseudoClass(CSSParser.PseudoClassContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterPseudoClassWithArgs(CSSParser.PseudoClassWithArgsContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitPseudoClassWithArgs(CSSParser.PseudoClassWithArgsContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterPseudoElement(CSSParser.PseudoElementContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitPseudoElement(CSSParser.PseudoElementContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
@@ -276,6 +300,18 @@ public class CSSParserBaseListener implements CSSParserListener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitFunction_(CSSParser.Function_Context ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterWs(CSSParser.WsContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitWs(CSSParser.WsContext ctx) { }
 
 	/**
 	 * {@inheritDoc}

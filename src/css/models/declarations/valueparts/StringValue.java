@@ -2,6 +2,8 @@ package css.models.declarations.valueparts;
 
 import css.models.Node;
 
+import java.util.List;
+
 public class StringValue extends ValuePart {
     private final String value;
 
@@ -30,5 +32,10 @@ public class StringValue extends ValuePart {
     @Override
     public String toString() {
         return "\"" + value + "\"";
+    }
+
+    @Override
+    public List<Node> getChildren() {
+        return List.of();
     }
 }
