@@ -1,3 +1,5 @@
+import antlr.jinja2.Jinja2Lexer;
+import antlr.jinja2.Jinja2Parser;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -20,7 +22,7 @@ public class Main {
     public static void python() throws IOException
     {
          // 1. اقرأ الملف أو النص
-        CharStream input = CharStreams.fromFileName("test.py");
+        CharStream input = CharStreams.fromFileName("tests/app.py");
         // CharStream input = CharStreams.fromString("a = 5 + 3");
 
         // 2. Lexer
@@ -56,8 +58,29 @@ public class Main {
 
     }
 
+    public static void jinja() throws IOException {
+        // اقرأ الملف اللي فيه الكود
+        CharStream input = CharStreams.fromFileName("tests/templates/index.html");
+
+        // مرر النص للـ lexer
+        Jinja2Lexer lexer = new Jinja2Lexer(input);
+        CommonTokenStream tokens = new CommonTokenStream(lexer);
+
+        // مرر التوكنات للـ parser
+        Jinja2Parser parser = new Jinja2Parser(tokens);
+
+        // استدعي القاعدة العليا (مثلاً template)
+        ParseTree tree = parser.template();
+
+        // اطبع الشجرة
+        System.out.println(tree.toStringTree(parser));
+
+    }
+
+
     public static void main(String[] args) throws IOException 
     {
-        python();
+        // python();
+        jinja();
     }
 }

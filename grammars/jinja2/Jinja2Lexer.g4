@@ -3,81 +3,74 @@ lexer grammar Jinja2Lexer;
     package antlr.jinja2;
 }
 
-DOUBLE_OPEN_BRACE  : '{{';
-DOUBLE_CLOSE_BRACE : '}}';
-
-OPEN_TAG           : '{%';
-CLOSE_TAG          : '%}';
-
-COMMENT: '{#' .*? '#}' -> skip;
-
-//RAW_TEXT
-//  : ( ~[{]
-//    | '{' ~[{%#]
-//    )+
-//  ;
+DOUBLE_OPEN_BRACE     : '{{' -> pushMode(EXPR) ;
+OPEN_TAG   : '{%' -> pushMode(EXPR) ;
+COMMENT_START : '{#' -> pushMode(COMMENT) ;
 
 
+mode DEFAULT_MODE;
+TEXT :  (~'{')+;
 
-INCLUDE  : 'include';
-FOR      : 'for';
-IN       : 'in';
-ENDFOR   : 'endfor';
-IF       : 'if';
-ELIF     : 'elif';
-ELSE     : 'else';
-ENDIF    : 'endif';
-BLOCK    : 'block';
-ENDBLOCK : 'endblock';
-MACRO    : 'macro';
-ENDMACRO : 'endmacro';
-SET      : 'set';
-ENDSET   : 'endset';
-EXTENDS  : 'extends';
-RAW      : 'raw';
-ENDRAW   : 'endraw';
-IS       : 'is';
-OR       : 'or';
-AND      : 'and';
-NOT      : 'not';
-TRUE     : 'true';
-FALSE    : 'false';
-NONE     : 'none';
+mode EXPR;
+CLOSE_TAG     : '%}' -> popMode ;
+DOUBLE_CLOSE_BRACE       : '}}' -> popMode ;
+INCLUDE  : 'include' ;
+FOR      : 'for' ;
+IN       : 'in' ;
+ENDFOR   : 'endfor' ;
+IF       : 'if' ;
+ELIF     : 'elif' ;
+ELSE     : 'else' ;
+ENDIF    : 'endif' ;
+BLOCK    : 'block' ;
+ENDBLOCK : 'endblock' ;
+MACRO    : 'macro' ;
+ENDMACRO : 'endmacro' ;
+SET      : 'set' ;
+ENDSET   : 'endset' ;
+EXTENDS  : 'extends' ;
+RAW      : 'raw' ;
+ENDRAW   : 'endraw' ;
+IS       : 'is' ;
+OR       : 'or' ;
+AND      : 'and' ;
+NOT      : 'not' ;
+TRUE     : 'true' ;
+FALSE    : 'false' ;
+NONE     : 'none' ;
 
+PLUS     : '+' ;
+MINUS    : '-' ;
+STAR     : '*' ;
+SLASH    : '/' ;
+PERCENT  : '%' ;
+EQ       : '==' ;
+NEQ      : '!=' ;
+LT       : '<' ;
+GT       : '>' ;
+LTE      : '<=' ;
+GTE      : '>=' ;
 
-PLUS     : '+';
-MINUS    : '-';
-STAR     : '*';
-SLASH    : '/';
-PERCENT  : '%';
-EQ       : '==';
-NEQ      : '!=';
-LT       : '<';
-GT       : '>';
-LTE      : '<=';
-GTE      : '>=';
-
-ASSIGN   : '=';
-PIPE     : '|';
-DOT      : '.';
-COMMA    : ',';
-COLON    : ':';
-LPAREN   : '(';
-RPAREN   : ')';
-LBRACK   : '[';
-RBRACK   : ']';
-
+ASSIGN   : '=' ;
+PIPE     : '|' ;
+DOT      : '.' ;
+COMMA    : ',' ;
+COLON    : ':' ;
+LPAREN   : '(' ;
+RPAREN   : ')' ;
+LBRACK   : '[' ;
+RBRACK   : ']' ;
 
 STRING   : '"' ( ~["\\] | '\\' . )* '"'
-         | '\'' ( ~['\\] | '\\' . )* '\'';
+         | '\'' ( ~['\\] | '\\' . )* '\'' ;
 
-NUMBER   : [0-9]+ ('.' [0-9]+)?;
+NUMBER   : [0-9]+ ('.' [0-9]+)? ;
 
+ID       : [a-zA-Z_][a-zA-Z0-9_]* ;
 
-ID       : [a-zA-Z_][a-zA-Z0-9_]*;
-
-
-WS       : [ \t\r\n]+ -> skip;
+WS       : [ \t\r\n]+ -> skip ;
 
 
-TEXT     : .+? ;
+mode COMMENT;
+COMMENT_END   : '#}' -> popMode ;
+COMMENT_TEXT : '{#' .*? '#}' -> skip ;

@@ -1,3 +1,5 @@
+// cSpell: disable
+
 parser grammar Jinja2Parser;
 
 @header{
@@ -5,89 +7,90 @@ parser grammar Jinja2Parser;
 }
 options { tokenVocab=Jinja2Lexer; }
 
+
+
 // ===== Top-level =====
 
 template
-    : (variable | block_stmt | inline_stmt | COMMENT)* | EOF
+    : tag*  EOF
     ;
+
+tag
+    : variable      #VariableStatement
+    | stmt          #Statement
+    | inline_stmt   #InlineStatement
+    | TEXT          #Text
+    ;
+
 
 // ===== Variables =====
 
 variable
-    : DOUBLE_OPEN_BRACE MINUS? expr MINUS? DOUBLE_CLOSE_BRACE
+    : DOUBLE_OPEN_BRACE MINUS?  expr  MINUS? DOUBLE_CLOSE_BRACE
     ;
 
-// ===== Statements (tags) =====
+// ===== Statements  =====
 
-block_stmt
-    : for_block
-    | if_block
-    | set_block
-    | macro_block
-    | block_block
+stmt
+    : for_block     #ForStatement
+    | if_block      #IfStatement
+    | set_block     #SetStatement
+    | macro_block   #MacroStatement
+    | block_block   #BlockStatement
     ;
+
 
 inline_stmt
-    : extends_stmt
-    | include_stmt
-    | set_inline
+    : extends_stmt      #InlineExtendsStatement
+    | include_stmt      #InlineIncludeStatement
+    | set_inline        #InlineSetStatement
     ;
+
 
 // ----- For -----
 for_block
-    : OPEN_TAG MINUS? FOR target IN expr MINUS? CLOSE_TAG
-      template
-      end_for
+    : OPEN_TAG MINUS? FOR (ID (COMMA ID)*) IN expr MINUS? CLOSE_TAG
+      body
+      OPEN_TAG MINUS? ENDFOR MINUS? CLOSE_TAG
     ;
-end_for :  OPEN_TAG MINUS? ENDFOR MINUS? CLOSE_TAG ;
-
-target
-    : ID (COMMA ID)*
-    ;
+    
 
 // ----- If / Elif / Else -----
 if_block
-    : OPEN_TAG MINUS? IF expr MINUS? CLOSE_TAG
-      template
-      (OPEN_TAG MINUS? ELIF expr MINUS? CLOSE_TAG template)*
-      (OPEN_TAG MINUS? ELSE MINUS? CLOSE_TAG template)?
+    : OPEN_TAG MINUS? IF expr MINUS? CLOSE_TAG body
+      (OPEN_TAG MINUS? ELIF expr MINUS? CLOSE_TAG body)*
+      (OPEN_TAG MINUS? ELSE MINUS? CLOSE_TAG body)?
       OPEN_TAG MINUS? ENDIF MINUS? CLOSE_TAG
     ;
-
+body : tag*;
 // ----- Set -----
 set_inline
-    : OPEN_TAG MINUS? SET set_targets ASSIGN expr MINUS? CLOSE_TAG
+    : OPEN_TAG MINUS? SET (ID (COMMA ID)*) ASSIGN expr MINUS? CLOSE_TAG
     ;
 
 set_block
-    : OPEN_TAG MINUS? SET set_targets MINUS? CLOSE_TAG
-      template
+    : OPEN_TAG MINUS? SET (ID (COMMA ID)*) MINUS? CLOSE_TAG
+      body
       OPEN_TAG MINUS? ENDSET MINUS? CLOSE_TAG
     ;
 
-set_targets
-    : ID (COMMA ID)*
-    ;
+
 
 // ----- Macro -----
 macro_block
-    : OPEN_TAG MINUS? MACRO ID LPAREN call_params? RPAREN MINUS? CLOSE_TAG
-      template
+    : OPEN_TAG MINUS? MACRO ID LPAREN parameters? RPAREN MINUS? CLOSE_TAG
+      body
       OPEN_TAG MINUS? ENDMACRO MINUS? CLOSE_TAG
     ;
 
-call_params
-    : param (COMMA param)*
-    ;
+parameters :  parameter (COMMA parameter)*;
+parameter : ID (ASSIGN expr)?;
 
-param
-    : ID (ASSIGN expr)?
-    ;
 
-// ----- Block / Inheritance -----
+// ----- Block -----
 block_block
     : OPEN_TAG MINUS? BLOCK ID MINUS? CLOSE_TAG
-      template
+      body
       OPEN_TAG MINUS? ENDBLOCK MINUS? CLOSE_TAG
     ;
 
@@ -98,37 +101,54 @@ extends_stmt
 include_stmt
     : OPEN_TAG MINUS? INCLUDE expr MINUS? CLOSE_TAG
     ;
-// ===== Raw =====
-//raw_block
-//    : OPEN_TAG MINUS? RAW MINUS? CLOSE_TAG
-//      RAW_TEXT*
-//      OPEN_TAG MINUS? ENDRAW MINUS? CLOSE_TAG
-//    ;
+
+
 // ===== Expressions =====
 expr
-    : primary
-    | (PLUS | MINUS | NOT) expr
-    | expr (STAR | SLASH | PERCENT) expr
-    | expr (PLUS | MINUS) expr
-    | expr (LT | GT | LTE | GTE | EQ | NEQ | IN | IS) expr
-    | expr AND expr
-    | expr OR expr
+    : primary (trailer | filter)*                               #IDTrFlExpression  // edited
+    | primary                                                   #PrimaryExpression
+    | op=(PLUS | MINUS | NOT) expr                              #UnaryExpression
+    | expr op=(STAR | SLASH | PERCENT) expr                     #BinaryExpression
+    | expr op=(PLUS | MINUS) expr                               #BinaryExpression
+    | expr op=(LT | GT | LTE | GTE | EQ | NEQ | IN | IS) expr   #BinaryExpression
+    | expr op=AND expr                                          #BinaryExpression
+    | expr op=OR expr                                           #BinaryExpression
     ;
 
-primary
-    : NUMBER
-    | STRING
-    | TRUE
-    | FALSE
-    | NONE
-    | ID
-    | LPAREN expr RPAREN
-    | primary DOT ID        // obj.attr
-    | primary LBRACK expr RBRACK  // list[0]
-    | primary LPAREN (expr (COMMA expr)*)? RPAREN // func(args)
-    | primary PIPE ID (LPAREN (expr (COMMA expr)*)? RPAREN)? // value|filter(args)
-    | primary IS ID (LPAREN (expr (COMMA expr)*)? RPAREN)?   // value is test(args)
+trailer
+    : LPAREN arguments? RPAREN                           
+    | DOT ID                                             
+    | LBRACK expr RBRACK                                 
     ;
+
+filter
+    : PIPE ID (LPAREN arguments? RPAREN)?                
+    ;
+
+arguments : expr (ASSIGN expr)? (COMMA expr (ASSIGN expr)?)*;   // edited
+
+primary
+    : LPAREN expr RPAREN                             #ParenExpression
+    | ID                                             #ID
+    | TRUE                                           #Boolean
+    | FALSE                                          #Boolean
+    | NUMBER                                         #Number
+    | NONE                                           #None
+    | STRING                                         #String
+    | listdef                                        #List
+    | dictdef                                        #Dictionary
+    ;
+
+listdef
+    : LBRACK (expr (COMMA expr)*)? RBRACK
+    ;
+
+dictdef
+    : LBRACK ((expr COLON expr) (COMMA (expr COLON expr))*)? RBRACK
+    ;
+
+
+
 
 
 

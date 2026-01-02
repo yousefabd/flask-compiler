@@ -170,7 +170,7 @@ iter: ID (COMMA ID)*;
 /****************************** function definition ******************************/
 
 funcdef
-    : DEF ID OPEN_PAREN def_parameters COMMA? CLOSE_PAREN (ARROW cond)? COLON body
+    : DEF ID OPEN_PAREN def_parameters? COMMA? CLOSE_PAREN (ARROW cond)? COLON body
     ;
 
 def_parameters

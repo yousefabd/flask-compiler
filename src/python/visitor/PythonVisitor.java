@@ -514,7 +514,8 @@ public class PythonVisitor extends PythonParserBaseVisitor<Object> {
     @Override
     public FunctionDef visitFuncdef(PythonParser.FuncdefContext ctx) {
         ID id = new ID(ctx.ID().getText(), ctx.getStart().getLine());
-        ArrayList<Parameter> parameters = visitDef_parameters(ctx.def_parameters());
+        ArrayList<Parameter> parameters = new ArrayList<>();
+        if(ctx.def_parameters() != null)  parameters = visitDef_parameters(ctx.def_parameters());
         Condition returnType = null;
         if(ctx.ARROW() != null) {
             returnType = (Condition) visit(ctx.cond());
