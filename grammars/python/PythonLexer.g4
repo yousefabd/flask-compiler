@@ -12,7 +12,7 @@ tokens {
 }
 
 
-
+GLOBAL : 'global';
 DEF : 'def';
 RETURN: 'return';
 IMPORT: 'import';

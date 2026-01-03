@@ -403,6 +403,18 @@ public class Jinja2ParserBaseListener implements Jinja2ParserListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterArgument(Jinja2Parser.ArgumentContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitArgument(Jinja2Parser.ArgumentContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterParenExpression(Jinja2Parser.ParenExpressionContext ctx) { }
 	/**
 	 * {@inheritDoc}

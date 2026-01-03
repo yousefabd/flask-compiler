@@ -62,7 +62,9 @@ if_block
       (OPEN_TAG MINUS? ELSE MINUS? CLOSE_TAG body)?
       OPEN_TAG MINUS? ENDIF MINUS? CLOSE_TAG
     ;
-body : tag*;
+
+body : tag* ;
+
 // ----- Set -----
 set_inline
     : OPEN_TAG MINUS? SET (ID (COMMA ID)*) ASSIGN expr MINUS? CLOSE_TAG
@@ -84,6 +86,7 @@ macro_block
     ;
 
 parameters :  parameter (COMMA parameter)*;
+
 parameter : ID (ASSIGN expr)?;
 
 
@@ -125,14 +128,16 @@ filter
     : PIPE ID (LPAREN arguments? RPAREN)?                
     ;
 
-arguments : expr (ASSIGN expr)? (COMMA expr (ASSIGN expr)?)*;   // edited
+arguments : argument (COMMA argument)* ;   // edited
+
+argument : expr (ASSIGN expr)? ;
 
 primary
     : LPAREN expr RPAREN                             #ParenExpression
     | ID                                             #ID
     | TRUE                                           #Boolean
     | FALSE                                          #Boolean
-    | NUMBER                                         #Number
+    | MINUS? NUMBER                                  #Number
     | NONE                                           #None
     | STRING                                         #String
     | listdef                                        #List

@@ -475,6 +475,7 @@ public class PythonVisitor extends PythonParserBaseVisitor<Object> {
     @Override
     public ArrayList<Argument> visitArglist(PythonParser.ArglistContext ctx) {
         ArrayList<Argument> res = new ArrayList<>();
+        if(ctx == null) return res;
         for(PythonParser.ArgumentContext argCtx : ctx.argument())
             res.add(visitArgument(argCtx));
         return res;
