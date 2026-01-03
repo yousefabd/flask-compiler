@@ -28,10 +28,11 @@ public class SymbolTable
     public void enterScope(String name) {
         Scope newScope = new Scope(name, getCurrentScope());
         scopeStack.push(newScope);
-        allScopes.add(getCurrentScope());
+        
     }
 
     public void exitScope() {
+        allScopes.add(getCurrentScope());
         if (scopeStack.size() > 1) {
             scopeStack.pop();
         }
