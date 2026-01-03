@@ -221,6 +221,12 @@ public interface Jinja2ParserVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitArguments(Jinja2Parser.ArgumentsContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link Jinja2Parser#argument}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitArgument(Jinja2Parser.ArgumentContext ctx);
+	/**
 	 * Visit a parse tree produced by the {@code ParenExpression}
 	 * labeled alternative in {@link Jinja2Parser#primary}.
 	 * @param ctx the parse tree

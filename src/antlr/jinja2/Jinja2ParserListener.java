@@ -362,6 +362,16 @@ public interface Jinja2ParserListener extends ParseTreeListener {
 	 */
 	void exitArguments(Jinja2Parser.ArgumentsContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link Jinja2Parser#argument}.
+	 * @param ctx the parse tree
+	 */
+	void enterArgument(Jinja2Parser.ArgumentContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link Jinja2Parser#argument}.
+	 * @param ctx the parse tree
+	 */
+	void exitArgument(Jinja2Parser.ArgumentContext ctx);
+	/**
 	 * Enter a parse tree produced by the {@code ParenExpression}
 	 * labeled alternative in {@link Jinja2Parser#primary}.
 	 * @param ctx the parse tree

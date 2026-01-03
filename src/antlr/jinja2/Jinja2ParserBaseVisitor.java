@@ -244,6 +244,13 @@ public class Jinja2ParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> impl
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
+	@Override public T visitArgument(Jinja2Parser.ArgumentContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
 	@Override public T visitParenExpression(Jinja2Parser.ParenExpressionContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}

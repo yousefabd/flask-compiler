@@ -89,7 +89,7 @@ expr_stmt
     ;
 
 condlist
-    : cond (COMMA cond)* COMMA? // should not be empty
+    : cond (COMMA cond)* COMMA?
     ;
 
 cond
@@ -130,7 +130,7 @@ atom
     : OPEN_PAREN expr CLOSE_PAREN       #ParenAtom
     | OPEN_BRACKET list? CLOSE_BRACKET  #ListAtom
     | OPEN_BRACE dicorset? CLOSE_BRACE  #DicOrSetAtom
-    | ID                                #IDAtom
+    | GLOBAL? ID                                #IDAtom   // edited
     | TRUE                              #BoolAtom
     | FALSE                             #BoolAtom
     | MINUS? INTEGER                    #IntegerAtom

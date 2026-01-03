@@ -93,7 +93,8 @@ def add_product():
 
         # Add to products list
         products.append(new_product)
-        flash(f'Product "{new_product["name"]}" added successfully!')
+        message = 'Product "' + new_product["name"] + '" added successfully!'
+        flash(message)
         return redirect(url_for('view_products'))
 
     # GET request - show form
@@ -108,7 +109,8 @@ def delete_product(product_id):
     if product:
         # Remove product from list 
         remove_product_by_id(product_id)
-        flash(f'Product "{product["name"]}" deleted successfully!')
+        message = 'Product "' + new_product["name"] + '" deleted successfully!'
+        flash(message)
 
     return redirect(url_for('view_products'))
 

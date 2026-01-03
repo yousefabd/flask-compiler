@@ -1,5 +1,7 @@
 import antlr.jinja2.Jinja2Lexer;
 import antlr.jinja2.Jinja2Parser;
+import jinja2.models.root.Template;
+import jinja2.visitor.Jinja2Visitor;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -73,14 +75,23 @@ public class Main {
         ParseTree tree = parser.template();
 
         // اطبع الشجرة
-        System.out.println(tree.toStringTree(parser));
+        // System.out.println(tree.toStringTree(parser));
+
+        Jinja2Visitor visitor = new Jinja2Visitor();
+        Template template = (Template) visitor.visit(tree);
+
+
+
+        // System.out.println("AST:\n" + template.toString());
+        jinja2.printer.ASTPrinter printer = new jinja2.printer.ASTPrinter();
+        System.out.println("AST:");
+        printer.printTree(template);
 
     }
 
-
     public static void main(String[] args) throws IOException 
     {
-        // python();
-        jinja();
+        python();
+        // jinja();
     }
 }
