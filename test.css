@@ -1,4 +1,5 @@
 div, span.highlight, #main {
     color: red;
     background-color: #ffcc00;
+    --main-padding: 10px;
 }

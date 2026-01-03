@@ -23,60 +23,68 @@ public class AntlrToRuleset extends CSSParserBaseVisitor<Node> {
     @Override
     public ValuePart visitValuePart(CSSParser.ValuePartContext ctx) {
         int line = ctx.getStart().getLine();
-        if(ctx.IDENT() != null)
-            return new IdentifierValue(ctx.IDENT().getText(),line);
-        if (ctx.NUMBER() != null) {
+
+        if (ctx.IDENT() != null)
+            return new IdentifierValue(ctx.IDENT().getText(), line);
+
+        if (ctx.NUMBER() != null)
             return new NumberValue(ctx.NUMBER().getText(), line);
-        }
+
         if (ctx.DIMENSION() != null) {
             String raw = ctx.DIMENSION().getText();
-
-            // split number + unit
             int i = 0;
             while (i < raw.length() &&
                     (Character.isDigit(raw.charAt(i)) || raw.charAt(i) == '.')) {
                 i++;
             }
 
-            String numberPart = raw.substring(0, i);
-            String unitPart = raw.substring(i);
-
             return new DimensionValue(
-                    new NumberValue(numberPart,line),
-                    unitPart,
+                    new NumberValue(raw.substring(0, i), line),
+                    raw.substring(i),
                     line
             );
         }
-        if (ctx.PERCENT() != null) {
-            String raw = ctx.PERCENT().getText(); // e.g. "50%"
-            String numberPart = raw.substring(0, raw.length() - 1);
 
+        if (ctx.PERCENT() != null) {
+            String raw = ctx.PERCENT().getText();
             return new PercentValue(
-                    new NumberValue(numberPart,line),
+                    new NumberValue(raw.substring(0, raw.length() - 1), line),
                     line
             );
         }
-        if (ctx.HEX() != null) {
-            return new HexColorValue(ctx.HEX().getText(),line);
-        }
-        if (ctx.STRING() != null) {
-            return new StringValue(ctx.STRING().getText(),line);
-        }
-        if(ctx.function_() != null){
+
+        if (ctx.HEX() != null)
+            return new HexColorValue(ctx.HEX().getText(), line);
+
+        if (ctx.STRING() != null)
+            return new StringValue(ctx.STRING().getText(), line);
+
+        if (ctx.variable() != null)
+            return new VariableValue(
+                    ctx.variable().IDENT().getText(),
+                    line
+            );
+
+        if (ctx.function_() != null)
             return visitFunction_(ctx.function_());
-        }
-        return null;
+
+        throw new IllegalStateException("Unknown valuePart at line " + line);
     }
 
     @Override
     public FunctionValue visitFunction_(CSSParser.Function_Context ctx) {
         int line = ctx.getStart().getLine();
-        IdentifierValue name = new IdentifierValue(ctx.getText(),line);
-        List<ValuePart> valueParts = List.of();
-        if(ctx.value()!= null){
-            valueParts = visitValue(ctx.value()).getValueParts();
+
+        IdentifierValue name =
+                new IdentifierValue(ctx.IDENT().getText(), line);
+
+        List<ValuePart> arguments = List.of();
+
+        if (ctx.value() != null) {
+            arguments = visitValue(ctx.value()).getValueParts();
         }
-        return new FunctionValue(name,valueParts,line);
+
+        return new FunctionValue(name, arguments, line);
     }
 
     //Value border: (1px circular red) <---

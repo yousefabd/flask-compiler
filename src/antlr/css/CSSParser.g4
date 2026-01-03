@@ -91,16 +91,20 @@ value
 
 valuePart
     : IDENT
-    | NUMBER
+    | DASH? NUMBER
     | PERCENT
-    | DIMENSION
+    | DASH? DIMENSION
     | STRING
     | HEX
+    | variable
     | function_
     ;
 
 function_
-    : IDENT LPAREN value? RPAREN
+    : IDENT ws LPAREN ws value? ws RPAREN ws
+    ;
+variable
+    : DOUBLEDASH IDENT
     ;
 
 ws

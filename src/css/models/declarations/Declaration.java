@@ -29,4 +29,7 @@ public class Declaration extends Node {
     public List<Node> getChildren() {
         return List.of(property,value);
     }
+    public boolean isVariable() {
+        return property.getName().startsWith("--");
+    }
 }

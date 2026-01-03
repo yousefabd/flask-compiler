@@ -162,6 +162,12 @@ public interface CSSParserVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitFunction_(CSSParser.Function_Context ctx);
 	/**
+	 * Visit a parse tree produced by {@link CSSParser#variable}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitVariable(CSSParser.VariableContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link CSSParser#ws}.
 	 * @param ctx the parse tree
 	 * @return the visitor result

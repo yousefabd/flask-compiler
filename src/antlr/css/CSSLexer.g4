@@ -21,6 +21,7 @@ PREFIX  : '^=' ;
 SUFFIX  : '$=' ;
 SUBSTR  : '*=' ;
 DOUBLEDASH : '--' ;
+DASH      : '-' ;
 
 /* --- Literals --- */
 STRING

@@ -262,6 +262,16 @@ public interface CSSParserListener extends ParseTreeListener {
 	 */
 	void exitFunction_(CSSParser.Function_Context ctx);
 	/**
+	 * Enter a parse tree produced by {@link CSSParser#variable}.
+	 * @param ctx the parse tree
+	 */
+	void enterVariable(CSSParser.VariableContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link CSSParser#variable}.
+	 * @param ctx the parse tree
+	 */
+	void exitVariable(CSSParser.VariableContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link CSSParser#ws}.
 	 * @param ctx the parse tree
 	 */
