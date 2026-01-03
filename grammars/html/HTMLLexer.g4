@@ -1,5 +1,9 @@
 lexer grammar HTMLLexer;
 
+@header{
+    package antlr.html;
+}
+
 // Comments
 COMMENT: '<!--' .*? '-->'  -> skip;
 
@@ -26,6 +30,8 @@ TAG_ACCEPTED_NAME
     | 'a' | 'img'
     | 'form' | 'input' | 'label'
     | 'h1' | 'h2' | 'h3'
+    | 'meta' | 'title' | 'strong' | 'textarea'
+    | 'link' | 'button'
     ;
 CHAR_NAME: NameStartChar NameChar*;
 

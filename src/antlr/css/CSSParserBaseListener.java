@@ -1,5 +1,7 @@
-// Generated from C:/Users/youus/IdeaProjects/flask-compiler/src/antlr/css/CSSParser.g4 by ANTLR 4.13.2
-package antlr.css;
+// Generated from C:/Users/yahia/IdeaProjects/flaskcomp/grammars/css/CSSParser.g4 by ANTLR 4.13.2
+
+    package antlr.css;
+
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ErrorNode;

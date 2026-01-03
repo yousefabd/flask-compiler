@@ -1,5 +1,7 @@
 parser grammar CSSParser;
-
+@header{
+    package antlr.css;
+}
 options { tokenVocab=CSSLexer; }
 
 stylesheet
@@ -86,7 +88,7 @@ property
     ;
 
 value
-    : valuePart (ws valuePart)*
+    : valuePart ((ws | ws COMMA ws) valuePart)*
     ;
 
 valuePart

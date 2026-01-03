@@ -1,5 +1,7 @@
-// Generated from C:/Users/youus/IdeaProjects/flask-compiler/src/antlr/css/CSSLexer.g4 by ANTLR 4.13.2
-package antlr.css;
+// Generated from C:/Users/yahia/IdeaProjects/flaskcomp/grammars/css/CSSLexer.g4 by ANTLR 4.13.2
+
+    package antlr.css;
+
 import org.antlr.v4.runtime.Lexer;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.Token;

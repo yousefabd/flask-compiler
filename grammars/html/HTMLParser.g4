@@ -1,5 +1,9 @@
 parser grammar HTMLParser;
 
+@header{
+    package antlr.html;
+}
+
 options {
     tokenVocab=HTMLLexer;
 }

@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html> -->
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>
         {% if page == 'home' %}Home - Product Store
         {% elif page == 'products' %}All Products
@@ -12,7 +12,7 @@
         {% else %}Product Store
         {% endif %}
     </title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}"/>
 </head>
 
 <body>
@@ -109,17 +109,17 @@
         <form method="POST" class="form-container">
             <div class="form-group">
                 <label for="name">Product Name:</label>
-                <input type="text" id="name" name="name" required>
+                <input type="text" id="name" name="name" required/>
             </div>
 
             <div class="form-group">
                 <label for="price">Price ($):</label>
-                <input type="number" id="price" name="price" step="0.01" min="0" required>
+                <input type="number" id="price" name="price" step="0.01" min="0" required/>
             </div>
 
             <div class="form-group">
                 <label for="image">Image Filename:</label>
-                <input type="text" id="image" name="image" placeholder="e.g., product.jpg" required>
+                <input type="text" id="image" name="image" placeholder="e.g., product.jpg" required/>
             </div>
 
             <div class="form-group">

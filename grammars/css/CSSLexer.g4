@@ -1,5 +1,7 @@
 lexer grammar CSSLexer;
-
+@header{
+    package antlr.css;
+}
 /* --- Symbols --- */
 LBRACE  : '{' ;
 RBRACE  : '}' ;

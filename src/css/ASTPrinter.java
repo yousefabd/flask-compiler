@@ -10,7 +10,7 @@ public final class ASTPrinter {
 
     private static void print(Node node, int depth) {
         System.out.println(
-                "  ".repeat(depth) +
+                "|   ".repeat(depth) +
                         node.getNodeName() +
                         " (line " + node.getLine() + ")"
         );
