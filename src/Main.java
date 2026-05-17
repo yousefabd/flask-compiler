@@ -1,5 +1,9 @@
 // cSpell: disable
 
+import antlr.html.HTMLLexer;
+import antlr.html.HTMLParser;
+import jinja2.models.TemplateNode;
+import jinja2.visitor.AntlrToTemplateAstVisitor;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -17,8 +21,7 @@ import antlr.css.CSSParser;
 import css.AntlrToStyleSheet;
 import css.models.Stylesheet;
 
-import jinja2.models.root.Template;
-import jinja2.visitor.Jinja2Visitor;
+//import jinja2.models.root.Template;
 
 import python.models.root.Program;
 import python.printer.ASTPrinter;
@@ -33,7 +36,7 @@ public class Main {
 
     public static void html() throws IOException
     {
-        HTMLApp.html("tests/templates/index.html");
+       // HTMLApp.html("tests/templates/index.html");
     }
 
     public static void css() throws IOException
@@ -86,17 +89,17 @@ public class Main {
     public static void jinja() throws IOException 
     {
 
-        CharStream input = CharStreams.fromFileName("tests/templates/index.html");
-        Jinja2Lexer lexer = new Jinja2Lexer(input);
+        CharStream input = CharStreams.fromFileName("tests/templates/index2.html");
+        HTMLLexer lexer = new HTMLLexer(input);
         CommonTokenStream tokens = new CommonTokenStream(lexer);
-        Jinja2Parser parser = new Jinja2Parser(tokens);
+        HTMLParser parser = new HTMLParser(tokens);
 
         // return the context of template
         ParseTree tree = parser.template();
     
         // build the ast now
-        Jinja2Visitor visitor = new Jinja2Visitor();
-        Template template = (Template) visitor.visit(tree);
+        AntlrToTemplateAstVisitor visitor = new AntlrToTemplateAstVisitor();
+        TemplateNode template = (TemplateNode) visitor.visit(tree);
 
         // print the ast for jinja2
         jinja2.printer.ASTPrinter printer = new jinja2.printer.ASTPrinter();
@@ -108,8 +111,7 @@ public class Main {
     public static void main(String[] args) throws IOException 
     {
         //python();
-        //jinja();
+        jinja();
         //css();
-        html();
     }
 }
