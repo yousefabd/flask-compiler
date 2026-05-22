@@ -34,4 +34,13 @@ public class HtmlAttributeNode extends TemplateNode {
         return valueParts;
     }
 
+    @Override
+    public String describe() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(super.describe()).append(" ");
+        for(var valuePart : valueParts){
+            sb.append(valuePart.describe()).append(" ");
+        }
+        return sb.toString();
+    }
 }

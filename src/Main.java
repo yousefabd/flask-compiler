@@ -3,6 +3,7 @@
 import antlr.html.HTMLLexer;
 import antlr.html.HTMLParser;
 import jinja2.models.TemplateNode;
+import jinja2.models.file.TemplateFile;
 import jinja2.visitor.AntlrToTemplateAstVisitor;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
@@ -29,7 +30,9 @@ import python.symbol_table.SymbolTable;
 import python.symbol_table.SymbolTableBuilder;
 import python.visitor.PythonVisitor;
 
-import java.io.IOException; 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class Main {
@@ -99,13 +102,18 @@ public class Main {
     
         // build the ast now
         AntlrToTemplateAstVisitor visitor = new AntlrToTemplateAstVisitor();
-        TemplateNode template = (TemplateNode) visitor.visit(tree);
+        TemplateFile template = (TemplateFile) visitor.visit(tree);
 
         // print the ast for jinja2
         jinja2.printer.ASTPrinter printer = new jinja2.printer.ASTPrinter();
         System.out.println("AST:");
-        printer.printTree(template);
+        //printer.printTree(template);
 
+        jinja2.symbol_table.SymbolTable symbolTable = new jinja2.symbol_table.SymbolTable();
+        List<String> errors = new ArrayList<>();
+        jinja2.symbol_table.SymbolTableBuilder stb = new jinja2.symbol_table.SymbolTableBuilder(symbolTable,errors);
+        stb.build(template);
+        System.out.println(symbolTable.toString());
     }
 
     public static void main(String[] args) throws IOException 

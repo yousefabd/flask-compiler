@@ -30,4 +30,15 @@ public class HTMLVoidElementNode extends HTMLNode {
     public List<? extends TemplateNode> getChildren() {
         return List.of();
     }
+
+    @Override
+    public String describe() {
+        // super.describe() + attributes
+        StringBuilder sb = new StringBuilder();
+        sb.append(super.describe());
+        for (HtmlAttributeNode attr : attributes) {
+            sb.append(" ").append(attr.describe());
+        }
+        return sb.toString();
+    }
 }

@@ -1,8 +1,8 @@
 package jinja2.visitor;
 
+import antlr.html.HTMLLexer;
 import antlr.html.HTMLParser;
 import antlr.html.HTMLParserBaseVisitor;
-import antlr.jinja2.Jinja2Parser;
 import jinja2.models.TemplateNode;
 import jinja2.models.attribute.HtmlAttributeNode;
 import jinja2.models.attribute.valuepart.AttributeExpressionNode;
@@ -20,6 +20,9 @@ import jinja2.models.expression.literal.NumberLiteralNode;
 import jinja2.models.expression.literal.StringLiteralNode;
 import jinja2.models.file.TemplateFile;
 import jinja2.models.statement.*;
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -170,10 +173,16 @@ public class AntlrToTemplateAstVisitor extends HTMLParserBaseVisitor<TemplateNod
      * stub carrying the raw expression text, so the tree is structurally complete even if the
      * expression is not yet deeply parsed.
      */
+    private ExpressionNode parseAttributeExpression(String fullToken, int line) {
+        CharStream input = CharStreams.fromString(fullToken);
+        HTMLLexer lexer = new HTMLLexer(input);
+        HTMLParser parser = new HTMLParser(new CommonTokenStream(lexer));
+        OutputNode output = visitVariable(parser.variable());
+        return output.getExpression();
+    }
     private List<AttributeValuePartNode> parseAttributeValueParts(String raw, int line) {
 
         List<AttributeValuePartNode> parts = new ArrayList<>();
-
         // Matches both {{ expr }} and {{- expr -}} (whitespace-control variants)
         Pattern exprPattern = Pattern.compile("\\{\\{-?\\s*(.*?)\\s*-?}}");
         Matcher matcher = exprPattern.matcher(raw);
@@ -189,7 +198,7 @@ public class AntlrToTemplateAstVisitor extends HTMLParserBaseVisitor<TemplateNod
 
             // TODO: feed matcher.group(1) through the Jinja expression sub-parser
             // to produce a proper ExpressionNode instead of an IdentifierNode stub.
-            ExpressionNode exprStub = new IdentifierNode(matcher.group(1).trim(), line);
+            ExpressionNode exprStub = parseAttributeExpression(matcher.group(0).trim(), line);
             parts.add(new AttributeExpressionNode(exprStub, line));
 
             last = matcher.end();
@@ -198,7 +207,7 @@ public class AntlrToTemplateAstVisitor extends HTMLParserBaseVisitor<TemplateNod
         if (last < raw.length()) {
             parts.add(new AttributeTextNode(raw.substring(last), line));
         }
-
+        System.out.println("Parsed attribute value parts: " + parts);
         return parts;
     }
 
@@ -256,7 +265,7 @@ public class AntlrToTemplateAstVisitor extends HTMLParserBaseVisitor<TemplateNod
 
         // Grammar:
         //   OPEN_TAG IF expr CLOSE_TAG body          ← if branch
-        //   (OPEN_TAG ELIF expr CLOSE_TAG body)*     ← 0..n elif branches
+        //   (OPEN_TAG ELIF expr CLOSE_TAG body)*     ← 0.n elif branches
         //   (OPEN_TAG ELSE CLOSE_TAG body)?          ← optional else branch
         //   OPEN_TAG ENDIF CLOSE_TAG
         //
