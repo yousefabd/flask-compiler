@@ -1,0 +1,48 @@
+{% set site_name = "My Store" %}
+{% set products = ["laptop", "phone", "tablet"] %}
+{% set page = "store" %}
+
+{% macro render_badge(label, color) %}
+<span class="{{ color }}">{{ label }}</span>
+{% endmacro %}
+
+{% macro render_card(title, price, discount=0) %}
+<div class="card">
+    <h2>{{ title }}</h2>
+    <p>{{ price }}</p>
+    {% if discount %}
+    <p>Sale: {{ discount }}</p>
+    {% endif %}
+    {{ render_badge(title, "blue") }}
+</div>
+{% endmacro %}
+
+{% block header %}
+<h1>{{ site_name }}</h1>
+{% endblock %}
+
+{% block content %}
+
+{% set count = 0 %}
+
+{% for product in products %}
+
+{% set label = product %}
+
+{{ render_card(label, count) }}
+
+{% for tag in products %}
+<span>{{ tag }}</span>
+{% set inner = tag %}
+<p>{{ inner }}</p>
+{% endfor %}
+
+{% endfor %}
+
+{% if page %}
+<p>{{ page }}</p>
+{% set note = site_name %}
+<p>{{ note }}</p>
+{% endif %}
+
+{% endblock %}

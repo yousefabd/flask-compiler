@@ -8,33 +8,27 @@ import jinja2.models.expression.IdentifierNode;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ForStatementNode extends StatementNode {
+public class ForStatementNode extends BodyStatementNode  {
 
     private final IdentifierNode variable;
     private final ExpressionNode iterable;
-    private final List<ContentNode> body;
 
-    public ForStatementNode(
-            IdentifierNode variable,
-            ExpressionNode iterable,
-            List<ContentNode> body,
-            int lineNumber) {
-        super(lineNumber);
+    public ForStatementNode(IdentifierNode variable, ExpressionNode iterable,
+                            List<ContentNode> body, int lineNumber) {
+        super(body, lineNumber);
         this.variable = variable;
         this.iterable = iterable;
-        this.body     = body;
     }
 
     public IdentifierNode   getVariable() { return variable; }
     public ExpressionNode   getIterable() { return iterable; }
-    public List<ContentNode> getBody()    { return body; }
 
     @Override
     public List<? extends TemplateNode> getChildren() {
         List<TemplateNode> children = new ArrayList<>();
         children.add(variable);
         children.add(iterable);
-        children.addAll(body);
+        children.addAll(super.getBody());
         return children;
     }
 

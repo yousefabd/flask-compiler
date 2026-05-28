@@ -4,6 +4,8 @@ import antlr.html.HTMLLexer;
 import antlr.html.HTMLParser;
 import jinja2.models.TemplateNode;
 import jinja2.models.file.TemplateFile;
+import jinja2.symbol_table.semantic_rules.ISemanticRule;
+import jinja2.symbol_table.semantic_rules.UlLiRule;
 import jinja2.visitor.AntlrToTemplateAstVisitor;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
@@ -92,7 +94,7 @@ public class Main {
     public static void jinja() throws IOException 
     {
 
-        CharStream input = CharStreams.fromFileName("tests/templates/index.html");
+        CharStream input = CharStreams.fromFileName("tests/templates/ulli.html");
         HTMLLexer lexer = new HTMLLexer(input);
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         HTMLParser parser = new HTMLParser(tokens);
@@ -111,8 +113,18 @@ public class Main {
 
         jinja2.symbol_table.SymbolTable symbolTable = new jinja2.symbol_table.SymbolTable();
         List<String> errors = new ArrayList<>();
-        jinja2.symbol_table.SymbolTableBuilder stb = new jinja2.symbol_table.SymbolTableBuilder(symbolTable,errors);
+        List<ISemanticRule> semanticRules = new ArrayList<>();
+        semanticRules.add(new UlLiRule());
+        jinja2.symbol_table.SymbolTableBuilder stb = new jinja2.symbol_table.SymbolTableBuilder(
+                symbolTable,errors,semanticRules);
         stb.build(template);
+        if(!errors.isEmpty()){
+            System.out.println("Semantic Errors:");
+            for(String error : errors){
+                System.out.println(error);
+            }
+            return;
+        }
         System.out.println(symbolTable.toString());
     }
 

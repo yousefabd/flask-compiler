@@ -7,20 +7,25 @@ import jinja2.models.content.html.*;
 import jinja2.models.expression.*;
 import jinja2.models.file.TemplateFile;
 import jinja2.models.statement.*;
+import jinja2.symbol_table.semantic_rules.ISemanticRule;
 
 import java.util.List;
 
 public class SymbolTableBuilder {
     private final SymbolTable  symbolTable;
     private final List<String> errors;
+    private final List<ISemanticRule> semanticRules;
 
-    public SymbolTableBuilder(SymbolTable symbolTable, List<String> errors) {
+    public SymbolTableBuilder(SymbolTable symbolTable, List<String> errors, List<ISemanticRule> semanticRules) {
         this.symbolTable = symbolTable;
         this.errors      = errors;
+        this.semanticRules = semanticRules;
     }
 
     public void build(TemplateFile template) {
         visitTemplateFile(template);
+        for (ISemanticRule rule : semanticRules)
+            rule.validate(template, symbolTable, errors);
     }
 
     // ─────────────────────────────────────────────────────────────

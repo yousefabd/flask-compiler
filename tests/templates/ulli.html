@@ -1,0 +1,53 @@
+{% set items = ["a", "b", "c"] %}
+{% set flag = true %}
+
+<!-- valid: for inside ul producing li -->
+<ul>
+    {% for item in items %}
+    <li>{{ item }}</li>
+    {% endfor %}
+</ul>
+
+<!-- invalid: for inside ul producing div -->
+<ul>
+    {% for item in items %}
+    <div>{{ item }}</div>
+    {% endfor %}
+</ul>
+
+<!-- valid: if inside ul producing li -->
+<ul>
+    {% if flag %}
+    <li>shown</li>
+    {% endif %}
+</ul>
+
+<!-- invalid: if inside ul producing div -->
+<ul>
+    {% if flag %}
+    <div>wrong</div>
+    {% endif %}
+</ul>
+
+<!-- invalid: direct html child that isn't li -->
+<ul>
+    <div>wrong</div>
+</ul>
+
+<!-- valid: nested jinja two levels deep -->
+<ul>
+    {% if flag %}
+    {% for item in items %}
+    <li>{{ item }}</li>
+    {% endfor %}
+    {% endif %}
+</ul>
+
+<!-- invalid: nested jinja two levels deep with wrong element -->
+<ul>
+    {% if flag %}
+    {% for item in items %}
+    <span>{{ item }}</span>
+    {% endfor %}
+    {% endif %}
+</ul>

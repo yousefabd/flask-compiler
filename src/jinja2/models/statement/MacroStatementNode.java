@@ -6,32 +6,25 @@ import jinja2.models.content.ContentNode;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MacroStatementNode extends StatementNode {
+public class MacroStatementNode extends BodyStatementNode {
 
     private final String            macroName;
     private final List<ParameterNode> parameters;
-    private final List<ContentNode>   body;
-
-    public MacroStatementNode(
-            String macroName,
-            List<ParameterNode> parameters,
-            List<ContentNode> body,
-            int lineNumber) {
-        super(lineNumber);
+    public MacroStatementNode(String macroName, List<ParameterNode> parameters,
+                              List<ContentNode> body, int lineNumber) {
+        super(body, lineNumber);
         this.macroName  = macroName;
         this.parameters = parameters;
-        this.body       = body;
     }
 
-    public String              getMacroName()  { return macroName; }
-    public List<ParameterNode> getParameters() { return parameters; }
-    public List<ContentNode>   getBody()       { return body; }
+    public String getMacroName()                   { return macroName; }
+    public List<ParameterNode> getParameters()     { return parameters; }
 
     @Override
     public List<? extends TemplateNode> getChildren() {
         List<TemplateNode> children = new ArrayList<>();
         children.addAll(parameters);
-        children.addAll(body);
+        children.addAll(super.getBody());
         return children;
     }
 
