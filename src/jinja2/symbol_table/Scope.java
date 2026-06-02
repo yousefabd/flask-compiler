@@ -27,6 +27,11 @@ public class Scope {
         return true;
     }
 
+    /** Unconditionally set a symbol — used for Jinja2 variable reassignment. */
+    public void overwrite(Symbol symbol) {
+        symbols.put(symbol.getName(), symbol);
+    }
+
     public Symbol resolveLocal(String name) {
         return symbols.get(name);
     }

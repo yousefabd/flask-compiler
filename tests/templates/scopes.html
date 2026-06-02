@@ -1,48 +1,54 @@
 {% set site_name = "My Store" %}
-{% set products = ["laptop", "phone", "tablet"] %}
-{% set page = "store" %}
+{% set theme = "dark" %}
 
-{% macro render_badge(label, color) %}
-<span class="{{ color }}">{{ label }}</span>
-{% endmacro %}
+{% macro render_user(name, role="guest") %}
+<div>
+    {{ name }}
+    {{ role }}
 
-{% macro render_card(title, price, discount=0) %}
-<div class="card">
-    <h2>{{ title }}</h2>
-    <p>{{ price }}</p>
-    {% if discount %}
-    <p>Sale: {{ discount }}</p>
+    {% if role %}
+    {% set badge = role %}
+    {{ badge }}
     {% endif %}
-    {{ render_badge(title, "blue") }}
 </div>
 {% endmacro %}
 
-{% block header %}
-<h1>{{ site_name }}</h1>
-{% endblock %}
-
 {% block content %}
 
-{% set count = 0 %}
+{% set page_title = site_name %}
 
-{% for product in products %}
+<section class="{{ theme }}">
+    <h1>{{ page_title }}</h1>
 
-{% set label = product %}
+    {% for user in ["Alice", "Bob"] %}
 
-{{ render_card(label, count) }}
+    {% set display_name = user %}
 
-{% for tag in products %}
-<span>{{ tag }}</span>
-{% set inner = tag %}
-<p>{{ inner }}</p>
-{% endfor %}
+    <article>
+        {{ render_user(display_name) }}
 
-{% endfor %}
+        {% for tag in ["new", "vip"] %}
 
-{% if page %}
-<p>{{ page }}</p>
-{% set note = site_name %}
-<p>{{ note }}</p>
-{% endif %}
+        {% set label = tag %}
+
+        <span>{{ label }}</span>
+
+        {% if label %}
+        {% set inner_note = label %}
+        <small>{{ inner_note }}</small>
+        {% endif %}
+
+        {% endfor %}
+
+    </article>
+
+    {% endfor %}
+
+    {% if theme %}
+    {% set footer_text = site_name %}
+    <footer>{{ footer_text }}</footer>
+    {% endif %}
+
+</section>
 
 {% endblock %}

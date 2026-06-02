@@ -21,7 +21,7 @@ import python.models.funcdef.Parameter;
 
 public class SymbolTableBuilder {
 
-    private SymbolTable symbolTable;
+    private final SymbolTable symbolTable;
 
     public SymbolTableBuilder(SymbolTable symbolTable) {
         this.symbolTable = symbolTable;

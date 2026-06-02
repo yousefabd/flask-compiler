@@ -13,12 +13,13 @@ import java.util.List;
 
 public class SymbolTableBuilder {
     private final SymbolTable  symbolTable;
-    private final List<String> errors;
+    private final List<CompilerError> errors;
     private final List<ISemanticRule> semanticRules;
 
-    public SymbolTableBuilder(SymbolTable symbolTable, List<String> errors, List<ISemanticRule> semanticRules) {
-        this.symbolTable = symbolTable;
-        this.errors      = errors;
+    public SymbolTableBuilder(SymbolTable symbolTable, List<CompilerError> errors,
+                              List<ISemanticRule> semanticRules) {
+        this.symbolTable   = symbolTable;
+        this.errors        = errors;
         this.semanticRules = semanticRules;
     }
 
@@ -72,14 +73,19 @@ public class SymbolTableBuilder {
 
         symbolTable.enterScope("for", ScopeKind.FOR);
 
+        // Seed the magic `loop` variable that Jinja2 injects in every for-body
+        symbolTable.define(new Symbol("loop", SymbolKind.LOOP_VAR, fs.getLineNumber()));
+
         Symbol loopVar = new Symbol(
                 fs.getVariable().getName(),
                 SymbolKind.LOOP_VAR,
                 fs.getLineNumber()
         );
         if (!symbolTable.define(loopVar))
-            errors.add("Duplicate variable '" + loopVar.getName()
-                    + "' at line " + fs.getLineNumber());
+            errors.add(new CompilerError(
+                    CompilerError.Kind.DUPLICATE_VARIABLE,
+                    "Duplicate loop variable '" + loopVar.getName() + "'",
+                    fs.getLineNumber()));
 
         for (ContentNode child : fs.getBody())
             visitContent(child);
@@ -99,14 +105,13 @@ public class SymbolTableBuilder {
     }
 
     private void visitSetStatement(SetStatementNode ss) {
-        Symbol sym = new Symbol(
+        // In Jinja2, {% set x = ... %} is assignment — re-setting an existing
+        // variable is valid. We overwrite rather than reject.
+        symbolTable.overwrite(new Symbol(
                 ss.getVariableName(),
                 SymbolKind.VARIABLE,
                 ss.getLineNumber()
-        );
-        if (!symbolTable.define(sym))
-            errors.add("Duplicate variable '" + ss.getVariableName()
-                    + "' at line " + ss.getLineNumber());
+        ));
 
         if (ss.isBlock()) {
             for (ContentNode child : ss.getBody())
@@ -125,26 +130,31 @@ public class SymbolTableBuilder {
                 ms.getParameters()
         );
         if (!symbolTable.define(macroSym))
-            errors.add("Duplicate macro '" + ms.getMacroName()
-                    + "' at line " + ms.getLineNumber());
+            errors.add(new CompilerError(
+                    CompilerError.Kind.DUPLICATE_MACRO,
+                    "Duplicate macro '" + ms.getMacroName() + "'",
+                    ms.getLineNumber()));
+
+        // Default values are evaluated in the CALLER's scope, so visit them
+        // before entering the macro scope.
+        for (ParameterNode param : ms.getParameters())
+            if (param.hasDefault())
+                visitExpression(param.getDefaultValue());
 
         symbolTable.enterScope("macro " + ms.getMacroName(), ScopeKind.MACRO);
 
         for (ParameterNode param : ms.getParameters()) {
-            // default value is resolved in the outer scope — visit before entering
-            // so we define params after
             Symbol paramSym = new Symbol(
                     param.getName(),
                     SymbolKind.PARAMETER,
                     param.getLineNumber()
             );
             if (!symbolTable.define(paramSym))
-                errors.add("Duplicate parameter '" + param.getName()
-                        + "' in macro '" + ms.getMacroName()
-                        + "' at line " + param.getLineNumber());
-
-            if (param.hasDefault())
-                visitExpression(param.getDefaultValue());
+                errors.add(new CompilerError(
+                        CompilerError.Kind.DUPLICATE_PARAMETER,
+                        "Duplicate parameter '" + param.getName()
+                                + "' in macro '" + ms.getMacroName() + "'",
+                        param.getLineNumber()));
         }
 
         for (ContentNode child : ms.getBody())
@@ -154,15 +164,17 @@ public class SymbolTableBuilder {
     }
 
     private void visitBlockStatement(BlockStatementNode bs) {
-        // blocks are always template-level names regardless of nesting depth
+        // Blocks are always template-level names regardless of nesting depth.
         Symbol blockSym = new Symbol(
                 bs.getBlockName(),
                 SymbolKind.BLOCK,
                 bs.getLineNumber()
         );
-        if (!symbolTable.getTemplateScope().define(blockSym))
-            errors.add("Duplicate block '" + bs.getBlockName()
-                    + "' at line " + bs.getLineNumber());
+        if (!symbolTable.defineInTemplateScope(blockSym))
+            errors.add(new CompilerError(
+                    CompilerError.Kind.DUPLICATE_BLOCK,
+                    "Duplicate block '" + bs.getBlockName() + "'",
+                    bs.getLineNumber()));
 
         symbolTable.enterScope("block " + bs.getBlockName(), ScopeKind.BLOCK);
 
@@ -234,8 +246,27 @@ public class SymbolTableBuilder {
     }
 
     private void visitIdentifier(IdentifierNode id) {
-        if (symbolTable.resolve(id.getName()) == null)
-            errors.add("Undefined variable '" + id.getName()
-                    + "' at line " + id.getLineNumber());
+
+
+        Symbol visible = symbolTable.resolve(id.getName());
+
+        if (visible != null)
+            return;
+
+        Symbol declaredSomewhere =
+                symbolTable.resolveGlobal(id.getName());
+
+        if (declaredSomewhere != null) {
+            errors.add(new CompilerError(
+                    CompilerError.Kind.SCOPE,
+                    "Variable '" + id.getName() + "' is not visible in this scope",
+                    id.getLineNumber()));
+        }
+        else {
+            errors.add(new CompilerError(
+                    CompilerError.Kind.UNDEFINED_VARIABLE,
+                    "Undefined variable '" + id.getName() + "'",
+                    id.getLineNumber()));
+        }
     }
 }

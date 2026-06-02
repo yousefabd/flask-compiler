@@ -1,0 +1,14 @@
+{% set x = "global" %}
+
+{% for item in [1] %}
+{% set y = item %}
+{% endfor %}
+
+{% macro test() %}
+{% set z = x %}
+{% endmacro %}
+
+{{ x }}
+{{ y }}
+{{ z }}
+{{ banana }}

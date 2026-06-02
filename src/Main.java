@@ -4,6 +4,7 @@ import antlr.html.HTMLLexer;
 import antlr.html.HTMLParser;
 import jinja2.models.TemplateNode;
 import jinja2.models.file.TemplateFile;
+import jinja2.symbol_table.CompilerError;
 import jinja2.symbol_table.semantic_rules.ISemanticRule;
 import jinja2.symbol_table.semantic_rules.UlLiRule;
 import jinja2.visitor.AntlrToTemplateAstVisitor;
@@ -94,7 +95,7 @@ public class Main {
     public static void jinja() throws IOException 
     {
 
-        CharStream input = CharStreams.fromFileName("tests/templates/ulli.html");
+        CharStream input = CharStreams.fromFileName("tests/templates/variables.html");
         HTMLLexer lexer = new HTMLLexer(input);
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         HTMLParser parser = new HTMLParser(tokens);
@@ -112,7 +113,7 @@ public class Main {
         //printer.printTree(template);
 
         jinja2.symbol_table.SymbolTable symbolTable = new jinja2.symbol_table.SymbolTable();
-        List<String> errors = new ArrayList<>();
+        List<CompilerError> errors = new ArrayList<>();
         List<ISemanticRule> semanticRules = new ArrayList<>();
         semanticRules.add(new UlLiRule());
         jinja2.symbol_table.SymbolTableBuilder stb = new jinja2.symbol_table.SymbolTableBuilder(
@@ -120,7 +121,7 @@ public class Main {
         stb.build(template);
         if(!errors.isEmpty()){
             System.out.println("Semantic Errors:");
-            for(String error : errors){
+            for(CompilerError error : errors){
                 System.out.println(error);
             }
             return;

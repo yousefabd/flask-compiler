@@ -7,6 +7,7 @@ import jinja2.models.content.html.HTMLNormalElementNode;
 import jinja2.models.content.html.HTMLVoidElementNode;
 import jinja2.models.file.TemplateFile;
 import jinja2.models.statement.*;
+import jinja2.symbol_table.CompilerError;
 import jinja2.symbol_table.SymbolTable;
 
 import java.util.List;
@@ -15,7 +16,7 @@ import java.util.List;
 public class UlLiRule implements ISemanticRule {
 
     @Override
-    public void validate(TemplateFile root, SymbolTable table, List<String> errors) {
+    public void validate(TemplateFile root, SymbolTable table, List<CompilerError> errors) {
         for (ContentNode child : root.getContentChildren())
             visitContent(child, null, errors);
     }
@@ -24,7 +25,7 @@ public class UlLiRule implements ISemanticRule {
      * @param parentListTag  "ul" or "ol" if we're currently inside one, null otherwise
      */
     private void visitContent(ContentNode node, String parentListTag,
-                              List<String> errors) {
+                              List<CompilerError> errors) {
 
         // ── Jinja2 statements — not HTML, always allowed inside <ul>/<ol>
         //    but recurse into their bodies carrying the parentListTag context
@@ -47,9 +48,10 @@ public class UlLiRule implements ISemanticRule {
 
         // ── {{ expr }} directly inside <ul> renders raw text — flag it
         if (node instanceof OutputNode && parentListTag != null) {
-            errors.add("{{ }} output directly inside <" + parentListTag + ">"
-                    + " at line " + node.getLineNumber()
-                    + " — wrap it in <li>");
+            errors.add(new CompilerError(
+                    CompilerError.Kind.INVALID_HTML_STRUCTURE,
+                    "{{ }} output directly inside <" + parentListTag + "> — wrap it in <li>",
+                    node.getLineNumber()));
             return;
         }
 
@@ -61,9 +63,11 @@ public class UlLiRule implements ISemanticRule {
 
         if (parentListTag != null
                 && !element.getTagName().equalsIgnoreCase("li")) {
-            errors.add("<" + parentListTag + "> can only contain <li>"
-                    + " but found <" + element.getTagName() + ">"
-                    + " at line " + element.getLineNumber());
+            errors.add(new CompilerError(
+                    CompilerError.Kind.INVALID_HTML_STRUCTURE,
+                    "<" + parentListTag + "> can only contain <li>"
+                            + " but found <" + element.getTagName() + ">",
+                    element.getLineNumber()));
         }
 
         if (!(element instanceof HTMLNormalElementNode normal)) return;
