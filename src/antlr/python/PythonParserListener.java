@@ -1,4 +1,4 @@
-// Generated from C:/Users/yahia/IdeaProjects/flaskcomp/grammars/python/PythonParser.g4 by ANTLR 4.13.2
+// Generated from grammars/python/PythonParser.g4 by ANTLR 4.13.2
 
     package antlr.python;
 
@@ -186,6 +186,18 @@ public interface PythonParserListener extends ParseTreeListener {
 	 */
 	void exitImportStatement(PythonParser.ImportStatementContext ctx);
 	/**
+	 * Enter a parse tree produced by the {@code GlobalStatement}
+	 * labeled alternative in {@link PythonParser#small_stmt}.
+	 * @param ctx the parse tree
+	 */
+	void enterGlobalStatement(PythonParser.GlobalStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code GlobalStatement}
+	 * labeled alternative in {@link PythonParser#small_stmt}.
+	 * @param ctx the parse tree
+	 */
+	void exitGlobalStatement(PythonParser.GlobalStatementContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link PythonParser#augassign_stmt}.
 	 * @param ctx the parse tree
 	 */
@@ -259,6 +271,16 @@ public interface PythonParserListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitFromImport(PythonParser.FromImportContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link PythonParser#global_stmt}.
+	 * @param ctx the parse tree
+	 */
+	void enterGlobal_stmt(PythonParser.Global_stmtContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link PythonParser#global_stmt}.
+	 * @param ctx the parse tree
+	 */
+	void exitGlobal_stmt(PythonParser.Global_stmtContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link PythonParser#dotted_name}.
 	 * @param ctx the parse tree

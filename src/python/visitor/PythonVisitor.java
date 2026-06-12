@@ -143,6 +143,19 @@ public class PythonVisitor extends PythonParserBaseVisitor<Object> {
     }
 
     @Override
+    public GlobalStatement visitGlobalStatement(PythonParser.GlobalStatementContext ctx) {
+        return visitGlobal_stmt(ctx.global_stmt());
+    }
+
+    @Override
+    public GlobalStatement visitGlobal_stmt(PythonParser.Global_stmtContext ctx) {
+        ArrayList<ID> names = new ArrayList<>();
+        for (TerminalNode idNode : ctx.ID())
+            names.add(new ID(idNode.getText(), ctx.getStart().getLine()));
+        return new GlobalStatement(names, ctx.getStart().getLine());
+    }
+
+    @Override
     public AugAssignStatement visitAugassign_stmt(PythonParser.Augassign_stmtContext ctx) {
         ID id = new ID(ctx.ID().getText(),ctx.getStart().getLine());
         Expression ex = (Expression) visit(ctx.expr());

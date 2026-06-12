@@ -38,6 +38,7 @@ small_stmt
     | continue_stmt     #ContinueStatement
     | return_stmt       #ReturnStatement
     | import_stmt       #ImportStatement
+    | global_stmt       #GlobalStatement
     ;
 
 augassign_stmt
@@ -76,6 +77,10 @@ return_stmt
 import_stmt
     : IMPORT dotted_name                                   #SimpleImport
     | FROM dotted_name IMPORT (STAR | (ID (COMMA ID)*))    #FromImport
+    ;
+
+global_stmt
+    : GLOBAL ID (COMMA ID)*
     ;
 
 dotted_name
@@ -130,7 +135,7 @@ atom
     : OPEN_PAREN expr CLOSE_PAREN       #ParenAtom
     | OPEN_BRACKET list? CLOSE_BRACKET  #ListAtom
     | OPEN_BRACE dicorset? CLOSE_BRACE  #DicOrSetAtom
-    | GLOBAL? ID                                #IDAtom   // edited
+    | ID                                 #IDAtom
     | TRUE                              #BoolAtom
     | FALSE                             #BoolAtom
     | MINUS? INTEGER                    #IntegerAtom

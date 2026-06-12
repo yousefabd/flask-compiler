@@ -4,7 +4,9 @@ import python.models.root.CompoundStatement;
 import python.models.root.Program;
 import python.models.root.SimpleStatement;
 import python.models.root.Statement;
+import python.models.atom_statement.ID;
 import python.models.small_statement.AugAssignStatement;
+import python.models.small_statement.GlobalStatement;
 import python.models.small_statement.SmallStatement;
 
 import python.models.Import_statement.FromImportStatement;
@@ -153,7 +155,10 @@ public class SymbolTableBuilder {
             visitImportStatement(is);
         } else if (sm instanceof ExpressionStatement es) {
             visitExpressionStatement(es);
-            
+
+        } else if (sm instanceof GlobalStatement gs) {
+            for (ID id : gs.names)
+                symbolTable.declareGlobal(id.name);
         }
     }
 

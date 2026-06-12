@@ -1,4 +1,4 @@
-// Generated from C:/Users/yahia/IdeaProjects/flaskcomp/grammars/python/PythonParser.g4 by ANTLR 4.13.2
+// Generated from grammars/python/PythonParser.g4 by ANTLR 4.13.2
 
     package antlr.python;
 
@@ -116,6 +116,13 @@ public interface PythonParserVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitImportStatement(PythonParser.ImportStatementContext ctx);
 	/**
+	 * Visit a parse tree produced by the {@code GlobalStatement}
+	 * labeled alternative in {@link PythonParser#small_stmt}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitGlobalStatement(PythonParser.GlobalStatementContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link PythonParser#augassign_stmt}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
@@ -159,6 +166,12 @@ public interface PythonParserVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitFromImport(PythonParser.FromImportContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link PythonParser#global_stmt}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitGlobal_stmt(PythonParser.Global_stmtContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link PythonParser#dotted_name}.
 	 * @param ctx the parse tree

@@ -1,12 +1,15 @@
 package python.symbol_table;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class Scope {
-    private final String name; 
-    private final Scope parent; 
+    private final String name;
+    private final Scope parent;
     private final Map<String, Symbol> symbols = new HashMap<>();
+    private final Set<String> globalNames = new HashSet<>();
 
     public Scope(String name, Scope parent) {
         this.name = name;
@@ -35,8 +38,19 @@ public class Scope {
         return null;
     }
 
+    /** Marks {@code name} as referring to the module-level scope for the rest of this scope. */
+    public void declareGlobal(String name) {
+        globalNames.add(name);
+    }
+
+    public boolean isGlobal(String name) {
+        return globalNames.contains(name);
+    }
+
     @Override
     public String toString() {
-        return "Scope(" + name + "): " + symbols.values();
+        String base = "Scope(" + name + "): " + symbols.values();
+        if (!globalNames.isEmpty()) base += " | global: " + globalNames;
+        return base;
     }
 }

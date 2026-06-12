@@ -1,4 +1,4 @@
-// Generated from C:/Users/yahia/IdeaProjects/flaskcomp/grammars/python/PythonParser.g4 by ANTLR 4.13.2
+// Generated from grammars/python/PythonParser.g4 by ANTLR 4.13.2
 
     package antlr.python;
 
@@ -199,6 +199,18 @@ public class PythonParserBaseListener implements PythonParserListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterGlobalStatement(PythonParser.GlobalStatementContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitGlobalStatement(PythonParser.GlobalStatementContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterAugassign_stmt(PythonParser.Augassign_stmtContext ctx) { }
 	/**
 	 * {@inheritDoc}
@@ -278,6 +290,18 @@ public class PythonParserBaseListener implements PythonParserListener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitFromImport(PythonParser.FromImportContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterGlobal_stmt(PythonParser.Global_stmtContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitGlobal_stmt(PythonParser.Global_stmtContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *

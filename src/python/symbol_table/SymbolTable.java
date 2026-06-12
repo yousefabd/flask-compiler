@@ -39,13 +39,22 @@ public class SymbolTable
     }
 
     // تعريف رمز جديد في الـ scope الحالي
+    // (or in the global scope, if this name was declared with `global` in the current scope)
     public boolean define(Symbol symbol) {
-        return getCurrentScope().define(symbol);
+        Scope current = getCurrentScope();
+        if (current != globalScope && current.isGlobal(symbol.getName()))
+            return globalScope.define(symbol);
+        return current.define(symbol);
     }
 
     // البحث عن اسم في الـ scope الحالي وما فوق
     public Symbol resolve(String name) {
         return getCurrentScope().resolve(name);
+    }
+
+    /** Records that {@code name} refers to the module-level variable for the rest of the current scope. */
+    public void declareGlobal(String name) {
+        getCurrentScope().declareGlobal(name);
     }
 
     @Override
