@@ -1,0 +1,33 @@
+{% set count = 5 %}
+{% set count = "five" %}
+
+{% set price = 9.99 %}
+{% set total = price + "tax" %}
+
+{% set name = "Alice" %}
+{% set shout = name * name %}
+
+{% set negated = -name %}
+
+{% set valid_sum = 1 + 2.5 %}
+{% set greeting = "Hello, " + name %}
+
+{% set numbers = [1, 2, 3] %}
+{% for n in numbers %}
+{{ n }}
+{% endfor %}
+
+{% for n in 5 %}
+{{ n }}
+{% endfor %}
+
+{% if "abc" < 5 %}
+mismatched comparison
+{% endif %}
+
+{% if 10 in 5 %}
+not iterable
+{% endif %}
+
+{{ valid_sum }}
+{{ greeting }}

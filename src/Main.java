@@ -129,10 +129,42 @@ public class Main {
         System.out.println(symbolTable.toString());
     }
 
-    public static void main(String[] args) throws IOException 
+    /** Runs the jinja2/html pipeline (including the new type checks) on tests/templates/types.html */
+    public static void types() throws IOException
+    {
+        CharStream input = CharStreams.fromFileName("tests/templates/types.html");
+        HTMLLexer lexer = new HTMLLexer(input);
+        CommonTokenStream tokens = new CommonTokenStream(lexer);
+        HTMLParser parser = new HTMLParser(tokens);
+
+        ParseTree tree = parser.template();
+
+        AntlrToTemplateAstVisitor visitor = new AntlrToTemplateAstVisitor();
+        TemplateFile template = (TemplateFile) visitor.visit(tree);
+
+        jinja2.symbol_table.SymbolTable symbolTable = new jinja2.symbol_table.SymbolTable();
+        List<CompilerError> errors = new ArrayList<>();
+        List<ISemanticRule> semanticRules = new ArrayList<>();
+        semanticRules.add(new UlLiRule());
+        jinja2.symbol_table.SymbolTableBuilder stb = new jinja2.symbol_table.SymbolTableBuilder(
+                symbolTable, errors, semanticRules);
+        stb.build(template);
+
+        if (!errors.isEmpty()) {
+            System.out.println("Semantic Errors:");
+            for (CompilerError error : errors) {
+                System.out.println(error);
+            }
+        }
+
+        System.out.println(symbolTable.toString());
+    }
+
+    public static void main(String[] args) throws IOException
     {
         //python();
         jinja();
+        types();
         //css();
     }
 }

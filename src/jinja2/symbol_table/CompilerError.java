@@ -9,6 +9,8 @@ public final class CompilerError {
         DUPLICATE_PARAMETER,
         DUPLICATE_BLOCK,
         INVALID_HTML_STRUCTURE,
+        TYPE_MISMATCH,
+        TYPE_ERROR,
     }
 
     private final Kind   kind;
