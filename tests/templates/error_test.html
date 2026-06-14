@@ -1,0 +1,112 @@
+{% set items = ["a"] %}
+{% set flag = true %}
+
+<!-- VALID: ul -> li -->
+<ul>
+    <li>ok</li>
+</ul>
+
+<!-- VALID: if -->
+<ul>
+    {% if flag %}
+    <li>ok</li>
+    {% endif %}
+</ul>
+
+<!-- VALID: for -->
+<ul>
+    {% for item in items %}
+    <li>{{ item }}</li>
+    {% endfor %}
+</ul>
+
+<!-- VALID: nested if + for -->
+<ul>
+    {% if flag %}
+    {% for item in items %}
+    <li>{{ item }}</li>
+    {% endfor %}
+    {% endif %}
+</ul>
+
+<!-- INVALID: direct child -->
+<ul>
+    <div>wrong</div>
+</ul>
+
+<!-- INVALID: if produces wrong element -->
+<ul>
+    {% if flag %}
+    <div>wrong</div>
+    {% endif %}
+</ul>
+
+<!-- INVALID: nested if + for produces wrong element -->
+<ul>
+    {% if flag %}
+    {% for item in items %}
+    <span>{{ item }}</span>
+    {% endfor %}
+    {% endif %}
+</ul>
+
+<!-- VALID expressions -->
+{{ "abc".upper() }}
+{{ "abc"[0] }}
+{{ -(5) }}
+{{ "a" in "abc" }}
+
+<!-- INVALID call expressions -->
+{{ 5("hello") }}
+{{ "hello"("world") }}
+{{ true("arg") }}
+
+<!-- INVALID indexing -->
+{{ true[0] }}
+{{ 5[0] }}
+
+<!-- INVALID members -->
+{{ "abc".unknownMethod() }}
+{{ (42).upper() }}
+{{ true.keys() }}
+
+<!-- INVALID unary -->
+{{ -(true) }}
+{{ -("hello") }}
+
+<!-- INVALID in -->
+{{ 5 in 3 }}
+{{ "x" in true }}
+
+<!-- VALID variable usage -->
+{% set x = "global" %}
+{{ x }}
+
+<!-- INVALID call through identifier -->
+{% set n = 5 %}
+{{ n("hello") }}
+
+<!-- INVALID arithmetic -->
+{% set bad1 = 5 + true %}
+
+<!-- REQUIRED TEST -->
+{% set v = "banana" + (5 * 3) %}
+
+<!-- VALID arithmetic -->
+{% set y = 5 + 3 %}
+
+<!-- INVALID indexing through identifier -->
+{{ y[0] }}
+
+<!-- Scope tests -->
+{% for item in [1] %}
+{% set loopVar = item %}
+{% endfor %}
+
+{% macro test() %}
+{% set localVar = x %}
+{% endmacro %}
+
+{{ loopVar }}
+{{ localVar }}
+{{ banana }}
