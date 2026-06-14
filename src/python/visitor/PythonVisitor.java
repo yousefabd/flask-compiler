@@ -142,11 +142,14 @@ public class PythonVisitor extends PythonParserBaseVisitor<Object> {
         return (ImportStatement) visit(ctx.import_stmt());
     }
 
+    // added: unwrap the #GlobalStatement small_stmt alternative to its global_stmt rule
     @Override
     public GlobalStatement visitGlobalStatement(PythonParser.GlobalStatementContext ctx) {
         return visitGlobal_stmt(ctx.global_stmt());
     }
 
+    // added: build a GlobalStatement node from `global x, y, z`, collecting each
+    // declared ID so the symbol table builder can mark them as global later
     @Override
     public GlobalStatement visitGlobal_stmt(PythonParser.Global_stmtContext ctx) {
         ArrayList<ID> names = new ArrayList<>();

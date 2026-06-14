@@ -4,9 +4,9 @@ import python.models.root.CompoundStatement;
 import python.models.root.Program;
 import python.models.root.SimpleStatement;
 import python.models.root.Statement;
-import python.models.atom_statement.ID;
+import python.models.atom_statement.ID; // added: used to read names out of GlobalStatement
 import python.models.small_statement.AugAssignStatement;
-import python.models.small_statement.GlobalStatement;
+import python.models.small_statement.GlobalStatement; // added: handle `global x, y` statements
 import python.models.small_statement.SmallStatement;
 
 import python.models.Import_statement.FromImportStatement;
@@ -157,6 +157,9 @@ public class SymbolTableBuilder {
             visitExpressionStatement(es);
 
         } else if (sm instanceof GlobalStatement gs) {
+            // added: `global x, y` - mark each name as global in the current scope so that
+            // any later assignment to it (handled above/in visitExpressionStatement) is
+            // defined in the module/global scope instead of this local scope
             for (ID id : gs.names)
                 symbolTable.declareGlobal(id.name);
         }

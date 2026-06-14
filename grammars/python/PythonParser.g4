@@ -38,7 +38,7 @@ small_stmt
     | continue_stmt     #ContinueStatement
     | return_stmt       #ReturnStatement
     | import_stmt       #ImportStatement
-    | global_stmt       #GlobalStatement
+    | global_stmt       #GlobalStatement // added: support `global x, y` as its own small statement
     ;
 
 augassign_stmt
@@ -79,6 +79,7 @@ import_stmt
     | FROM dotted_name IMPORT (STAR | (ID (COMMA ID)*))    #FromImport
     ;
 
+// added: `global x, y, z` - declares names as referring to module-level scope
 global_stmt
     : GLOBAL ID (COMMA ID)*
     ;
@@ -135,7 +136,7 @@ atom
     : OPEN_PAREN expr CLOSE_PAREN       #ParenAtom
     | OPEN_BRACKET list? CLOSE_BRACKET  #ListAtom
     | OPEN_BRACE dicorset? CLOSE_BRACE  #DicOrSetAtom
-    | ID                                 #IDAtom
+    | ID                                 #IDAtom // reverted: `global` no longer swallowed here, now handled by global_stmt
     | TRUE                              #BoolAtom
     | FALSE                             #BoolAtom
     | MINUS? INTEGER                    #IntegerAtom

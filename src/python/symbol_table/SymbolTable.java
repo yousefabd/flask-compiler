@@ -40,6 +40,9 @@ public class SymbolTable
 
     // تعريف رمز جديد في الـ scope الحالي
     // (or in the global scope, if this name was declared with `global` in the current scope)
+    // added: when `name` was declared `global` in this scope, define it in globalScope
+    // instead of the current (function) scope, so an assignment after `global x` updates
+    // the module-level `x` rather than creating a local shadow.
     public boolean define(Symbol symbol) {
         Scope current = getCurrentScope();
         if (current != globalScope && current.isGlobal(symbol.getName()))
@@ -52,6 +55,7 @@ public class SymbolTable
         return getCurrentScope().resolve(name);
     }
 
+    // added: entry point used by SymbolTableBuilder when it visits a GlobalStatement
     /** Records that {@code name} refers to the module-level variable for the rest of the current scope. */
     public void declareGlobal(String name) {
         getCurrentScope().declareGlobal(name);

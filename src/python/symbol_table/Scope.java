@@ -9,6 +9,7 @@ public class Scope {
     private final String name;
     private final Scope parent;
     private final Map<String, Symbol> symbols = new HashMap<>();
+    // added: names declared with `global` inside this scope (see declareGlobal/isGlobal)
     private final Set<String> globalNames = new HashSet<>();
 
     public Scope(String name, Scope parent) {
@@ -38,11 +39,14 @@ public class Scope {
         return null;
     }
 
+    // added: record that `name` was declared `global` in this scope - SymbolTable.define()
+    // checks this to redirect later assignments to the module/global scope instead
     /** Marks {@code name} as referring to the module-level scope for the rest of this scope. */
     public void declareGlobal(String name) {
         globalNames.add(name);
     }
 
+    // added: used by SymbolTable.define() to decide whether to define `name` here or in globalScope
     public boolean isGlobal(String name) {
         return globalNames.contains(name);
     }
@@ -50,6 +54,7 @@ public class Scope {
     @Override
     public String toString() {
         String base = "Scope(" + name + "): " + symbols.values();
+        // added: surface global declarations in printed output, e.g. "| global: [products]"
         if (!globalNames.isEmpty()) base += " | global: " + globalNames;
         return base;
     }
