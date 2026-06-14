@@ -7,7 +7,7 @@ import jinja2.models.content.html.*;
 import jinja2.models.expression.*;
 import jinja2.models.file.TemplateFile;
 import jinja2.models.statement.*;
-import jinja2.symbol_table.semantic_rules.ISemanticRule;
+import jinja2.symbol_table.semantic_rules.*;
 
 import java.util.List;
 
@@ -25,8 +25,9 @@ public class SymbolTableBuilder {
 
     public void build(TemplateFile template) {
         visitTemplateFile(template);
+        SemanticContext semanticContext = new SemanticContext(template, symbolTable, errors);
         for (ISemanticRule rule : semanticRules)
-            rule.validate(template, symbolTable, errors);
+            rule.validate(semanticContext);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -73,13 +74,15 @@ public class SymbolTableBuilder {
 
         symbolTable.enterScope("for", ScopeKind.FOR);
 
-        // Seed the magic `loop` variable that Jinja2 injects in every for-body
-        symbolTable.define(new Symbol("loop", SymbolKind.LOOP_VAR, fs.getLineNumber()));
+        // the magic `loop` variable
+        symbolTable.define(new Symbol("loop", SymbolKind.LOOP_VAR, fs.getLineNumber(), null));
 
+        // the actual loop variable — element type can't be inferred from the iterable without type-tracking it
         Symbol loopVar = new Symbol(
                 fs.getVariable().getName(),
                 SymbolKind.LOOP_VAR,
-                fs.getLineNumber()
+                fs.getLineNumber(),
+                null
         );
         if (!symbolTable.define(loopVar))
             errors.add(new CompilerError(
@@ -110,7 +113,8 @@ public class SymbolTableBuilder {
         symbolTable.overwrite(new Symbol(
                 ss.getVariableName(),
                 SymbolKind.VARIABLE,
-                ss.getLineNumber()
+                ss.getLineNumber(),
+                ss.isBlock() ? null : ss.getValue()  // block-set has no single expression
         ));
 
         if (ss.isBlock()) {
@@ -125,9 +129,8 @@ public class SymbolTableBuilder {
         // macro name is visible in the scope it's defined in
         Symbol macroSym = new Symbol(
                 ms.getMacroName(),
-                SymbolKind.MACRO,
                 ms.getLineNumber(),
-                ms.getParameters()
+                ms.getParameters()         // uses the MACRO constructor
         );
         if (!symbolTable.define(macroSym))
             errors.add(new CompilerError(
@@ -147,7 +150,8 @@ public class SymbolTableBuilder {
             Symbol paramSym = new Symbol(
                     param.getName(),
                     SymbolKind.PARAMETER,
-                    param.getLineNumber()
+                    param.getLineNumber(),
+                    param.hasDefault() ? param.getDefaultValue() : null
             );
             if (!symbolTable.define(paramSym))
                 errors.add(new CompilerError(
@@ -168,7 +172,8 @@ public class SymbolTableBuilder {
         Symbol blockSym = new Symbol(
                 bs.getBlockName(),
                 SymbolKind.BLOCK,
-                bs.getLineNumber()
+                bs.getLineNumber(),
+                null  // blocks have no initializer expression
         );
         if (!symbolTable.defineInTemplateScope(blockSym))
             errors.add(new CompilerError(

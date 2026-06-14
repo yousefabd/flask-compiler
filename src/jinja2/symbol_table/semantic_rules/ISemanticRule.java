@@ -7,5 +7,5 @@ import jinja2.symbol_table.SymbolTable;
 import java.util.List;
 
 public interface ISemanticRule {
-    void validate(TemplateFile root, SymbolTable table, List<CompilerError> errors);
+    void validate(SemanticContext semanticContext);
 }
