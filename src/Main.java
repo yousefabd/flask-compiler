@@ -99,7 +99,7 @@ public class Main {
     public static void jinja() throws IOException 
     {
 
-        CharStream input = CharStreams.fromFileName("tests/templates/variables.html");
+        CharStream input = CharStreams.fromFileName("tests/templates/error_test.html");
         HTMLLexer lexer = new HTMLLexer(input);
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         HTMLParser parser = new HTMLParser(tokens);
