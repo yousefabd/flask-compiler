@@ -33,7 +33,11 @@ import python.symbol_table.SymbolTable;
 import python.symbol_table.SymbolTableBuilder;
 import python.visitor.PythonVisitor;
 
+import codegen.FlaskProjectGenerator;
+import errors.ErrorReporter;
+
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -160,11 +164,43 @@ public class Main {
         System.out.println(symbolTable.toString());
     }
 
+    /**
+     * Compiles the miniFlask source program (tests/app.py + the templates it
+     * renders) into an executable Flask project under generated/.
+     *
+     * <p>The whole pipeline runs behind an error boundary: syntax, semantic,
+     * generation and I/O problems are collected by the {@link ErrorReporter}
+     * and printed in the same format as the existing semantic-error display —
+     * the compiler itself never crashes on bad input.</p>
+     */
+    public static void compile()
+    {
+        ErrorReporter reporter = new ErrorReporter();
+        FlaskProjectGenerator generator = new FlaskProjectGenerator(
+                Path.of("tests/app.py"),
+                Path.of("tests/templates"),
+                Path.of("tests/static"),
+                Path.of("generated"),
+                reporter);
+
+        System.out.println("Compiling miniFlask project (tests/app.py)...");
+        boolean success = generator.generate();
+
+        if (success) {
+            System.out.println("Compilation finished successfully.");
+            System.out.println("Run the generated app with:  python generated/app.py");
+        } else {
+            System.out.println("Compilation failed:");
+            reporter.printReport();
+        }
+    }
+
     public static void main(String[] args) throws IOException
     {
         //python();
-        jinja();
-        types();
+        //jinja();
+        //types();
         //css();
+        compile();
     }
 }

@@ -1,3 +1,6 @@
+### miniFlask compiler output ###
+generated/
+
 ### IntelliJ IDEA ###
 out/
 !**/src/main/**/out/

@@ -207,7 +207,6 @@ public class AntlrToTemplateAstVisitor extends HTMLParserBaseVisitor<TemplateNod
         if (last < raw.length()) {
             parts.add(new AttributeTextNode(raw.substring(last), line));
         }
-        System.out.println("Parsed attribute value parts: " + parts);
         return parts;
     }
 
