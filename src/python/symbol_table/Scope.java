@@ -1,5 +1,6 @@
 package python.symbol_table;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -49,6 +50,12 @@ public class Scope {
     // added: used by SymbolTable.define() to decide whether to define `name` here or in globalScope
     public boolean isGlobal(String name) {
         return globalNames.contains(name);
+    }
+
+    // added: lets PythonResolver.report() enumerate every symbol declared directly
+    // in this scope (mirrors jinja2.symbol_table.Scope.getSymbols()).
+    public Collection<Symbol> getSymbols() {
+        return symbols.values();
     }
 
     @Override

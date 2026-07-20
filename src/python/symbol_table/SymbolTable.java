@@ -55,10 +55,32 @@ public class SymbolTable
         return getCurrentScope().resolve(name);
     }
 
+    // added: used by PythonResolver, where re-assigning an existing name (completely
+    // normal in Python — `x = 1` then `x = 2`) must return the SAME Symbol so usage
+    // lines/values accumulate on it, instead of define()'s "reject duplicates" behavior
+    // (which exists for the builder's *declaration* checks, not for plain reassignment).
+    // Respects the same `global`-redirection rule as define().
+    public Symbol defineOrGet(Symbol candidate) {
+        Scope current = getCurrentScope();
+        Scope target = (current != globalScope && current.isGlobal(candidate.getName()))
+                ? globalScope : current;
+        Symbol existing = target.resolveLocal(candidate.getName());
+        if (existing != null) return existing;
+        target.define(candidate);
+        return candidate;
+    }
+
     // added: entry point used by SymbolTableBuilder when it visits a GlobalStatement
     /** Records that {@code name} refers to the module-level variable for the rest of the current scope. */
     public void declareGlobal(String name) {
         getCurrentScope().declareGlobal(name);
+    }
+
+    // added: exposes every scope opened during the walk (global + all entered/exited
+    // scopes) so PythonResolver.report() and other tooling can inspect the whole table
+    // after build() has run, without depending on the (by-then-collapsed) scope stack.
+    public List<Scope> getAllScopes() {
+        return allScopes;
     }
 
     @Override

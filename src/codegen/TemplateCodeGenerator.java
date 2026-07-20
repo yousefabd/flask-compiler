@@ -20,8 +20,12 @@ import jinja2.models.expression.literal.StringLiteralNode;
 import jinja2.models.file.TemplateFile;
 import jinja2.models.statement.*;
 
+import resolver.ConstantValue;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * Walks the Jinja2/HTML template AST and emits an HTML file that Flask's
@@ -30,6 +34,17 @@ import java.util.List;
  *
  * <p>Original text nodes are preserved verbatim, so the generated template
  * keeps the source formatting wherever possible.</p>
+ *
+ * <p><b>Optional compile-time template evaluation:</b> when constructed with
+ * a non-empty {@code knownValues} map (typically the literal keyword
+ * arguments a specific {@code render_template(...)} call site passes, e.g.
+ * {@code page='home'}), {@code {% if/elif/else %}} chains whose condition
+ * depends only on those known values are folded down to just the taken
+ * branch's body instead of being re-emitted as live Jinja. Anything the
+ * folder can't prove (a branch touching {@code products}, filters, calls,
+ * ...) falls back to the exact same output as the default (no-argument)
+ * constructor, so the live Flask templates this class also generates are
+ * completely unaffected unless a caller opts in.</p>
  */
 public class TemplateCodeGenerator {
 
@@ -39,9 +54,15 @@ public class TemplateCodeGenerator {
             "link", "meta", "param", "source", "track", "wbr");
 
     private final String sourceFile;    // used only for error messages
+    private final Map<String, ConstantValue> knownValues; // empty => folding never applies
 
     public TemplateCodeGenerator(String sourceFile) {
+        this(sourceFile, Map.of());
+    }
+
+    public TemplateCodeGenerator(String sourceFile, Map<String, ConstantValue> knownValues) {
         this.sourceFile = sourceFile;
+        this.knownValues = knownValues != null ? knownValues : Map.of();
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -146,6 +167,11 @@ public class TemplateCodeGenerator {
     }
 
     private String ifStatement(IfStatementNode is) {
+        if (!knownValues.isEmpty()) {
+            Optional<String> folded = tryFold(is);
+            if (folded.isPresent()) return folded.get();
+        }
+
         StringBuilder sb = new StringBuilder();
         boolean first = true;
         for (IfBranchNode branch : is.getBranches()) {
@@ -160,6 +186,93 @@ public class TemplateCodeGenerator {
         }
         sb.append("{% endif %}");
         return sb.toString();
+    }
+
+    /**
+     * Attempts to statically pick the one branch that runs, using only the
+     * literal values in {@code knownValues}. Returns empty (do not fold) the
+     * moment any branch's condition can't be proven true or false — folding
+     * only ever happens when it is 100% safe.
+     */
+    private Optional<String> tryFold(IfStatementNode is) {
+        for (IfBranchNode branch : is.getBranches()) {
+            if (branch.isElseBranch())
+                return Optional.of(body(branch.getBody())); // reached the end: else always applies
+
+            Optional<Boolean> taken = evalCondition(branch.getCondition());
+            if (taken.isEmpty())
+                return Optional.empty(); // undetermined branch — never guess, fall back to live Jinja
+            if (taken.get())
+                return Optional.of(body(branch.getBody()));
+            // false: skip this branch, keep checking the rest
+        }
+        return Optional.of(""); // no branch matched and there was no else — Jinja would render nothing
+    }
+
+    /** A tiny constant-expression evaluator over {@code knownValues}; empty = "can't tell". */
+    private Optional<Boolean> evalCondition(ExpressionNode expr) {
+        Optional<ConstantValue> value = evalValue(expr);
+        return value.filter(v -> v.getKind() == ConstantValue.Kind.BOOL).map(ConstantValue::asBool);
+    }
+
+    private Optional<ConstantValue> evalValue(ExpressionNode expr) {
+        if (expr instanceof IdentifierNode id) {
+            ConstantValue v = knownValues.get(id.getName());
+            return (v != null && v.isKnown()) ? Optional.of(v) : Optional.empty();
+        }
+        if (expr instanceof StringLiteralNode s)
+            return Optional.of(ConstantValue.ofString(unquote(s.getValue())));
+        if (expr instanceof BooleanLiteralNode b)
+            return Optional.of(ConstantValue.ofBool(b.getValue()));
+        if (expr instanceof NumberLiteralNode n)
+            return Optional.of(n.getValue().contains(".")
+                    ? ConstantValue.ofFloat(Double.parseDouble(n.getValue()))
+                    : ConstantValue.ofInt(Integer.parseInt(n.getValue())));
+        if (expr instanceof NoneLiteralNode)
+            return Optional.of(ConstantValue.none());
+
+        if (expr instanceof UnaryExpressionNode un && un.getOperation() == Operation.NOT) {
+            Optional<Boolean> inner = evalCondition(un.getExpression());
+            return inner.map(b -> ConstantValue.ofBool(!b));
+        }
+
+        if (expr instanceof BinaryExpressionNode bin) {
+            Operation op = bin.getOperation();
+            if (op == Operation.AND || op == Operation.OR) {
+                Optional<Boolean> left = evalCondition(bin.getLeft());
+                Optional<Boolean> right = evalCondition(bin.getRight());
+                if (left.isEmpty() || right.isEmpty()) return Optional.empty();
+                boolean result = op == Operation.AND ? (left.get() && right.get()) : (left.get() || right.get());
+                return Optional.of(ConstantValue.ofBool(result));
+            }
+            if (op == Operation.EQ || op == Operation.NEQ) {
+                Optional<ConstantValue> left = evalValue(bin.getLeft());
+                Optional<ConstantValue> right = evalValue(bin.getRight());
+                if (left.isEmpty() || right.isEmpty()) return Optional.empty();
+                boolean equal = constantsEqual(left.get(), right.get());
+                return Optional.of(ConstantValue.ofBool(op == Operation.EQ ? equal : !equal));
+            }
+        }
+        return Optional.empty(); // property/index access, calls, filters, ... — not foldable
+    }
+
+    private static boolean constantsEqual(ConstantValue a, ConstantValue b) {
+        if (a.getKind() != b.getKind()) return false;
+        return switch (a.getKind()) {
+            case STRING -> a.asString().equals(b.asString());
+            case INT    -> a.asInt() == b.asInt();
+            case FLOAT  -> a.asFloat() == b.asFloat();
+            case BOOL   -> a.asBool() == b.asBool();
+            case NONE   -> true;
+            default     -> false; // LIST/DICT equality isn't needed for {% if %} folding
+        };
+    }
+
+    private static String unquote(String raw) {
+        if (raw.length() >= 2 && (raw.startsWith("'") || raw.startsWith("\""))
+                && raw.endsWith(raw.substring(0, 1)))
+            return raw.substring(1, raw.length() - 1);
+        return raw;
     }
 
     private String setStatement(SetStatementNode ss) {

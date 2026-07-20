@@ -5,12 +5,16 @@ import jinja2.models.attribute.valuepart.*;
 import jinja2.models.content.*;
 import jinja2.models.content.html.*;
 import jinja2.models.expression.*;
-import jinja2.models.expression.literal.LiteralExpressionNode;
+import jinja2.models.expression.literal.*;
 import jinja2.models.file.TemplateFile;
 import jinja2.models.statement.*;
 import jinja2.symbol_table.semantic_rules.ISemanticRule;
 
+import resolver.ConstantValue;
+
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class SymbolTableBuilder {
     private final SymbolTable  symbolTable;
@@ -140,12 +144,55 @@ public class SymbolTableBuilder {
             TypeChecker.checkAssignment(previous.getType(), valueType,
                     ss.getVariableName(), ss.getLineNumber(), errors);
 
-        symbolTable.overwrite(new Symbol(
+        Symbol finalSymbol = new Symbol(
                 ss.getVariableName(),
                 SymbolKind.VARIABLE,
                 ss.getLineNumber(),
                 valueType
-        ));
+        );
+        // added: record the value when {% set x = <literal> %} is provably constant,
+        // so the resolver report and template-evaluation folding can use it — a
+        // block-set or a non-literal expression is simply left as unknown.
+        finalSymbol.setValue(ss.isBlock() ? ConstantValue.unknown() : literalConstant(ss.getValue()));
+        symbolTable.overwrite(finalSymbol);
+    }
+
+    /** Best-effort literal evaluation for {% set %}, mirroring python.resolver's approach. */
+    private static ConstantValue literalConstant(ExpressionNode expr) {
+        if (expr instanceof StringLiteralNode s)  return ConstantValue.ofString(stripJinjaQuotes(s.getValue()));
+        if (expr instanceof NumberLiteralNode n)
+            return n.getValue().contains(".")
+                    ? ConstantValue.ofFloat(Double.parseDouble(n.getValue()))
+                    : ConstantValue.ofInt(Integer.parseInt(n.getValue()));
+        if (expr instanceof BooleanLiteralNode b) return ConstantValue.ofBool(b.getValue());
+        if (expr instanceof NoneLiteralNode)      return ConstantValue.none();
+        if (expr instanceof ListExpressionNode list) {
+            java.util.List<ConstantValue> items = new java.util.ArrayList<>();
+            for (ExpressionNode el : list.getElements()) {
+                ConstantValue v = literalConstant(el);
+                if (!v.isKnown()) return ConstantValue.unknown();
+                items.add(v);
+            }
+            return ConstantValue.ofList(items);
+        }
+        if (expr instanceof DictionaryExpressionNode dict) {
+            Map<String, ConstantValue> map = new LinkedHashMap<>();
+            for (int i = 0; i < dict.getKeys().size(); i++) {
+                ConstantValue k = literalConstant(dict.getKeys().get(i));
+                ConstantValue v = literalConstant(dict.getValues().get(i));
+                if (!v.isKnown() || k.getKind() != ConstantValue.Kind.STRING) return ConstantValue.unknown();
+                map.put(k.asString(), v);
+            }
+            return ConstantValue.ofDict(map);
+        }
+        return ConstantValue.unknown(); // identifiers, calls, filters, binary ops, ... not provable here
+    }
+
+    private static String stripJinjaQuotes(String raw) {
+        if (raw.length() >= 2 && (raw.startsWith("'") || raw.startsWith("\""))
+                && raw.endsWith(raw.substring(0, 1)))
+            return raw.substring(1, raw.length() - 1);
+        return raw;
     }
 
     private void visitMacroStatement(MacroStatementNode ms) {
@@ -296,8 +343,16 @@ public class SymbolTableBuilder {
 
         Symbol visible = symbolTable.resolve(id.getName());
 
-        if (visible != null)
+        if (visible != null) {
+            // added: this is the resolution step the builder already had the
+            // information for (it just discarded it) — record which declaration
+            // this identifier node refers to, and that it was read here, so
+            // python.resolver's jinja2 counterpart doesn't need a full second
+            // AST walk just to capture what visitIdentifier already knows.
+            symbolTable.recordBinding(id, visible);
+            visible.addUsage(id.getLineNumber());
             return visible.getType();
+        }
 
         Symbol declaredSomewhere =
                 symbolTable.resolveGlobal(id.getName());

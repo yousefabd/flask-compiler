@@ -1,15 +1,22 @@
 package jinja2.symbol_table;
 
+import jinja2.models.TemplateNode;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class SymbolTable {
 
     private final Scope templateScope;
     private Scope currentScope;
     private final List<Scope> allScopes  = new ArrayList<>();
+    // added: every identifier node resolved so far, mapped to the Symbol it refers to —
+    // populated by SymbolTableBuilder.visitIdentifier(), read by jinja2.resolver.TemplateResolver
+    private final Map<TemplateNode, Symbol> bindings = new IdentityHashMap<>();
 
     public SymbolTable() {
         templateScope = new Scope("template", ScopeKind.TEMPLATE, null);
@@ -55,6 +62,16 @@ public class SymbolTable {
     }
 
     public List<Scope> getAllScopes() { return allScopes; }
+
+    // added: called by SymbolTableBuilder.visitIdentifier() once it resolves an
+    // identifier, so the AST node stays traceable back to its declaring Symbol —
+    // this is the "connect every identifier node with its declaration" requirement.
+    public void recordBinding(TemplateNode node, Symbol symbol) {
+        bindings.put(node, symbol);
+    }
+
+    public Symbol getBinding(TemplateNode node) { return bindings.get(node); }
+    public Map<TemplateNode, Symbol> getBindings() { return bindings; }
 
     @Override
     public String toString() {
