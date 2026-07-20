@@ -8,8 +8,7 @@ import jinja2.models.expression.*;
 import jinja2.models.expression.literal.*;
 import jinja2.models.file.TemplateFile;
 import jinja2.models.statement.*;
-import jinja2.symbol_table.semantic_rules.ISemanticRule;
-
+import jinja2.symbol_table.semantic_rules.*;
 import resolver.ConstantValue;
 
 import java.util.LinkedHashMap;
@@ -30,8 +29,9 @@ public class SymbolTableBuilder {
 
     public void build(TemplateFile template) {
         visitTemplateFile(template);
+        SemanticContext semanticContext = new SemanticContext(template, symbolTable, errors);
         for (ISemanticRule rule : semanticRules)
-            rule.validate(template, symbolTable, errors);
+            rule.validate(semanticContext);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -74,25 +74,19 @@ public class SymbolTableBuilder {
 
     private void visitForStatement(ForStatementNode fs) {
         // iterable is evaluated in the OUTER scope before entering
-        Type iterableType = visitExpression(fs.getIterable());
-        TypeChecker.checkIterable(iterableType, fs.getLineNumber(), errors);
+        visitExpression(fs.getIterable());
 
         symbolTable.enterScope("for", ScopeKind.FOR);
 
-        // Seed the magic `loop` variable that Jinja2 injects in every for-body
-        symbolTable.define(new Symbol("loop", SymbolKind.LOOP_VAR, fs.getLineNumber()));
+        // the magic `loop` variable
+        symbolTable.define(new Symbol("loop", SymbolKind.LOOP_VAR, fs.getLineNumber(), null));
 
-        // If the iterable is a list literal of uniform type, e.g. [1, 2, 3],
-        // the loop variable's type can be inferred too.
-        Type elementType = fs.getIterable() instanceof ListExpressionNode list
-                ? TypeChecker.homogeneousElementType(list)
-                : Type.UNKNOWN;
-
+        // the actual loop variable — element type can't be inferred from the iterable without type-tracking it
         Symbol loopVar = new Symbol(
                 fs.getVariable().getName(),
                 SymbolKind.LOOP_VAR,
                 fs.getLineNumber(),
-                elementType
+                null
         );
         if (!symbolTable.define(loopVar))
             errors.add(new CompilerError(
@@ -119,42 +113,28 @@ public class SymbolTableBuilder {
 
     private void visitSetStatement(SetStatementNode ss) {
         // In Jinja2, {% set x = ... %} is assignment — re-setting an existing
-        // variable is valid. We overwrite rather than reject — but if the new
-        // value's type is incompatible with the type it previously held,
-        // that's a type mismatch worth flagging.
-        Symbol previous = symbolTable.getCurrentScope().resolveLocal(ss.getVariableName());
-
-        symbolTable.overwrite(new Symbol(
-                ss.getVariableName(),
-                SymbolKind.VARIABLE,
-                ss.getLineNumber()
-        ));
-
-        Type valueType;
-        if (ss.isBlock()) {
-            for (ContentNode child : ss.getBody())
-                visitContent(child);
-            // {% set x %}...{% endset %} captures the rendered body as text
-            valueType = Type.STRING;
-        } else {
-            valueType = visitExpression(ss.getValue());
-        }
-
-        if (previous != null)
-            TypeChecker.checkAssignment(previous.getType(), valueType,
-                    ss.getVariableName(), ss.getLineNumber(), errors);
-
-        Symbol finalSymbol = new Symbol(
+        // variable is valid. We overwrite rather than reject.
+        Symbol symbol = new Symbol(
                 ss.getVariableName(),
                 SymbolKind.VARIABLE,
                 ss.getLineNumber(),
-                valueType
+                ss.isBlock() ? null : ss.getValue()  // block-set has no single expression
         );
-        // added: record the value when {% set x = <literal> %} is provably constant,
-        // so the resolver report and template-evaluation folding can use it — a
-        // block-set or a non-literal expression is simply left as unknown.
-        finalSymbol.setValue(ss.isBlock() ? ConstantValue.unknown() : literalConstant(ss.getValue()));
-        symbolTable.overwrite(finalSymbol);
+        symbolTable.overwrite(symbol);
+
+        if (ss.isBlock()) {
+            for (ContentNode child : ss.getBody())
+                visitContent(child);
+            // {% set x %}...{% endset %} captures the rendered body as text —
+            // not something we can evaluate to a compile-time constant here
+            symbol.setResolvedValue(ConstantValue.unknown());
+        } else {
+            visitExpression(ss.getValue());
+            // added: record the value when {% set x = <literal> %} is provably
+            // constant, so the resolver report and template-evaluation folding
+            // can use it — a non-literal expression is simply left as unknown.
+            symbol.setResolvedValue(literalConstant(ss.getValue()));
+        }
     }
 
     /** Best-effort literal evaluation for {% set %}, mirroring python.resolver's approach. */
@@ -199,9 +179,8 @@ public class SymbolTableBuilder {
         // macro name is visible in the scope it's defined in
         Symbol macroSym = new Symbol(
                 ms.getMacroName(),
-                SymbolKind.MACRO,
                 ms.getLineNumber(),
-                ms.getParameters()
+                ms.getParameters()         // uses the MACRO constructor
         );
         if (!symbolTable.define(macroSym))
             errors.add(new CompilerError(
@@ -221,7 +200,8 @@ public class SymbolTableBuilder {
             Symbol paramSym = new Symbol(
                     param.getName(),
                     SymbolKind.PARAMETER,
-                    param.getLineNumber()
+                    param.getLineNumber(),
+                    param.hasDefault() ? param.getDefaultValue() : null
             );
             if (!symbolTable.define(paramSym))
                 errors.add(new CompilerError(
@@ -242,7 +222,8 @@ public class SymbolTableBuilder {
         Symbol blockSym = new Symbol(
                 bs.getBlockName(),
                 SymbolKind.BLOCK,
-                bs.getLineNumber()
+                bs.getLineNumber(),
+                null  // blocks have no initializer expression
         );
         if (!symbolTable.defineInTemplateScope(blockSym))
             errors.add(new CompilerError(
@@ -283,63 +264,43 @@ public class SymbolTableBuilder {
     // EXPRESSIONS
     // ─────────────────────────────────────────────────────────────
 
-    /**
-     * Resolves identifiers (for undefined-variable/scope checks) and infers
-     * the static {@link Type} of the expression, reporting TYPE_ERROR for
-     * invalid operations along the way. Returns Type.UNKNOWN when the type
-     * can't be determined — callers must treat that as "no information".
-     */
-    private Type visitExpression(ExpressionNode expr) {
+    private void visitExpression(ExpressionNode expr) {
         if (expr instanceof IdentifierNode id)
-            return visitIdentifier(id);
+            visitIdentifier(id);
         else if (expr instanceof BinaryExpressionNode bin) {
-            Type left  = visitExpression(bin.getLeft());
-            Type right = visitExpression(bin.getRight());
-            return TypeChecker.checkBinary(bin.getOperation(), left, right, bin.getLineNumber(), errors);
+            visitExpression(bin.getLeft());
+            visitExpression(bin.getRight());
         }
-        else if (expr instanceof UnaryExpressionNode un) {
-            Type operand = visitExpression(un.getExpression());
-            return TypeChecker.checkUnary(un.getOperation(), operand, un.getLineNumber(), errors);
-        }
-        else if (expr instanceof PropertyAccessNode prop) {
+        else if (expr instanceof UnaryExpressionNode un)
+            visitExpression(un.getExpression());
+        else if (expr instanceof PropertyAccessNode prop)
             // only resolve the root object — the property is a field name, not a variable
             visitExpression(prop.getTarget());
-            return Type.UNKNOWN;
-        }
         else if (expr instanceof IndexAccessNode idx) {
             visitExpression(idx.getTarget());
             visitExpression(idx.getIndex());
-            return Type.UNKNOWN;
         }
         else if (expr instanceof CallExpressionNode call) {
             visitExpression(call.getCallee());
             for (ArgumentNode arg : call.getArguments())
                 visitExpression(arg.getValue());
-            return Type.UNKNOWN;
         }
         else if (expr instanceof FilterExpressionNode filter) {
             visitExpression(filter.getTarget());
             for (ArgumentNode arg : filter.getArguments())
                 visitExpression(arg.getValue());
-            return Type.UNKNOWN;
         }
-        else if (expr instanceof ListExpressionNode list) {
+        else if (expr instanceof ListExpressionNode list)
             for (ExpressionNode el : list.getElements())
                 visitExpression(el);
-            return Type.LIST;
-        }
         else if (expr instanceof DictionaryExpressionNode dict) {
             for (ExpressionNode key : dict.getKeys())   visitExpression(key);
             for (ExpressionNode val : dict.getValues()) visitExpression(val);
-            return Type.DICTIONARY;
         }
-        else if (expr instanceof LiteralExpressionNode)
-            return TypeChecker.literalType(expr);
-
-        return Type.UNKNOWN;
+        // LiteralExpressionNode subtypes — nothing to resolve
     }
 
-    private Type visitIdentifier(IdentifierNode id) {
+    private void visitIdentifier(IdentifierNode id) {
 
         Symbol visible = symbolTable.resolve(id.getName());
 
@@ -347,11 +308,11 @@ public class SymbolTableBuilder {
             // added: this is the resolution step the builder already had the
             // information for (it just discarded it) — record which declaration
             // this identifier node refers to, and that it was read here, so
-            // python.resolver's jinja2 counterpart doesn't need a full second
-            // AST walk just to capture what visitIdentifier already knows.
+            // jinja2.resolver.TemplateResolver doesn't need a full second AST
+            // walk just to capture what visitIdentifier already knows.
             symbolTable.recordBinding(id, visible);
             visible.addUsage(id.getLineNumber());
-            return visible.getType();
+            return;
         }
 
         Symbol declaredSomewhere =
@@ -369,7 +330,5 @@ public class SymbolTableBuilder {
                     "Undefined variable '" + id.getName() + "'",
                     id.getLineNumber()));
         }
-
-        return Type.UNKNOWN;
     }
 }

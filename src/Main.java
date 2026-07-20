@@ -1,32 +1,23 @@
 // cSpell: disable
 
+import antlr.css.CSSLexer;
+import antlr.css.CSSParser;
 import antlr.html.HTMLLexer;
 import antlr.html.HTMLParser;
-import jinja2.models.TemplateNode;
+import antlr.python.PythonLexer;
+import antlr.python.PythonParser;
+import css.AntlrToStyleSheet;
+import css.models.Stylesheet;
 import jinja2.models.file.TemplateFile;
 import jinja2.symbol_table.CompilerError;
 import jinja2.symbol_table.semantic_rules.ISemanticRule;
+import jinja2.symbol_table.semantic_rules.TypeCheckerRule;
 import jinja2.symbol_table.semantic_rules.UlLiRule;
 import jinja2.visitor.AntlrToTemplateAstVisitor;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
-
-import antlr.python.PythonLexer;
-import antlr.python.PythonParser;
-
-import antlr.jinja2.Jinja2Lexer;
-import antlr.jinja2.Jinja2Parser;
-
-import antlr.css.CSSLexer;
-import antlr.css.CSSParser;
-
-import css.AntlrToStyleSheet;
-import css.models.Stylesheet;
-
-//import jinja2.models.root.Template;
-
 import python.models.root.Program;
 import python.printer.ASTPrinter;
 import python.symbol_table.SymbolTable;
@@ -120,6 +111,7 @@ public class Main {
         List<CompilerError> errors = new ArrayList<>();
         List<ISemanticRule> semanticRules = new ArrayList<>();
         semanticRules.add(new UlLiRule());
+        semanticRules.add(new TypeCheckerRule());
         jinja2.symbol_table.SymbolTableBuilder stb = new jinja2.symbol_table.SymbolTableBuilder(
                 symbolTable,errors,semanticRules);
         stb.build(template);
@@ -150,6 +142,7 @@ public class Main {
         List<CompilerError> errors = new ArrayList<>();
         List<ISemanticRule> semanticRules = new ArrayList<>();
         semanticRules.add(new UlLiRule());
+        semanticRules.add(new TypeCheckerRule());
         jinja2.symbol_table.SymbolTableBuilder stb = new jinja2.symbol_table.SymbolTableBuilder(
                 symbolTable, errors, semanticRules);
         stb.build(template);

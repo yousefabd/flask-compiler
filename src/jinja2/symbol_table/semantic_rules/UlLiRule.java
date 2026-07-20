@@ -5,10 +5,8 @@ import jinja2.models.content.HtmlTextNode;
 import jinja2.models.content.OutputNode;
 import jinja2.models.content.html.HTMLNormalElementNode;
 import jinja2.models.content.html.HTMLVoidElementNode;
-import jinja2.models.file.TemplateFile;
 import jinja2.models.statement.*;
 import jinja2.symbol_table.CompilerError;
-import jinja2.symbol_table.SymbolTable;
 
 import java.util.List;
 
@@ -16,9 +14,9 @@ import java.util.List;
 public class UlLiRule implements ISemanticRule {
 
     @Override
-    public void validate(TemplateFile root, SymbolTable table, List<CompilerError> errors) {
-        for (ContentNode child : root.getContentChildren())
-            visitContent(child, null, errors);
+    public void validate(SemanticContext semanticContext) {
+        for (ContentNode child : semanticContext.root().getContentChildren())
+            visitContent(child, null, semanticContext.errors());
     }
 
     /**

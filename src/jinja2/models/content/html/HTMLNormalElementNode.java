@@ -1,6 +1,4 @@
 package jinja2.models.content.html;
-
-import html.models.ElementNode;
 import jinja2.models.content.ContentNode;
 
 import java.util.ArrayList;

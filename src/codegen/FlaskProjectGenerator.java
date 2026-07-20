@@ -248,14 +248,15 @@ public class FlaskProjectGenerator {
         jinja2.symbol_table.SymbolTable symtab = new jinja2.symbol_table.SymbolTable();
         for (String builtin : TEMPLATE_BUILTINS)
             symtab.define(new jinja2.symbol_table.Symbol(
-                    builtin, jinja2.symbol_table.SymbolKind.VARIABLE, 0));
+                    builtin, jinja2.symbol_table.SymbolKind.VARIABLE, 0, null));
         for (String var : contextVars)
             symtab.define(new jinja2.symbol_table.Symbol(
-                    var, jinja2.symbol_table.SymbolKind.VARIABLE, 0));
+                    var, jinja2.symbol_table.SymbolKind.VARIABLE, 0, null));
 
         List<jinja2.symbol_table.CompilerError> errors = new ArrayList<>();
         List<ISemanticRule> rules = new ArrayList<>();
         rules.add(new UlLiRule());
+        rules.add(new jinja2.symbol_table.semantic_rules.TypeCheckerRule());
         new jinja2.symbol_table.SymbolTableBuilder(symtab, errors, rules).build(ast);
 
         for (jinja2.symbol_table.CompilerError e : errors)
