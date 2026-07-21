@@ -152,6 +152,7 @@ output/                    ← pure, final static HTML (the compiler's main deli
 ├── view_products.html
 ├── product_details.html
 ├── add_product.html
+├── app.py                 ← support file, copied through unmodified (see below)
 └── static/
     └── styles.css         ← copied through unchanged (CSS/JS are support files, not transformed)
 
@@ -170,8 +171,9 @@ One filename is generated per Python view function (`index`, `view_products`,
 single `index.html` drives four distinct pages via a `page` parameter, and
 "one Jinja template → one generated HTML file" in the spec means one output
 page per render, which for a template reused across routes means one file
-per route. Support files (`app.py`, CSS/JS) are never transformed themselves;
-CSS/JS is copied into `output/static/`, `app.py` stays at its source location.
+per route. Support files (`app.py`, CSS/JS) are never transformed by the
+analysis/generation pipeline itself — they are copied through byte-for-byte
+into `output/`: `app.py` to `output/app.py`, CSS/JS into `output/static/`.
 
 ---
 

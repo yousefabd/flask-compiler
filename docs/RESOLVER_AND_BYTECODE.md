@@ -204,14 +204,13 @@ touched silently.
 ## 3. Symbol Table extensions
 
 Both `Symbol` classes gained the same three things, **additively** (existing
-constructors and call sites are untouched — every pre-existing `new
-Symbol(name, kind)` call still compiles and runs exactly as before):
+constructors and call sites are untouched):
 
 | Field | Python `Symbol` | Jinja2 `Symbol` |
 |---|---|---|
 | declaration line | added (`declarationLine`, `-1` if unknown) | already had `lineNumber` |
-| type / kind | `SymbolKind` (already existed) | `Type` (already existed) |
-| **value** *(new)* | `ConstantValue value` | `ConstantValue value` |
+| type / kind | `SymbolKind` (already existed) | `SymbolType` |
+| **value** *(new)* | `ConstantValue value` | `ConstantValue resolvedValue` |
 | **usages** *(new)* | `List<Integer> usageLines` | `List<Integer> usageLines` |
 | **binding map** *(new)* | `PythonResolver`'s own `IdentityHashMap<ASTNode, Symbol>` | `SymbolTable.bindings` (`IdentityHashMap<TemplateNode, Symbol>`) |
 
@@ -219,7 +218,23 @@ Symbol(name, kind)` call still compiles and runs exactly as before):
 value — `INT | FLOAT | STRING | BOOL | NONE | LIST | DICT | UNKNOWN` — used
 only when the source text *proves* a value; everything else is `UNKNOWN`.
 
-`Symbol.toString()` on both sides now prints all of it:
+**Update (post-merge with `origin/main`):** the Jinja2 side of this table
+changed shape after this branch was later merged with `origin/main`'s own,
+independently-developed type-checking work (`TypeCheckerRule`/`SymbolType`/
+`SemanticContext` — see the merge history for the full reconciliation). Main
+had *also* added a `type`/`value` pair to `jinja2.symbol_table.Symbol`, but
+with different meaning: `SymbolType` is a type shallowly inferred at
+declaration time, and `getValue()` returns the raw declared `ExpressionNode`
+(the initializer itself, not an evaluated constant). The Resolver's own
+value-tracking, described above, therefore uses a differently-named field —
+`resolvedValue`, via `getResolvedValue()`/`setResolvedValue(ConstantValue)`
+— so the two independently-added features coexist on the same class without
+colliding. `python.symbol_table.Symbol` was untouched by that merge (the
+Python pipeline has no counterpart to `TypeCheckerRule`), so its column above
+is still accurate as originally written.
+
+`Symbol.toString()` on both sides prints its value/usages when known, e.g.
+(Python side):
 
 ```
 VARIABLE max_id (line 46) = 0 | used at lines [48, 50]
