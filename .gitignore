@@ -1,5 +1,7 @@
 ### miniFlask compiler output ###
 generated/
+output/
+compiler_output/
 
 ### IntelliJ IDEA ###
 out/

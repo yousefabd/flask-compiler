@@ -321,54 +321,13 @@ public class PythonResolver {
             // simple `name = value`
             Symbol sym = declare(idt.id.name, SymbolKind.VARIABLE, idt.getLine());
             bindings.put(idt.id, sym);
-            ConstantValue cv = value != null ? evaluateConstant(value) : ConstantValue.unknown();
+            ConstantValue cv = value != null ? resolver.PythonLiteralEvaluator.evaluate(value) : ConstantValue.unknown();
             if (cv.isKnown()) sym.setValue(cv);
             else sym.invalidateValue();
         } else {
             // attribute/subscript/call target, e.g. `app.secret_key = ...`, `d[k] = v`
             resolveIdTrailer(idt, true);
         }
-    }
-
-    /** Best-effort literal evaluation; returns UNKNOWN for anything not provably a literal. */
-    private ConstantValue evaluateConstant(Condition value) {
-        if (value instanceof IntegerAtom ia) return ConstantValue.ofInt(ia.value);
-        if (value instanceof FloatAtom fa)   return ConstantValue.ofFloat(fa.value);
-        if (value instanceof BoolAtom ba)    return ConstantValue.ofBool(ba.value);
-        if (value instanceof StringAtom sa)  return ConstantValue.ofString(stripPyQuotes(sa.value));
-        if (value instanceof None)           return ConstantValue.none();
-        if (value instanceof ParenAtom pa)   return evaluateConstant(pa.inner);
-
-        if (value instanceof python.models.atom_statement.List la) {
-            List<ConstantValue> items = new ArrayList<>();
-            if (la.content != null)
-                for (Expression e : la.content) {
-                    ConstantValue v = evaluateConstant(e);
-                    if (!v.isKnown()) return ConstantValue.unknown();
-                    items.add(v);
-                }
-            return ConstantValue.ofList(items);
-        }
-        if (value instanceof Dictionary dict) {
-            Map<String, ConstantValue> map = new LinkedHashMap<>();
-            if (dict.keys != null)
-                for (int i = 0; i < dict.keys.size(); i++) {
-                    ConstantValue k = evaluateConstant(dict.keys.get(i));
-                    ConstantValue v = evaluateConstant(dict.values.get(i));
-                    if (!v.isKnown() || k.getKind() != ConstantValue.Kind.STRING)
-                        return ConstantValue.unknown();
-                    map.put(k.asString(), v);
-                }
-            return ConstantValue.ofDict(map);
-        }
-        return ConstantValue.unknown(); // calls, binary ops, identifiers, ... — not provable here
-    }
-
-    private static String stripPyQuotes(String raw) {
-        for (String q : new String[]{"'''", "\"\"\"", "'", "\""})
-            if (raw.length() >= 2 * q.length() && raw.startsWith(q) && raw.endsWith(q))
-                return raw.substring(q.length(), raw.length() - q.length());
-        return raw;
     }
 
     // ─────────────────────────────────────────────────────────────

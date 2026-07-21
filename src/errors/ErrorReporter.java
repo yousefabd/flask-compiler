@@ -60,20 +60,26 @@ public class ErrorReporter {
 
     /** Prints all collected problems grouped by stage, in the existing display format. */
     public void printReport() {
-        if (problems.isEmpty()) {
-            System.out.println("No errors.");
-            return;
-        }
+        System.out.println(formatReport());
+    }
+
+    /** Same content as {@link #printReport()}, as a string — reused by generated report files. */
+    public String formatReport() {
+        if (problems.isEmpty())
+            return "No errors.";
+
+        StringBuilder sb = new StringBuilder();
         for (CompilerStage stage : CompilerStage.values()) {
             List<CompilerProblem> inStage = new ArrayList<>();
             for (CompilerProblem p : problems)
                 if (p.getStage() == stage) inStage.add(p);
             if (inStage.isEmpty()) continue;
 
-            System.out.println(stageTitle(stage) + ":");
+            sb.append(stageTitle(stage)).append(":\n");
             for (CompilerProblem p : inStage)
-                System.out.println("  " + p);
+                sb.append("  ").append(p).append('\n');
         }
+        return sb.toString();
     }
 
     private static String stageTitle(CompilerStage stage) {

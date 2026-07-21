@@ -77,7 +77,9 @@ public class FlaskProjectGenerator {
     private final Path appSource;      // e.g. tests/app.py
     private final Path templatesDir;   // e.g. tests/templates
     private final Path staticDir;      // e.g. tests/static (optional)
-    private final Path outputDir;      // e.g. generated
+    private final Path outputDir;      // e.g. generated — the executable Flask project
+    private final Path staticSiteDir;  // e.g. output — pure, pre-rendered static HTML
+    private final Path compilerOutputDir; // e.g. compiler_output — AST/report/log artifacts
     private final ErrorReporter reporter;
 
     public FlaskProjectGenerator(Path appSource, Path templatesDir, Path staticDir,
@@ -86,6 +88,8 @@ public class FlaskProjectGenerator {
         this.templatesDir = templatesDir;
         this.staticDir = staticDir;
         this.outputDir = outputDir;
+        this.staticSiteDir = outputDir.resolveSibling("output");
+        this.compilerOutputDir = outputDir.resolveSibling("compiler_output");
         this.reporter = reporter;
     }
 
@@ -152,6 +156,13 @@ public class FlaskProjectGenerator {
             // ── 6. back end: generate Python + HTML output files ──────
             writeOutput(program, templates, renderCalls);
             writeReport(program, pyResolver, templates, templateResolvers);
+
+            // ── 7. pure static-site generation: fully resolved, Jinja-free
+            //       HTML pages, plus the AST/report/log artifacts in
+            //       compiler_output/ — see StaticPageGenerator for why this
+            //       is deliberately a separate pass from step 6, not a mode
+            //       flag on the same generator.
+            generateStaticSite(program, templates, renderCalls);
             return true;
 
         } catch (CompilerException e) {
@@ -414,6 +425,136 @@ public class FlaskProjectGenerator {
         }
 
         writeFile(outputDir.resolve("compiler_report.txt"), sb.toString());
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // STATIC-SITE GENERATION  (pure HTML, no Jinja left at all)
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Produces the "translator" output the project spec asks for: one final,
+     * already-rendered static HTML page per {@code render_template} call
+     * site, under {@code output/}, plus the compiler's analysis artifacts
+     * under {@code compiler_output/} (AST dumps as JSON, a semantic report,
+     * and a generation log).
+     *
+     * <p>The context each page is resolved against is the module-level
+     * literal Python data ({@link ModuleContextExtractor}, e.g. the
+     * {@code products} list as originally written) merged with that call
+     * site's literal {@code render_template} keyword arguments — never a
+     * simulation of what a route does at request time. Anything neither of
+     * those can prove (a value only known once a real request arrives, an
+     * unsupported filter, {@code extends}/{@code include}) is rendered as a
+     * visible HTML comment and recorded in {@code generation_log.txt} rather
+     * than guessed at or silently dropped — one page failing to fully
+     * resolve does not stop the others, and never re-throws past this method.</p>
+     */
+    private void generateStaticSite(Program program, Map<String, TemplateFile> templates,
+                                    List<RenderCall> renderCalls) {
+        Map<String, ConstantValue> moduleContext = ModuleContextExtractor.extract(program);
+        RouteTable routes = RouteTable.build(program);
+
+        List<String> log = new ArrayList<>();
+        log.add("miniFlask static-site generation log");
+        log.add("=====================================");
+        log.add("");
+        log.add("This output is produced entirely at COMPILE TIME by evaluating the resolved");
+        log.add("AST against known Python data. It is plain, final HTML: it does not depend");
+        log.add("on Flask/Jinja2 rendering at runtime, and will not change unless the");
+        log.add("compiler is run again against updated source.");
+        log.add("");
+        log.add("Module-level context extracted from " + appSource + ":");
+        for (Map.Entry<String, ConstantValue> e : moduleContext.entrySet())
+            log.add("  " + e.getKey() + " = " + e.getValue().display());
+        log.add("");
+
+        for (RenderCall call : renderCalls) {
+            TemplateFile ast = templates.get(call.templateName());
+            if (ast == null) continue; // a missing-template error was already reported earlier
+
+            Map<String, ConstantValue> pageContext = new LinkedHashMap<>(moduleContext);
+            pageContext.putAll(call.literalArgs());
+
+            try {
+                StaticPageGenerator generator = new StaticPageGenerator(call.functionName(), routes, log);
+                String html = generator.generate(ast, pageContext);
+                Path target = staticSiteDir.resolve(call.functionName() + ".html");
+                writeFile(target, html);
+                log.add(call.functionName() + ": generated from template '" + call.templateName()
+                        + "' -> " + target);
+            } catch (RuntimeException e) {
+                // one page's failure must not abort the rest of the static site
+                log.add(call.functionName() + ": FAILED to generate statically — " + e.getMessage());
+                System.out.println("  warning: static page '" + call.functionName() + "' failed: " + e.getMessage());
+            }
+            log.add("");
+        }
+
+        copySupportAssets();
+        writeCompilerOutputArtifacts(program, templates, log);
+    }
+
+    /**
+     * {@code app.py}, {@code style.css} and {@code script.js} are support
+     * files, not part of the analysis/generation transformation — they are
+     * preserved and copied into the final output as-is, unmodified, rather
+     * than regenerated or reprocessed.
+     */
+    private void copySupportAssets() {
+        if (Files.isRegularFile(appSource)) {
+            try {
+                Path target = staticSiteDir.resolve(appSource.getFileName());
+                Files.createDirectories(staticSiteDir);
+                Files.copy(appSource, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                System.out.println("  copied    " + target);
+            } catch (IOException e) {
+                throw new CodeGenError(appSource.toString(),
+                        "Cannot copy support file: " + e.getMessage(), e);
+            }
+        }
+
+        if (staticDir == null || !Files.isDirectory(staticDir)) return;
+        try (var stream = Files.walk(staticDir)) {
+            for (Path source : (Iterable<Path>) stream::iterator) {
+                if (!Files.isRegularFile(source)) continue;
+                Path target = staticSiteDir.resolve("static").resolve(staticDir.relativize(source).toString());
+                Files.createDirectories(target.getParent());
+                Files.copy(source, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                System.out.println("  copied    " + target);
+            }
+        } catch (IOException e) {
+            throw new CodeGenError(staticDir.toString(),
+                    "Cannot copy support assets: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Writes the {@code compiler_output/} analysis artifacts: both ASTs as
+     * JSON (so they can be inspected with any tool, not just this compiler's
+     * own text printer), the semantic-analysis report, and the generation log.
+     */
+    private void writeCompilerOutputArtifacts(Program program, Map<String, TemplateFile> templates,
+                                              List<String> log) {
+        writeFile(compilerOutputDir.resolve("ast_python.json"), AstJsonWriter.toJson(program));
+
+        StringBuilder jinjaJson = new StringBuilder("{\n");
+        int i = 0, total = templates.size();
+        for (Map.Entry<String, TemplateFile> entry : templates.entrySet()) {
+            jinjaJson.append("  \"").append(entry.getKey().replace("\"", "\\\"")).append("\": ")
+                    .append(AstJsonWriter.reindent(AstJsonWriter.toJson(entry.getValue()), 1));
+            jinjaJson.append(++i < total ? ",\n" : "\n");
+        }
+        jinjaJson.append("}\n");
+        writeFile(compilerOutputDir.resolve("ast_jinja.json"), jinjaJson.toString());
+
+        String semanticReport = "miniFlask Semantic Analysis Report\n"
+                + "===================================\n\n"
+                + "Backend source: " + appSource + "\n"
+                + "Templates analyzed: " + templates.keySet() + "\n\n"
+                + reporter.formatReport();
+        writeFile(compilerOutputDir.resolve("semantic_report.txt"), semanticReport);
+
+        writeFile(compilerOutputDir.resolve("generation_log.txt"), String.join("\n", log));
     }
 
     private void writeFile(Path target, String content) {
