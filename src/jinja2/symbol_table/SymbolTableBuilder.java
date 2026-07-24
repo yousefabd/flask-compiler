@@ -9,7 +9,6 @@ import jinja2.models.expression.literal.*;
 import jinja2.models.file.TemplateFile;
 import jinja2.models.statement.*;
 import jinja2.symbol_table.semantic_rules.*;
-import resolver.ConstantValue;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -127,46 +126,46 @@ public class SymbolTableBuilder {
                 visitContent(child);
             // {% set x %}...{% endset %} captures the rendered body as text —
             // not something we can evaluate to a compile-time constant here
-            symbol.setResolvedValue(ConstantValue.unknown());
+            //symbol.setResolvedValue(ConstantValue.unknown());
         } else {
             visitExpression(ss.getValue());
             // added: record the value when {% set x = <literal> %} is provably
             // constant, so the resolver report and template-evaluation folding
             // can use it — a non-literal expression is simply left as unknown.
-            symbol.setResolvedValue(literalConstant(ss.getValue()));
+            //symbol.setResolvedValue(literalConstant(ss.getValue()));
         }
     }
 
-    /** Best-effort literal evaluation for {% set %}, mirroring python.resolver's approach. */
-    private static ConstantValue literalConstant(ExpressionNode expr) {
-        if (expr instanceof StringLiteralNode s)  return ConstantValue.ofString(stripJinjaQuotes(s.getValue()));
-        if (expr instanceof NumberLiteralNode n)
-            return n.getValue().contains(".")
-                    ? ConstantValue.ofFloat(Double.parseDouble(n.getValue()))
-                    : ConstantValue.ofInt(Integer.parseInt(n.getValue()));
-        if (expr instanceof BooleanLiteralNode b) return ConstantValue.ofBool(b.getValue());
-        if (expr instanceof NoneLiteralNode)      return ConstantValue.none();
-        if (expr instanceof ListExpressionNode list) {
-            java.util.List<ConstantValue> items = new java.util.ArrayList<>();
-            for (ExpressionNode el : list.getElements()) {
-                ConstantValue v = literalConstant(el);
-                if (!v.isKnown()) return ConstantValue.unknown();
-                items.add(v);
-            }
-            return ConstantValue.ofList(items);
-        }
-        if (expr instanceof DictionaryExpressionNode dict) {
-            Map<String, ConstantValue> map = new LinkedHashMap<>();
-            for (int i = 0; i < dict.getKeys().size(); i++) {
-                ConstantValue k = literalConstant(dict.getKeys().get(i));
-                ConstantValue v = literalConstant(dict.getValues().get(i));
-                if (!v.isKnown() || k.getKind() != ConstantValue.Kind.STRING) return ConstantValue.unknown();
-                map.put(k.asString(), v);
-            }
-            return ConstantValue.ofDict(map);
-        }
-        return ConstantValue.unknown(); // identifiers, calls, filters, binary ops, ... not provable here
-    }
+//    /** Best-effort literal evaluation for {% set %}, mirroring python.resolver's approach. */
+//    private static ConstantValue literalConstant(ExpressionNode expr) {
+//        if (expr instanceof StringLiteralNode s)  return ConstantValue.ofString(stripJinjaQuotes(s.getValue()));
+//        if (expr instanceof NumberLiteralNode n)
+//            return n.getValue().contains(".")
+//                    ? ConstantValue.ofFloat(Double.parseDouble(n.getValue()))
+//                    : ConstantValue.ofInt(Integer.parseInt(n.getValue()));
+//        if (expr instanceof BooleanLiteralNode b) return ConstantValue.ofBool(b.getValue());
+//        if (expr instanceof NoneLiteralNode)      return ConstantValue.none();
+//        if (expr instanceof ListExpressionNode list) {
+//            java.util.List<ConstantValue> items = new java.util.ArrayList<>();
+//            for (ExpressionNode el : list.getElements()) {
+//                ConstantValue v = literalConstant(el);
+//                if (!v.isKnown()) return ConstantValue.unknown();
+//                items.add(v);
+//            }
+//            return ConstantValue.ofList(items);
+//        }
+//        if (expr instanceof DictionaryExpressionNode dict) {
+//            Map<String, ConstantValue> map = new LinkedHashMap<>();
+//            for (int i = 0; i < dict.getKeys().size(); i++) {
+//                ConstantValue k = literalConstant(dict.getKeys().get(i));
+//                ConstantValue v = literalConstant(dict.getValues().get(i));
+//                if (!v.isKnown() || k.getKind() != ConstantValue.Kind.STRING) return ConstantValue.unknown();
+//                map.put(k.asString(), v);
+//            }
+//            return ConstantValue.ofDict(map);
+//        }
+//        return ConstantValue.unknown(); // identifiers, calls, filters, binary ops, ... not provable here
+//    }
 
     private static String stripJinjaQuotes(String raw) {
         if (raw.length() >= 2 && (raw.startsWith("'") || raw.startsWith("\""))

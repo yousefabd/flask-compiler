@@ -83,12 +83,12 @@ public class ErrorReporter {
     }
 
     private static String stageTitle(CompilerStage stage) {
-        switch (stage) {
-            case PARSING:           return "Syntax Errors";
-            case SEMANTIC_ANALYSIS: return "Semantic Errors";
-            case CODE_GENERATION:   return "Code Generation Errors";
-            case IO:                return "I/O Errors";
-            default:                return stage.name();
-        }
+        return switch (stage) {
+            case PARSING -> "Syntax Errors";
+            case SEMANTIC_ANALYSIS -> "Semantic Errors";
+            case CODE_GENERATION -> "Code Generation Errors";
+            case IO -> "I/O Errors";
+            default -> stage.name();
+        };
     }
 }

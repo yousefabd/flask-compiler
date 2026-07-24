@@ -3,7 +3,6 @@ package jinja2.symbol_table;
 import jinja2.models.expression.*;
 import jinja2.models.expression.literal.*;
 import jinja2.models.statement.ParameterNode;
-import resolver.ConstantValue;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -23,7 +22,6 @@ public class Symbol {
     // `value` above, which is the raw *declared expression*, not its evaluated
     // compile-time constant — read by jinja2.resolver.TemplateResolver's report
     // and by the code generator's constant-folding preview.
-    private ConstantValue resolvedValue;
     private final List<Integer> usageLines = new ArrayList<>();   // every line this symbol was read on
 
     /** Variables, loop vars, parameters, blocks. */
@@ -65,8 +63,6 @@ public class Symbol {
     public SymbolType          getType()       { return type; }
     public List<ParameterNode> getParameters() { return parameters; }
 
-    public ConstantValue getResolvedValue()       { return resolvedValue; }
-    public void setResolvedValue(ConstantValue v) { this.resolvedValue = v; }
 
     public void addUsage(int line)       { usageLines.add(line); }
     public List<Integer> getUsageLines() { return usageLines; }
@@ -76,8 +72,8 @@ public class Symbol {
         StringBuilder sb = new StringBuilder();
         sb.append(kind).append(' ').append(name).append(": ").append(type)
           .append(" (line ").append(lineNumber).append(')');
-        if (resolvedValue != null)
-            sb.append(" = ").append(resolvedValue.isKnown() ? resolvedValue.display() : "unknown");
+//        if (resolvedValue != null)
+//            sb.append(" = ").append(resolvedValue.isKnown() ? resolvedValue.display() : "unknown");
         if (!usageLines.isEmpty())
             sb.append(" | used at lines ").append(usageLines);
         return sb.toString();

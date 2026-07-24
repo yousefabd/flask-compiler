@@ -1,112 +1,140 @@
-{% set items = ["a"] %}
-{% set flag = true %}
+<!-- <!DOCTYPE html> -->
+<html lang="en">
 
-<!-- VALID: ul -> li -->
-<ul>
-    <li>ok</li>
-</ul>
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>
+        {% if page == 'home' %}Home - Product Store
+        {% elif page == 'products' %}All Products
+        {% elif page == 'details' %}{{ product.name }} - Details
+        {% elif page == 'add' %}Add New Product
+        {% else %}Product Store
+        {% endif %}
+    </title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}"/>
+</head>
 
-<!-- VALID: if -->
-<ul>
-    {% if flag %}
-    <li>ok</li>
-    {% endif %}
-</ul>
+<body>
+    <div class="container">
+        <div class="nav">
+            <a href="{{ url_for('index') }}">Home</a>
+            <a href="{{ url_for('view_products') }}">View Products</a>
+            <a href="{{ url_for('add_product') }}">Add Product</a>
+        </div>
 
-<!-- VALID: for -->
-<ul>
-    {% for item in items %}
-    <li>{{ item }}</li>
-    {% endfor %}
-</ul>
+        {% set messages = get_flashed_messages() %}
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-success">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
 
-<!-- VALID: nested if + for -->
-<ul>
-    {% if flag %}
-    {% for item in items %}
-    <li>{{ item }}</li>
-    {% endfor %}
-    {% endif %}
-</ul>
+        <!-- HOME PAGE -->
+        {% if page == 'home' %}
+        <h1>Welcome to Product Store</h1>
+        <div class="hero-section">
+            <h2>Manage Your Products Easily</h2>
+            <p>Browse our collection, add new products, or manage existing ones.</p>
+            <a href="{{ url_for('view_products') }}" class="btn">Browse Products</a>
+        </div>
+        {% endif %}
 
-<!-- INVALID: direct child -->
-<ul>
-    <div>wrong</div>
-</ul>
+        <!-- PRODUCTS LIST PAGE -->
+        {% if page == 'products' %}
+        <h1>Product Catalog</h1>
+        <p class="product-count">Total Products: {{ products|length }}</p>
 
-<!-- INVALID: if produces wrong element -->
-<ul>
-    {% if flag %}
-    <div>wrong</div>
-    {% endif %}
-</ul>
+        {% if products %}
+        <div class="product-grid">
+            {% for product in products %}
+            <div class="product-card">
+                <div class="product-image">🖼️</div>
+                <div class="product-name">{{ product.name }}</div>
+                <div class="product-price">${{ "%.2f"|format(product.price) }}</div>
+                <a href="{{ url_for('product_details', product_id=product.id) }}" class="btn">View Details</a>
+                <a href="{{ url_for('delete_product', product_id=product.id) }}" class="btn btn-danger"
+                    onclick="return confirm('Are you sure you want to delete this product?');">
+                    Delete
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="no-products">
+            No products available. <a href="{{ url_for('add_product') }}">Add your first product</a>
+        </p>
+        {% endif %}
+        {% endif %}
 
-<!-- INVALID: nested if + for produces wrong element -->
-<ul>
-    {% if flag %}
-    {% for item in items %}
-    <span>{{ item }}</span>
-    {% endfor %}
-    {% endif %}
-</ul>
+        <!-- PRODUCT DETAILS PAGE -->
+        {% if page == 'details' %}
+        <h1>Product Details</h1>
 
-<!-- VALID expressions -->
-{{ "abc".upper() }}
-{{ "abc"[0] }}
-{{ -(5) }}
-{{ "a" in "abc" }}
+        {% if product %}
+        <div class="product-detail">
+            <div>
+                <div class="product-detail-image">🖼️</div>
+                <p class="image-caption">Image: {{ product.image }}</p>
+            </div>
 
-<!-- INVALID call expressions -->
-{{ 5("hello") }}
-{{ "hello"("world") }}
-{{ true("arg") }}
+            <div class="product-info">
+                <h2>{{ product.name }}</h2>
+                <p><strong>Price:</strong> ${{ "%.2f"|format(product.price) }}</p>
+                <p><strong>Product ID:</strong> {{ product.id }}</p>
+                <p><strong>Details:</strong></p>
+                <p>{{ product.details }}</p>
 
-<!-- INVALID indexing -->
-{{ true[0] }}
-{{ 5[0] }}
+                <div class="actions">
+                    <a href="{{ url_for('view_products') }}" class="btn">Back to Products</a>
+                    <a href="{{ url_for('delete_product', product_id=product.id) }}" class="btn btn-danger"
+                        onclick="return confirm('Are you sure you want to delete this product?');">
+                        Delete Product
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <p class="text-center text-muted">Product not found.</p>
+        <p class="text-center">
+            <a href="{{ url_for('view_products') }}" class="btn">Back to Products</a>
+        </p>
+        {% endif %}
+        {% endif %}
 
-<!-- INVALID members -->
-{{ "abc".unknownMethod() }}
-{{ (42).upper() }}
-{{ true.keys() }}
+        <!-- ADD PRODUCT PAGE -->
+        {% if page == 'add' %}
+        <h1>Add New Product</h1>
 
-<!-- INVALID unary -->
-{{ -(true) }}
-{{ -("hello") }}
+        <form method="POST" class="form-container">
+            <div class="form-group">
+                <label for="name">Product Name:</label>
+                <input type="text" id="name" name="name" required/>
+            </div>
 
-<!-- INVALID in -->
-{{ 5 in 3 }}
-{{ "x" in true }}
+            <div class="form-group">
+                <label for="price">Price ($):</label>
+                <input type="number" id="price" name="price" step="0.01" min="0" required/>
+            </div>
 
-<!-- VALID variable usage -->
-{% set x = "global" %}
-{{ x }}
+            <div class="form-group">
+                <label for="image">Image Filename:</label>
+                <input type="text" id="image" name="image" placeholder="e.g., product.jpg" required/>
+            </div>
 
-<!-- INVALID call through identifier -->
-{% set n = 5 %}
-{{ n("hello") }}
+            <div class="form-group">
+                <label for="details">Product Details:</label>
+                <textarea id="details" name="details" required></textarea>
+            </div>
 
-<!-- INVALID arithmetic -->
-{% set bad1 = 5 + true %}
+            <div class="form-group">
+                <button type="submit" class="btn">Add Product</button>
+                <a href="{{ url_for('view_products') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+        {% endif %}
 
-<!-- REQUIRED TEST -->
-{% set v = "banana" + (5 * 3) %}
+    </div>
+</body>
 
-<!-- VALID arithmetic -->
-{% set y = 5 + 3 %}
-
-<!-- INVALID indexing through identifier -->
-{{ y[0] }}
-
-<!-- Scope tests -->
-{% for item in [1] %}
-{% set loopVar = item %}
-{% endfor %}
-
-{% macro test() %}
-{% set localVar = x %}
-{% endmacro %}
-
-{{ loopVar }}
-{{ localVar }}
-{{ banana }}
+</html>
