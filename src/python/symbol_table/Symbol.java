@@ -2,7 +2,9 @@ package python.symbol_table;
 
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 public class Symbol
 {
@@ -12,7 +14,7 @@ public class Symbol
 
     // added: filled in by python.resolver.PythonResolver, not by SymbolTableBuilder —
     // a declaration alone doesn't tell you the value, only a second (resolution) pass does
-    private final List<Integer> usageLines = new ArrayList<>(); // every line this symbol was read on
+    private final Set<Integer> usageLines = new LinkedHashSet<>(); // every line this symbol was read on
 
     public Symbol(String name, SymbolKind kind) {
         this(name, kind, -1);
@@ -30,7 +32,7 @@ public class Symbol
 
 
     public void addUsage(int line) { usageLines.add(line); }
-    public List<Integer> getUsageLines() { return usageLines; }
+    public Set<Integer> getUsageLines() { return usageLines; }
 
     @Override
     public String toString() {

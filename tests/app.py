@@ -59,7 +59,6 @@ def remove_product_by_id(product_id):
             new_products.append(p)
     products = new_products
 
-
 @app.route('/')
 def index():
     return render_template('index.html', page='home')
@@ -79,7 +78,7 @@ def product_details(product_id):
 @app.route('/add', methods=['GET', 'POST'])
 def add_product():
     if request.method == 'POST':
-        # Generate new product ID 
+        # Generate new product ID
         new_id = get_max_product_id() + 1
 
         # Create new product from form data
@@ -103,17 +102,22 @@ def add_product():
 
 @app.route('/delete/<int:product_id>')
 def delete_product(product_id):
-    # Find product by ID 
+    # Find product by ID
     product = find_product_by_id(product_id)
 
     if product:
-        # Remove product from list 
+        # Remove product from list
         remove_product_by_id(product_id)
         message = 'Product "' + product["name"] + '" deleted successfully!'
         flash(message)
 
     return redirect(url_for('view_products'))
 
-
+@app.route('/render-test')
+def render_test():
+    return render_template(
+        'render_test.html',
+        name='Yousef'
+    )
 if __name__ == "__main__":
     app.run(debug=True)

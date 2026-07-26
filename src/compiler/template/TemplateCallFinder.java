@@ -5,6 +5,7 @@ import python.models.ASTNode;
 import python.models.atom_statement.StringAtom;
 import python.models.expr_statement.Condition;
 import python.models.expr_statement.IDTrailer;
+import python.models.funcdef.FunctionDef;
 import python.models.trailer.Argument;
 import python.models.trailer.CallArguments;
 import python.models.trailer.Trailer;
@@ -17,18 +18,39 @@ import java.util.List;
 import java.util.Map;
 
 public class TemplateCallFinder {
-    public  static List<TemplateCall> findTemplateCalls(ASTNode root) {
+    private static final String MODULE_SCOPE = "<module>";
+
+    public static List<TemplateCall> findTemplateCalls(
+            ASTNode root
+    ) {
         List<TemplateCall> calls = new ArrayList<>();
-        collectTemplateCalls(root, calls);
+
+        collectTemplateCalls(
+                root,
+                MODULE_SCOPE,
+                calls
+        );
+
         return calls;
     }
 
     private static void collectTemplateCalls(
             ASTNode node,
+            String currentFunction,
             List<TemplateCall> calls
     ) {
+        String functionForChildren = currentFunction;
+
+        if (node instanceof FunctionDef function &&
+                function.id != null) {
+            functionForChildren = function.id.name;
+        }
+
         if (node instanceof IDTrailer expression) {
-            TemplateCall call = readTemplateCall(expression);
+            TemplateCall call = readTemplateCall(
+                    expression,
+                    currentFunction
+            );
 
             if (call != null) {
                 calls.add(call);
@@ -37,11 +59,18 @@ public class TemplateCallFinder {
 
         for (ASTNode child : node.getChildren()) {
             if (child != null) {
-                collectTemplateCalls(child, calls);
+                collectTemplateCalls(
+                        child,
+                        functionForChildren,
+                        calls
+                );
             }
         }
     }
-    private static TemplateCall readTemplateCall(IDTrailer expression) {
+    private static TemplateCall readTemplateCall(
+            IDTrailer expression,
+            String ownerFunctionName
+    ) {
         if (expression.id == null ||
                 !"render_template".equals(expression.id.name)) {
             return null;
@@ -102,6 +131,7 @@ public class TemplateCallFinder {
         }
 
         return new TemplateCall(
+                ownerFunctionName,
                 templateName,
                 contextArguments,
                 expression.getLine()

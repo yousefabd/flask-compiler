@@ -14,9 +14,6 @@ public final class CompilerError {
         BREAK_OUTSIDE_LOOP,
         CONTINUE_OUTSIDE_LOOP,
         GLOBAL_AT_MODULE_LEVEL,
-        // added: raised by python.resolver.PythonResolver — the declaration-only
-        // SymbolTableBuilder above never looks at identifier *reads*, only defines
-        // declarations, so "used but never defined" was previously undetectable.
         UNDEFINED_VARIABLE,
     }
 

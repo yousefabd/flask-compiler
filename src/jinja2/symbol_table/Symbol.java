@@ -4,9 +4,7 @@ import jinja2.models.expression.*;
 import jinja2.models.expression.literal.*;
 import jinja2.models.statement.ParameterNode;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class Symbol {
 
@@ -22,7 +20,7 @@ public class Symbol {
     // `value` above, which is the raw *declared expression*, not its evaluated
     // compile-time constant — read by jinja2.resolver.TemplateResolver's report
     // and by the code generator's constant-folding preview.
-    private final List<Integer> usageLines = new ArrayList<>();   // every line this symbol was read on
+    private final Set<Integer> usageLines = new LinkedHashSet<>();   // every line this symbol was read on
 
     /** Variables, loop vars, parameters, blocks. */
     public Symbol(String name, SymbolKind kind, int lineNumber, ExpressionNode value) {
@@ -65,7 +63,7 @@ public class Symbol {
 
 
     public void addUsage(int line)       { usageLines.add(line); }
-    public List<Integer> getUsageLines() { return usageLines; }
+    public Set<Integer> getUsageLines() { return usageLines; }
 
     @Override
     public String toString() {

@@ -7,12 +7,15 @@ import errors.CompilerStage;
 import errors.ErrorReporter;
 import jinja2.TemplateFrontend;
 import jinja2.models.file.TemplateFile;
+import jinja2.renderer.ExpressionEvaluator;
+import jinja2.renderer.RenderContext;
+import jinja2.renderer.TemplateRenderer;
 import python.PythonFrontend;
+import python.execution.CPythonExecutor;
 import python.models.root.Program;
 import python.symbol_table.SymbolTable;
 import utils.CompilerSettings;
 
-import java.nio.file.Path;
 import java.util.*;
 
 public class CompilationPipeline {
@@ -41,7 +44,7 @@ public class CompilationPipeline {
             currentStage = CompilerStage.SEMANTIC_ANALYSIS;
 
             // Analyze the AST that was already created.
-            SymbolTable symbolTable = pythonFrontend.analyzePython(program);
+            SymbolTable pythonSymbolTable = pythonFrontend.analyzePython(program);
             List<TemplateCall> templateCalls =
                     TemplateCallFinder.findTemplateCalls(program);
             Map<String, List<TemplateCall>> callsByTemplate =
@@ -117,7 +120,43 @@ public class CompilationPipeline {
 
                 System.out.println(entry.getValue());
             }
+            if (!reporter.hasErrors()) {
+                currentStage = CompilerStage.CODE_GENERATION;
 
+                TemplateFile testTemplate =
+                        templates.get("render_test.html");
+
+                RenderContext testContext =
+                        RenderContext.root(
+                                Map.of("name", "Yousef")
+                        );
+
+                TemplateRenderer renderer =
+                        new TemplateRenderer(
+                                new ExpressionEvaluator()
+                        );
+
+                String renderedHtml = renderer.render(
+                        testTemplate,
+                        testContext
+                );
+                CPythonExecutor cPythonExecutor = new CPythonExecutor(
+                        CompilerSettings.pythonExecutable,
+                        CompilerSettings.renderCaptureScript,
+                        CompilerSettings.appSource
+                );
+
+                String capturedJson =
+                        cPythonExecutor.executeCaptureScript("render_test");
+
+                System.out.println();
+                System.out.println("Context captured from CPython:");
+                System.out.println(capturedJson);
+
+                System.out.println();
+                System.out.println("Rendered template:");
+                System.out.println(renderedHtml);
+            }
         } catch (CompilerException exception) {
             reporter.report(exception);
 
