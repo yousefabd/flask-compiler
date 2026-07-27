@@ -1,25 +1,47 @@
-<p>
-    {{ greeting }}, <strong>{{ user.name }}</strong>!
-</p>
+<section
+        id="{{ section_id }}"
+        class="card {{ theme }}"
+        title="{{ tooltip }}"
+>
+    <h1>{{ heading }}</h1>
 
-<p>
-    User: {{ user.name }} |
-    Age: {{ user.age }} |
-    Active: {{ user.status.active }}
-</p>
+    <p>
+        {{ greeting }}, <strong>{{ user.name }}</strong>!
+    </p>
 
-<p>
-    Optional note: <span>{{ user.optional_note }}</span>
-</p>
+    <p>
+        User: {{ user.name }} |
+        Age: {{ user.age }} |
+        Active: {{ user.status.active }}
+    </p>
 
-<input
-        type="text"
-        name="customer"
-        value="{{ user.name }}"
-        disabled
-/>
 
-<img
-        src="{{ image_path }}"
-        alt="Avatar for {{ user.name }}"
-/>
+    <p>
+        Calculated total: {{ total }}
+    </p>
+
+    <p>
+        Optional note: <span>{{ user.optional_note }}</span>
+    </p>
+
+    <input
+            type="text"
+            name="customer"
+            value="{{ user.name }}"
+            disabled
+    />
+
+    <img
+            src="{{ image_path }}"
+            alt="Avatar for {{ user.name }}"
+    />
+
+    <div class="product-list">
+        {% for product in products %}
+        <article class="product-card">
+            <h2>{{ product.name }}</h2>
+            <p>Price: {{ product.price }}</p>
+        </article>
+        {% endfor %}
+    </div>
+</section>

@@ -10,6 +10,7 @@ import jinja2.models.content.OutputNode;
 import jinja2.models.content.html.HTMLNormalElementNode;
 import jinja2.models.content.html.HTMLVoidElementNode;
 import jinja2.models.file.TemplateFile;
+import jinja2.models.statement.ForStatementNode;
 
 import java.util.List;
 
@@ -85,6 +86,15 @@ public final class TemplateRenderer {
         if (node instanceof HTMLVoidElementNode voidElement) {
             renderVoidElement(
                     voidElement,
+                    context,
+                    output
+            );
+
+            return;
+        }
+        if (node instanceof ForStatementNode forStatement) {
+            renderForStatement(
+                    forStatement,
                     context,
                     output
             );
@@ -208,7 +218,66 @@ public final class TemplateRenderer {
                         + part.getLineNumber()
         );
     }
+    private void renderForStatement(
+            ForStatementNode forStatement,
+            RenderContext context,
+            StringBuilder output
+    ) {
+        Object iterableValue =
+                expressionEvaluator.evaluate(
+                        forStatement.getIterable(),
+                        context
+                );
 
+        if (iterableValue == null) {
+            throw new IllegalStateException(
+                    "Cannot iterate over none at line "
+                            + forStatement.getLineNumber()
+            );
+        }
+
+        /*
+         * Python lists become Java ArrayLists after Gson
+         * deserialization, so they implement Iterable.
+         */
+        if (!(iterableValue instanceof Iterable<?> iterable)) {
+            throw new IllegalStateException(
+                    "For-loop value must be iterable, but received "
+                            + iterableValue
+                            .getClass()
+                            .getSimpleName()
+                            + " at line "
+                            + forStatement.getLineNumber()
+            );
+        }
+
+        String variableName =
+                forStatement
+                        .getVariable()
+                        .getName();
+
+        for (Object item : iterable) {
+            /*
+             * Each iteration receives its own scope.
+             *
+             * The loop variable is local, while variables from the
+             * template's root context remain accessible through parent.
+             */
+            RenderContext iterationContext =
+                    context.child();
+
+            iterationContext.setLocal(
+                    variableName,
+                    item
+            );
+
+            renderContents(
+                    forStatement.getBody(),
+                    iterationContext,
+                    output
+            );
+        }
+    }
     private void appendValue(
             Object value,
             StringBuilder output

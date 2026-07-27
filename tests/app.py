@@ -124,6 +124,25 @@ def render_test():
         'optional_note': None
     }
 
+    test_products = [
+        {
+            'name': 'Laptop',
+            'price': 1000
+        },
+        {
+            'name': 'Phone',
+            'price': 700
+        },
+        {
+            'name': 'Headphones',
+            'price': 200
+        },
+        {
+            'name': 'Gaming console',
+            'price': 350
+        }
+    ]
+
     unit_price = 20
     quantity = 3
     calculated_total = unit_price * quantity
@@ -139,6 +158,7 @@ def render_test():
         greeting='Welcome',
 
         user=user,
+        products=test_products,
         total=calculated_total,
 
         image_path='/static/avatar.png'
