@@ -31,7 +31,9 @@ bin/
 .vscode/
 lib/
 
-
+### python execution
 .venv/
+### some maven bullshit
+target/
 ### Mac OS ###
 .DS_Store

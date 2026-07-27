@@ -49,7 +49,12 @@ voidElement
     ;
 
 attribute
-    : CHAR_NAME (TAG_EQUALS ATTVALUE_VALUE)?
+    : attributeName (TAG_EQUALS ATTVALUE_VALUE)?
+    ;
+
+attributeName
+    : CHAR_NAME
+    | TAG_ACCEPTED_NAME
     ;
 
 // ======================================================

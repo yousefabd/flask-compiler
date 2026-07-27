@@ -113,11 +113,30 @@ def delete_product(product_id):
 
     return redirect(url_for('view_products'))
 
-@app.route('/render-test')
 def render_test():
+    unit_price = 20
+    quantity = 3
+
+    # CPython should resolve this equation before sending the context.
+    calculated_total = unit_price * quantity
+
     return render_template(
         'render_test.html',
-        name='World'
+
+        section_id='profile-card',
+        theme='dark',
+        tooltip='User information',
+
+        heading='Renderer integration test',
+        greeting='Welcome',
+        user_name='Yousef',
+
+        age=24,
+        active=True,
+        total=calculated_total,
+
+        optional_note=None,
+        image_path='/static/avatar.png'
     )
 if __name__ == "__main__":
     app.run(debug=True)
