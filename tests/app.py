@@ -117,7 +117,7 @@ def delete_product(product_id):
 def render_test():
     return render_template(
         'render_test.html',
-        name='Yousef'
+        name='World'
     )
 if __name__ == "__main__":
     app.run(debug=True)

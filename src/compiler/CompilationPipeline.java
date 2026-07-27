@@ -1,7 +1,9 @@
 package compiler;
 
+import compiler.generation.TemplateContextProvider;
 import compiler.template.TemplateCall;
 import compiler.template.TemplateCallFinder;
+import errors.CodeGenError;
 import errors.CompilerException;
 import errors.CompilerStage;
 import errors.ErrorReporter;
@@ -11,46 +13,91 @@ import jinja2.renderer.ExpressionEvaluator;
 import jinja2.renderer.RenderContext;
 import jinja2.renderer.TemplateRenderer;
 import python.PythonFrontend;
-import python.execution.CPythonExecutor;
 import python.models.root.Program;
-import python.symbol_table.SymbolTable;
 import utils.CompilerSettings;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
-public class CompilationPipeline {
+public final class CompilationPipeline {
+
     private final ErrorReporter reporter;
-    public CompilationPipeline(){
-        reporter = new ErrorReporter();
-    }
-    public void analyze() {
+    private final TemplateContextProvider contextProvider;
+    private final TemplateRenderer templateRenderer;
 
-        CompilerStage currentStage = CompilerStage.PARSING;
+    public CompilationPipeline(
+            TemplateContextProvider contextProvider
+    ) {
+        this.reporter = new ErrorReporter();
+
+        this.contextProvider =
+                Objects.requireNonNull(contextProvider);
+
+        this.templateRenderer =
+                new TemplateRenderer(
+                        new ExpressionEvaluator()
+                );
+    }
+
+    /**
+     * Performs all analysis and generates one static snapshot.
+     *
+     * The function name is temporary input for the current development
+     * stage. Later, it can be replaced by a generation plan containing
+     * all snapshots that should be produced.
+     */
+    public void compileSnapshot(
+            String ownerFunctionName
+    ) {
+        CompilerStage currentStage =
+                CompilerStage.PARSING;
 
         try {
-            // Parse exactly once.
-            PythonFrontend pythonFrontend = new PythonFrontend(
-                    CompilerSettings.appSource,
-                    reporter
-            );
-            Program program = pythonFrontend.parsePython();
+            /*
+             * Python front end
+             */
+            PythonFrontend pythonFrontend =
+                    new PythonFrontend(
+                            CompilerSettings.appSource,
+                            reporter
+                    );
+
+            Program program =
+                    pythonFrontend.parsePython();
 
             if (program == null) {
-                System.out.println("Compilation failed:");
-                reporter.printReport();
+                finishCompilation();
                 return;
             }
 
-            currentStage = CompilerStage.SEMANTIC_ANALYSIS;
+            currentStage =
+                    CompilerStage.SEMANTIC_ANALYSIS;
 
-            // Analyze the AST that was already created.
-            SymbolTable pythonSymbolTable = pythonFrontend.analyzePython(program);
+            pythonFrontend.analyzePython(program);
+
+            /*
+             * Discover render_template calls exactly once.
+             */
             List<TemplateCall> templateCalls =
-                    TemplateCallFinder.findTemplateCalls(program);
-            Map<String, List<TemplateCall>> callsByTemplate =
-                    TemplateCallFinder.groupTemplateCalls(templateCalls);
+                    TemplateCallFinder.findTemplateCalls(
+                            program
+                    );
 
-            currentStage = CompilerStage.PARSING;
+            Map<String, List<TemplateCall>> callsByTemplate =
+                    TemplateCallFinder.groupTemplateCalls(
+                            templateCalls
+                    );
+
+            /*
+             * Jinja front end
+             */
+            currentStage =
+                    CompilerStage.PARSING;
 
             TemplateFrontend templateFrontend =
                     new TemplateFrontend(
@@ -63,100 +110,53 @@ public class CompilationPipeline {
                             callsByTemplate.keySet()
                     );
 
-            currentStage = CompilerStage.SEMANTIC_ANALYSIS;
+            currentStage =
+                    CompilerStage.SEMANTIC_ANALYSIS;
 
             Map<String, jinja2.symbol_table.SymbolTable>
-                    templateSymbolTables = new LinkedHashMap<>();
-
-            for (Map.Entry<String, TemplateFile> entry
-                    : templates.entrySet()) {
-
-                String templateName = entry.getKey();
-                TemplateFile template = entry.getValue();
-
-                Set<String> contextVariables =
-                        new LinkedHashSet<>();
-
-                for (TemplateCall call :
-                        callsByTemplate.getOrDefault(
-                                templateName,
-                                List.of()
-                        )) {
-                    contextVariables.addAll(
-                            call.contextArguments().keySet()
+                    templateSymbolTables =
+                    analyzeTemplates(
+                            templateFrontend,
+                            templates,
+                            callsByTemplate
                     );
-                }
 
-                System.out.printf(
-                        "Analyzing template: %s with context=%s%n",
-                        templateName,
-                        contextVariables
-                );
-
-                jinja2.symbol_table.SymbolTable templateSymbolTable =
-                        templateFrontend.analyzeTemplate(
-                                templateName,
-                                template,
-                                contextVariables
-                        );
-
-                templateSymbolTables.put(
-                        templateName,
-                        templateSymbolTable
-                );
-            }
-
-            System.out.printf(
-                    "Analyzed %d unique template(s).%n",
-                    templateSymbolTables.size()
+            printTemplateSymbolTables(
+                    templateSymbolTables
             );
-            for (Map.Entry<String, jinja2.symbol_table.SymbolTable> entry
-                    : templateSymbolTables.entrySet()) {
 
-                System.out.println();
-                System.out.println(
-                        "Jinja Symbol Table: " + entry.getKey()
-                );
-
-                System.out.println(entry.getValue());
+            if (reporter.hasErrors()) {
+                finishCompilation();
+                return;
             }
-            if (!reporter.hasErrors()) {
-                currentStage = CompilerStage.CODE_GENERATION;
 
-                TemplateFile testTemplate =
-                        templates.get("render_test.html");
+            /*
+             * Code generation
+             */
+            currentStage =
+                    CompilerStage.CODE_GENERATION;
 
-                RenderContext testContext =
-                        RenderContext.root(
-                                Map.of("name", "Yousef")
-                        );
+            TemplateCall callToRender =
+                    requireSingleCallFromFunction(
+                            templateCalls,
+                            ownerFunctionName
+                    );
 
-                TemplateRenderer renderer =
-                        new TemplateRenderer(
-                                new ExpressionEvaluator()
-                        );
+            String renderedHtml =
+                    renderTemplateCall(
+                            callToRender,
+                            templates
+                    );
 
-                String renderedHtml = renderer.render(
-                        testTemplate,
-                        testContext
-                );
-                CPythonExecutor cPythonExecutor = new CPythonExecutor(
-                        CompilerSettings.pythonExecutable,
-                        CompilerSettings.renderCaptureScript,
-                        CompilerSettings.appSource
-                );
+            System.out.println();
+            System.out.printf(
+                    "Rendered %s from function %s:%n",
+                    callToRender.templateName(),
+                    callToRender.ownerFunctionName()
+            );
 
-                String capturedJson =
-                        cPythonExecutor.executeCaptureScript("render_test");
+            System.out.println(renderedHtml);
 
-                System.out.println();
-                System.out.println("Context captured from CPython:");
-                System.out.println(capturedJson);
-
-                System.out.println();
-                System.out.println("Rendered template:");
-                System.out.println(renderedHtml);
-            }
         } catch (CompilerException exception) {
             reporter.report(exception);
 
@@ -168,6 +168,184 @@ public class CompilationPipeline {
             );
         }
 
+        finishCompilation();
+    }
+
+    private Map<String, jinja2.symbol_table.SymbolTable>
+    analyzeTemplates(
+            TemplateFrontend templateFrontend,
+            Map<String, TemplateFile> templates,
+            Map<String, List<TemplateCall>> callsByTemplate
+    ) {
+        Map<String, jinja2.symbol_table.SymbolTable>
+                symbolTables =
+                new LinkedHashMap<>();
+
+        for (Map.Entry<String, TemplateFile> entry
+                : templates.entrySet()) {
+
+            String templateName =
+                    entry.getKey();
+
+            TemplateFile template =
+                    entry.getValue();
+
+            Set<String> contextVariables =
+                    collectContextVariables(
+                            templateName,
+                            callsByTemplate
+                    );
+
+            System.out.printf(
+                    "Analyzing template: %s with context=%s%n",
+                    templateName,
+                    contextVariables
+            );
+
+            jinja2.symbol_table.SymbolTable symbolTable =
+                    templateFrontend.analyzeTemplate(
+                            templateName,
+                            template,
+                            contextVariables
+                    );
+
+            symbolTables.put(
+                    templateName,
+                    symbolTable
+            );
+        }
+
+        System.out.printf(
+                "Analyzed %d unique template(s).%n",
+                symbolTables.size()
+        );
+
+        return symbolTables;
+    }
+
+    private Set<String> collectContextVariables(
+            String templateName,
+            Map<String, List<TemplateCall>> callsByTemplate
+    ) {
+        Set<String> contextVariables =
+                new LinkedHashSet<>();
+
+        for (TemplateCall call :
+                callsByTemplate.getOrDefault(
+                        templateName,
+                        List.of()
+                )) {
+
+            contextVariables.addAll(
+                    call.contextArguments().keySet()
+            );
+        }
+
+        return contextVariables;
+    }
+
+    private TemplateCall requireSingleCallFromFunction(
+            List<TemplateCall> templateCalls,
+            String ownerFunctionName
+    ) {
+        List<TemplateCall> matches =
+                new ArrayList<>();
+
+        for (TemplateCall call : templateCalls) {
+            if (call.ownerFunctionName()
+                    .equals(ownerFunctionName)) {
+
+                matches.add(call);
+            }
+        }
+
+        if (matches.isEmpty()) {
+            throw new CodeGenError(
+                    CompilerSettings.appSource.toString(),
+                    -1,
+                    "Function '"
+                            + ownerFunctionName
+                            + "' does not contain a render_template call"
+            );
+        }
+
+        /*
+         * If one function contains multiple render_template calls,
+         * runtime inputs are needed to determine which call is reached.
+         * Do not silently select the first one.
+         */
+        if (matches.size() > 1) {
+            throw new CodeGenError(
+                    CompilerSettings.appSource.toString(),
+                    matches.getFirst().line(),
+                    "Function '"
+                            + ownerFunctionName
+                            + "' contains "
+                            + matches.size()
+                            + " render_template calls. "
+                            + "A runtime scenario is required to choose one"
+            );
+        }
+
+        return matches.getFirst();
+    }
+
+    private String renderTemplateCall(
+            TemplateCall call,
+            Map<String, TemplateFile> templates
+    ) {
+        TemplateFile template =
+                templates.get(call.templateName());
+
+        if (template == null) {
+            throw new CodeGenError(
+                    CompilerSettings.templatesDir
+                            .resolve(call.templateName())
+                            .toString(),
+                    call.line(),
+                    "The parsed template AST is unavailable"
+            );
+        }
+
+        /*
+         * This is the important replacement:
+         *
+         * Before:
+         * Map.of("name", "Yousef")
+         *
+         * Now:
+         * actual values produced by executing Python.
+         */
+        Map<String, Object> resolvedValues =
+                contextProvider.provideContext(call);
+
+        RenderContext renderContext =
+                RenderContext.root(resolvedValues);
+
+        return templateRenderer.render(
+                template,
+                renderContext
+        );
+    }
+
+    private void printTemplateSymbolTables(
+            Map<String, jinja2.symbol_table.SymbolTable>
+                    symbolTables
+    ) {
+        for (Map.Entry<String, jinja2.symbol_table.SymbolTable>
+                entry : symbolTables.entrySet()) {
+
+            System.out.println();
+            System.out.println(
+                    "Jinja Symbol Table: "
+                            + entry.getKey()
+            );
+
+            System.out.println(entry.getValue());
+        }
+    }
+
+    private void finishCompilation() {
         if (reporter.hasErrors()) {
             System.out.println("Compilation failed:");
             reporter.printReport();
@@ -175,7 +353,7 @@ public class CompilationPipeline {
         }
 
         System.out.println(
-                "Python parsing and semantic analysis completed successfully."
+                "Compilation completed successfully."
         );
     }
 }
