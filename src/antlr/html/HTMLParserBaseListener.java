@@ -1,4 +1,4 @@
-// Generated from C:/Users/youus/IdeaProjects/flask-compiler/grammars/html/HTMLParser.g4 by ANTLR 4.13.2
+// Generated from C:/Users/Yousef.Abdulmonaem/Documents/GitHub/flask-compiler/grammars/html/HTMLParser.g4 by ANTLR 4.13.2
 
     package antlr.html;
 
@@ -158,6 +158,18 @@ public class HTMLParserBaseListener implements HTMLParserListener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitAttribute(HTMLParser.AttributeContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterAttributeName(HTMLParser.AttributeNameContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitAttributeName(HTMLParser.AttributeNameContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *

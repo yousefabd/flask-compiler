@@ -1,4 +1,4 @@
-// Generated from C:/Users/youus/IdeaProjects/flask-compiler/grammars/html/HTMLParser.g4 by ANTLR 4.13.2
+// Generated from C:/Users/Yousef.Abdulmonaem/Documents/GitHub/flask-compiler/grammars/html/HTMLParser.g4 by ANTLR 4.13.2
 
     package antlr.html;
 
@@ -89,6 +89,12 @@ public interface HTMLParserVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitAttribute(HTMLParser.AttributeContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link HTMLParser#attributeName}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitAttributeName(HTMLParser.AttributeNameContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link HTMLParser#variable}.
 	 * @param ctx the parse tree

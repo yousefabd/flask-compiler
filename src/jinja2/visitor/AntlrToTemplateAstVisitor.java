@@ -143,7 +143,7 @@ public class AntlrToTemplateAstVisitor extends HTMLParserBaseVisitor<TemplateNod
     @Override
     public HtmlAttributeNode visitAttribute(HTMLParser.AttributeContext ctx) {
 
-        String name = ctx.CHAR_NAME().getText();
+        String name = ctx.attributeName().getText();
         List<AttributeValuePartNode> parts = new ArrayList<>();
 
         if (ctx.ATTVALUE_VALUE() != null) {

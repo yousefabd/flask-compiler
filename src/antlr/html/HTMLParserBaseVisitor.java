@@ -1,4 +1,4 @@
-// Generated from C:/Users/youus/IdeaProjects/flask-compiler/grammars/html/HTMLParser.g4 by ANTLR 4.13.2
+// Generated from C:/Users/Yousef.Abdulmonaem/Documents/GitHub/flask-compiler/grammars/html/HTMLParser.g4 by ANTLR 4.13.2
 
     package antlr.html;
 
@@ -98,6 +98,13 @@ public class HTMLParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
 	@Override public T visitAttribute(HTMLParser.AttributeContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
+	@Override public T visitAttributeName(HTMLParser.AttributeNameContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *

@@ -1,4 +1,4 @@
-// Generated from C:/Users/youus/IdeaProjects/flask-compiler/grammars/html/HTMLParser.g4 by ANTLR 4.13.2
+// Generated from C:/Users/Yousef.Abdulmonaem/Documents/GitHub/flask-compiler/grammars/html/HTMLParser.g4 by ANTLR 4.13.2
 
     package antlr.html;
 
@@ -139,6 +139,16 @@ public interface HTMLParserListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitAttribute(HTMLParser.AttributeContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link HTMLParser#attributeName}.
+	 * @param ctx the parse tree
+	 */
+	void enterAttributeName(HTMLParser.AttributeNameContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link HTMLParser#attributeName}.
+	 * @param ctx the parse tree
+	 */
+	void exitAttributeName(HTMLParser.AttributeNameContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link HTMLParser#variable}.
 	 * @param ctx the parse tree
