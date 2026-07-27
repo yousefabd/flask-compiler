@@ -11,6 +11,8 @@ import jinja2.models.content.html.HTMLNormalElementNode;
 import jinja2.models.content.html.HTMLVoidElementNode;
 import jinja2.models.file.TemplateFile;
 import jinja2.models.statement.ForStatementNode;
+import jinja2.models.statement.IfBranchNode;
+import jinja2.models.statement.IfStatementNode;
 
 import java.util.List;
 
@@ -95,6 +97,15 @@ public final class TemplateRenderer {
         if (node instanceof ForStatementNode forStatement) {
             renderForStatement(
                     forStatement,
+                    context,
+                    output
+            );
+
+            return;
+        }
+        if (node instanceof IfStatementNode ifStatement) {
+            renderIfStatement(
+                    ifStatement,
                     context,
                     output
             );
@@ -276,6 +287,40 @@ public final class TemplateRenderer {
                     iterationContext,
                     output
             );
+        }
+    }
+    private void renderIfStatement(
+            IfStatementNode ifStatement,
+            RenderContext context,
+            StringBuilder output
+    ) {
+        for (IfBranchNode branch :
+                ifStatement.getBranches()) {
+
+            boolean shouldRender =
+                    branch.isElseBranch()
+                            || expressionEvaluator.evaluateCondition(
+                            branch.getCondition(),
+                            context
+                    );
+
+            if (!shouldRender) {
+                continue;
+            }
+
+            RenderContext branchContext =
+                    context.child();
+
+            renderContents(
+                    branch.getBody(),
+                    branchContext,
+                    output
+            );
+
+            /*
+             * Only the first matching branch is rendered.
+             */
+            return;
         }
     }
     private void appendValue(

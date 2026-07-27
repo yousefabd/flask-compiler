@@ -119,7 +119,9 @@ def render_test():
         'name': 'Yousef',
         'age': 24,
         'status': {
-            'active': True
+            'active': True,
+            'blocked': False,
+            'pending': True
         },
         'optional_note': None
     }
@@ -149,7 +151,7 @@ def render_test():
 
     return render_template(
         'render_test.html',
-
+        page='products',
         section_id='profile-card',
         theme='dark',
         tooltip='User information',
