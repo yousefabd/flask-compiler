@@ -113,11 +113,19 @@ def delete_product(product_id):
 
     return redirect(url_for('view_products'))
 
+@app.route('/render-test')
 def render_test():
+    user = {
+        'name': 'Yousef',
+        'age': 24,
+        'status': {
+            'active': True
+        },
+        'optional_note': None
+    }
+
     unit_price = 20
     quantity = 3
-
-    # CPython should resolve this equation before sending the context.
     calculated_total = unit_price * quantity
 
     return render_template(
@@ -129,13 +137,10 @@ def render_test():
 
         heading='Renderer integration test',
         greeting='Welcome',
-        user_name='Yousef',
 
-        age=24,
-        active=True,
+        user=user,
         total=calculated_total,
 
-        optional_note=None,
         image_path='/static/avatar.png'
     )
 if __name__ == "__main__":

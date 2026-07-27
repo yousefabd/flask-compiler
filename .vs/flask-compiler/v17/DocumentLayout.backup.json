@@ -36,7 +36,7 @@
               "RelativeDocumentMoniker": "src\\python\\symbol_table\\Symbol.java",
               "ToolTip": "C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\src\\python\\symbol_table\\Symbol.java",
               "RelativeToolTip": "src\\python\\symbol_table\\Symbol.java",
-              "ViewState": "AgIAABcAAAAAAAAAAAAAACkAAAA+AAAAAAAAAA==",
+              "ViewState": "AgIAABcAAAAAAAAAAAAAACgAAABCAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001630|",
               "WhenOpened": "2026-07-26T08:22:19.095Z",
               "EditorCaption": ""
@@ -51,8 +51,7 @@
               "RelativeToolTip": "src\\jinja2\\symbol_table\\Symbol.java",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAEsAAAAnAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001630|",
-              "WhenOpened": "2026-07-26T08:22:04.028Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-07-26T08:22:04.028Z"
             },
             {
               "$type": "Document",
@@ -64,8 +63,7 @@
               "RelativeToolTip": "docs\\RESOLVER_AND_BYTECODE.md",
               "ViewState": "AgIAAF0BAAAAAAAAAAAnwHcBAAA5AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001818|",
-              "WhenOpened": "2026-07-26T08:21:51.905Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-07-26T08:21:51.905Z"
             },
             {
               "$type": "Document",
@@ -77,8 +75,7 @@
               "RelativeToolTip": "garbage\\gui.py",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAASAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002457|",
-              "WhenOpened": "2026-07-26T08:21:30.743Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-07-26T08:21:30.743Z"
             }
           ]
         }

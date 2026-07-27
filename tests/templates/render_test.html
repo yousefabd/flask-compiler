@@ -1,33 +1,25 @@
-<section id="{{ section_id }}" class="card {{ theme }}" title="{{ tooltip }}">
-    <h1>{{ heading }}</h1>
+<p>
+    {{ greeting }}, <strong>{{ user.name }}</strong>!
+</p>
 
-    <p>
-        {{ greeting }}, <strong>{{ user_name }}</strong>!
-    </p>
+<p>
+    User: {{ user.name }} |
+    Age: {{ user.age }} |
+    Active: {{ user.status.active }}
+</p>
 
-    <p>
-        User: {{ user_name }} |
-        Age: {{ age }} |
-        Active: {{ active }}
-    </p>
-    <span>Hello</span> <span>world</span>
-    <p>
-        Calculated total: {{ total }}
-    </p>
+<p>
+    Optional note: <span>{{ user.optional_note }}</span>
+</p>
 
-    <p>
-        Optional note: <span>{{ optional_note }}</span>
-    </p>
+<input
+        type="text"
+        name="customer"
+        value="{{ user.name }}"
+        disabled
+/>
 
-    <input
-            type="text"
-            name="customer"
-            value="{{ user_name }}"
-            disabled
-    />
-
-    <img
-            src="{{ image_path }}"
-            alt="Avatar for {{ user_name }}"
-    />
-</section>
+<img
+        src="{{ image_path }}"
+        alt="Avatar for {{ user.name }}"
+/>
