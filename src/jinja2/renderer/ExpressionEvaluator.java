@@ -1,9 +1,6 @@
 package jinja2.renderer;
 
-import jinja2.models.expression.BinaryExpressionNode;
-import jinja2.models.expression.ExpressionNode;
-import jinja2.models.expression.IdentifierNode;
-import jinja2.models.expression.PropertyAccessNode;
+import jinja2.models.expression.*;
 import jinja2.models.expression.literal.BooleanLiteralNode;
 import jinja2.models.expression.literal.NoneLiteralNode;
 import jinja2.models.expression.literal.NumberLiteralNode;
@@ -126,6 +123,127 @@ public final class ExpressionEvaluator {
                         + propertyAccess.getLineNumber()
         );
     }
+    private Object evaluateArithmetic(
+            Operation operation,
+            Object left,
+            Object right,
+            BinaryExpressionNode expression
+    ) {
+        /*
+         * String concatenation.
+         */
+        if (operation == Operation.PLUS
+                && left instanceof String leftString
+                && right instanceof String rightString) {
+
+            return leftString + rightString;
+        }
+
+        /*
+         * String repetition:
+         *
+         * "ha" * 3 -> "hahaha"
+         */
+        if (operation == Operation.STAR
+                && left instanceof String text
+                && right instanceof Number repetitions) {
+
+            return repeatString(
+                    text,
+                    repetitions,
+                    expression
+            );
+        }
+
+        if (!(left instanceof Number leftNumber)
+                || !(right instanceof Number rightNumber)) {
+
+            throw invalidArithmeticOperands(
+                    operation,
+                    left,
+                    right,
+                    expression
+            );
+        }
+
+        boolean integerOperation =
+                isIntegerNumber(leftNumber)
+                        && isIntegerNumber(rightNumber);
+
+        return switch (operation) {
+            case PLUS -> {
+                if (integerOperation) {
+                    yield Math.addExact(
+                            leftNumber.longValue(),
+                            rightNumber.longValue()
+                    );
+                }
+
+                yield leftNumber.doubleValue()
+                        + rightNumber.doubleValue();
+            }
+
+            case MINUS -> {
+                if (integerOperation) {
+                    yield Math.subtractExact(
+                            leftNumber.longValue(),
+                            rightNumber.longValue()
+                    );
+                }
+
+                yield leftNumber.doubleValue()
+                        - rightNumber.doubleValue();
+            }
+
+            case STAR -> {
+                if (integerOperation) {
+                    yield Math.multiplyExact(
+                            leftNumber.longValue(),
+                            rightNumber.longValue()
+                    );
+                }
+
+                yield leftNumber.doubleValue()
+                        * rightNumber.doubleValue();
+            }
+
+            case SLASH -> {
+                ensureNotZero(
+                        rightNumber,
+                        "Division",
+                        expression
+                );
+
+                /*
+                 * Like Python 3, normal division always produces
+                 * a floating-point result.
+                 */
+                yield leftNumber.doubleValue()
+                        / rightNumber.doubleValue();
+            }
+
+            case PERCENT -> {
+                ensureNotZero(
+                        rightNumber,
+                        "Modulo",
+                        expression
+                );
+
+                if (integerOperation) {
+                    yield leftNumber.longValue()
+                            % rightNumber.longValue();
+                }
+
+                yield leftNumber.doubleValue()
+                        % rightNumber.doubleValue();
+            }
+
+            default -> throw new IllegalStateException(
+                    "Operation is not arithmetic: "
+                            + operation
+            );
+        };
+    }
     private Object evaluateBinaryExpression(
             BinaryExpressionNode expression,
             RenderContext context
@@ -141,6 +259,14 @@ public final class ExpressionEvaluator {
         );
 
         return switch (expression.getOperation()) {
+            case PLUS, MINUS, STAR, SLASH, PERCENT ->
+                    evaluateArithmetic(
+                            expression.getOperation(),
+                            leftValue,
+                            rightValue,
+                            expression
+                    );
+
             case EQ ->
                     valuesAreEqual(
                             leftValue,
@@ -268,6 +394,77 @@ public final class ExpressionEvaluator {
         }
 
         return Long.parseLong(rawValue);
+    }
+    private String repeatString(
+            String text,
+            Number repetitions,
+            BinaryExpressionNode expression
+    ) {
+        double numericCount =
+                repetitions.doubleValue();
+
+        int count =
+                repetitions.intValue();
+
+        if (!Double.isFinite(numericCount)
+                || numericCount != count) {
+
+            throw new IllegalStateException(
+                    "String repetition requires a whole number "
+                            + "at line "
+                            + expression.getLineNumber()
+            );
+        }
+
+        /*
+         * Python treats a negative repetition count as empty.
+         */
+        if (count <= 0) {
+            return "";
+        }
+
+        return text.repeat(count);
+    }
+
+    private boolean isIntegerNumber(
+            Number number
+    ) {
+        return number instanceof Byte
+                || number instanceof Short
+                || number instanceof Integer
+                || number instanceof Long;
+    }
+
+    private void ensureNotZero(
+            Number number,
+            String operationName,
+            BinaryExpressionNode expression
+    ) {
+        if (compareNumbers(number, 0L) == 0) {
+            throw new IllegalStateException(
+                    operationName
+                            + " by zero at line "
+                            + expression.getLineNumber()
+            );
+        }
+    }
+
+    private IllegalStateException invalidArithmeticOperands(
+            Operation operation,
+            Object left,
+            Object right,
+            BinaryExpressionNode expression
+    ) {
+        return new IllegalStateException(
+                "Operator "
+                        + operation
+                        + " cannot be applied to "
+                        + describeType(left)
+                        + " and "
+                        + describeType(right)
+                        + " at line "
+                        + expression.getLineNumber()
+        );
     }
     public boolean evaluateCondition(
             ExpressionNode expression,
