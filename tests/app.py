@@ -151,6 +151,10 @@ def render_test():
 
     return render_template(
         'render_test.html',
+        pairs=[
+            ["name", "Yousef"],
+            ["age", 24]
+        ],
         page='products',
         section_id='profile-card',
         theme='dark',

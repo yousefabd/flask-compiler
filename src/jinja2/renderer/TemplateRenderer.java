@@ -262,10 +262,15 @@ public final class TemplateRenderer {
             );
         }
 
+        if (forStatement.getVariables().size() != 1) {
+            throw new UnsupportedOperationException(
+                    "Loop-variable unpacking is not supported yet at line "
+                            + forStatement.getLineNumber()
+            );
+        }
+
         String variableName =
-                forStatement
-                        .getVariable()
-                        .getName();
+                forStatement.getVariables().getFirst().getName();
 
         for (Object item : iterable) {
             /*
@@ -274,13 +279,8 @@ public final class TemplateRenderer {
              * The loop variable is local, while variables from the
              * template's root context remain accessible through parent.
              */
-            RenderContext iterationContext =
-                    context.child();
-
-            iterationContext.setLocal(
-                    variableName,
-                    item
-            );
+            RenderContext iterationContext = context.child();
+            iterationContext.setLocal(variableName, item);
 
             renderContents(
                     forStatement.getBody(),

@@ -23,6 +23,7 @@ import jinja2.models.statement.*;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -233,23 +234,29 @@ public class AntlrToTemplateAstVisitor extends HTMLParserBaseVisitor<TemplateNod
     // =====================================================
 
     @Override
-    public ForStatementNode visitForStatement(HTMLParser.ForStatementContext ctx) {
+    public ForStatementNode visitForStatement(
+            HTMLParser.ForStatementContext ctx
+    ) {
+        HTMLParser.For_blockContext forContext =
+                ctx.for_block();
 
-        HTMLParser.For_blockContext forCtx = ctx.for_block();
-        int line = forCtx.getStart().getLine();
+        int line = forContext.getStart().getLine();
 
-        // Grammar: FOR (ID (COMMA ID)*) IN expr body
-        // ForStatementNode currently models a single loop variable.
-        // Multi-variable tuple unpacking (e.g. {% for k, v in items %}) is not yet
-        // supported by the node — extend it to List<IdentifierNode> when needed.
-        IdentifierNode variable = new IdentifierNode(
-                forCtx.ID(0).getText(), line);
+        List<IdentifierNode> variables =
+                buildIdentifiers(forContext.ID());
 
-        ExpressionNode iterable = (ExpressionNode) visit(forCtx.expr());
+        ExpressionNode iterable =
+                (ExpressionNode) visit(forContext.expr());
 
-        List<ContentNode> body = buildBodyContents(forCtx.body());
+        List<ContentNode> body =
+                buildBodyContents(forContext.body());
 
-        return new ForStatementNode(variable, iterable, body, line);
+        return new ForStatementNode(
+                variables,
+                iterable,
+                body,
+                line
+        );
     }
 
     // =====================================================
@@ -298,15 +305,23 @@ public class AntlrToTemplateAstVisitor extends HTMLParserBaseVisitor<TemplateNod
     // =====================================================
 
     @Override
-    public SetStatementNode visitSetStatement(HTMLParser.SetStatementContext ctx) {
+    public SetStatementNode visitSetStatement(
+            HTMLParser.SetStatementContext ctx
+    ) {
+        HTMLParser.Set_blockContext setContext =
+                ctx.set_block();
 
-        HTMLParser.Set_blockContext setCtx = ctx.set_block();
+        List<IdentifierNode> targets =
+                buildIdentifiers(setContext.ID());
 
-        // Grammar: OPEN_TAG SET (ID (COMMA ID)*) CLOSE_TAG body OPEN_TAG ENDSET CLOSE_TAG
-        String varName        = setCtx.ID(0).getText();
-        List<ContentNode> body = buildBodyContents(setCtx.body());
+        List<ContentNode> body =
+                buildBodyContents(setContext.body());
 
-        return SetStatementNode.block(varName, body, setCtx.getStart().getLine());
+        return SetStatementNode.block(
+                targets,
+                body,
+                setContext.getStart().getLine()
+        );
     }
 
     // =====================================================
@@ -314,17 +329,24 @@ public class AntlrToTemplateAstVisitor extends HTMLParserBaseVisitor<TemplateNod
     // =====================================================
 
     @Override
-    public SetStatementNode visitInlineSetStatement(HTMLParser.InlineSetStatementContext ctx) {
+    public SetStatementNode visitInlineSetStatement(
+            HTMLParser.InlineSetStatementContext ctx
+    ) {
+        HTMLParser.Set_inlineContext setContext =
+                ctx.set_inline();
 
-        HTMLParser.Set_inlineContext setCtx = ctx.set_inline();
+        List<IdentifierNode> targets =
+                buildIdentifiers(setContext.ID());
 
-        // Grammar: OPEN_TAG SET (ID (COMMA ID)*) ASSIGN expr CLOSE_TAG
-        String varName         = setCtx.ID(0).getText();
-        ExpressionNode value   = (ExpressionNode) visit(setCtx.expr());
+        ExpressionNode value =
+                (ExpressionNode) visit(setContext.expr());
 
-        return SetStatementNode.inline(varName, value, setCtx.getStart().getLine());
+        return SetStatementNode.inline(
+                targets,
+                value,
+                setContext.getStart().getLine()
+        );
     }
-
     // =====================================================
     // MACRO  {% macro name(params) %} ... {% endmacro %}
     // =====================================================
@@ -654,7 +676,22 @@ public class AntlrToTemplateAstVisitor extends HTMLParserBaseVisitor<TemplateNod
     // =====================================================
     // OPERATION PARSER
     // =====================================================
+    private List<IdentifierNode> buildIdentifiers(
+            List<TerminalNode> identifierTokens
+    ) {
+        List<IdentifierNode> identifiers = new ArrayList<>();
 
+        for (TerminalNode token : identifierTokens) {
+            identifiers.add(
+                    new IdentifierNode(
+                            token.getText(),
+                            token.getSymbol().getLine()
+                    )
+            );
+        }
+
+        return identifiers;
+    }
     private Operation parseOperation(String text) {
 
         return switch (text) {

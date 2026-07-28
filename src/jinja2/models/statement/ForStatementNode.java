@@ -10,25 +10,36 @@ import java.util.List;
 
 public class ForStatementNode extends BodyStatementNode  {
 
-    private final IdentifierNode variable;
+    private final List<IdentifierNode> variables;
     private final ExpressionNode iterable;
 
-    public ForStatementNode(IdentifierNode variable, ExpressionNode iterable,
-                            List<ContentNode> body, int lineNumber) {
+    public ForStatementNode(
+            List<IdentifierNode> variables,
+            ExpressionNode iterable,
+            List<ContentNode> body,
+            int lineNumber
+    ) {
         super(body, lineNumber);
-        this.variable = variable;
+        if (variables == null || variables.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "A for statement must contain at least one loop variable"
+            );
+        }
+
+        this.variables = List.copyOf(variables);
         this.iterable = iterable;
     }
 
-    public IdentifierNode   getVariable() { return variable; }
+    public List<IdentifierNode> getVariables() {
+        return variables;
+    }
     public ExpressionNode   getIterable() { return iterable; }
 
     @Override
     public List<? extends TemplateNode> getChildren() {
-        List<TemplateNode> children = new ArrayList<>();
-        children.add(variable);
+        List<TemplateNode> children = new ArrayList<>(variables);
         children.add(iterable);
-        children.addAll(super.getBody());
+        children.addAll(getBody());
         return children;
     }
 

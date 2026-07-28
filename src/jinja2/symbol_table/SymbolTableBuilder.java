@@ -71,30 +71,45 @@ public class SymbolTableBuilder {
     // STATEMENTS
     // ─────────────────────────────────────────────────────────────
 
-    private void visitForStatement(ForStatementNode fs) {
-        // iterable is evaluated in the OUTER scope before entering
-        visitExpression(fs.getIterable());
+    private void visitForStatement(ForStatementNode statement) {
+        // The iterable belongs to the outer scope.
+        visitExpression(statement.getIterable());
 
         symbolTable.enterScope("for", ScopeKind.FOR);
 
-        // the magic `loop` variable
-        symbolTable.define(new Symbol("loop", SymbolKind.LOOP_VAR, fs.getLineNumber(), null));
-
-        // the actual loop variable — element type can't be inferred from the iterable without type-tracking it
-        Symbol loopVar = new Symbol(
-                fs.getVariable().getName(),
-                SymbolKind.LOOP_VAR,
-                fs.getLineNumber(),
-                null
+        symbolTable.define(
+                new Symbol(
+                        "loop",
+                        SymbolKind.LOOP_VAR,
+                        statement.getLineNumber(),
+                        null
+                )
         );
-        if (!symbolTable.define(loopVar))
-            errors.add(new CompilerError(
-                    CompilerError.Kind.DUPLICATE_VARIABLE,
-                    "Duplicate loop variable '" + loopVar.getName() + "'",
-                    fs.getLineNumber()));
 
-        for (ContentNode child : fs.getBody())
+        for (IdentifierNode variable : statement.getVariables()) {
+            Symbol loopVariable = new Symbol(
+                    variable.getName(),
+                    SymbolKind.LOOP_VAR,
+                    variable.getLineNumber(),
+                    null
+            );
+
+            if (!symbolTable.define(loopVariable)) {
+                errors.add(
+                        new CompilerError(
+                                CompilerError.Kind.DUPLICATE_VARIABLE,
+                                "Duplicate loop variable '"
+                                        + loopVariable.getName()
+                                        + "'",
+                                variable.getLineNumber()
+                        )
+                );
+            }
+        }
+
+        for (ContentNode child : statement.getBody()) {
             visitContent(child);
+        }
 
         symbolTable.exitScope();
     }
@@ -110,29 +125,35 @@ public class SymbolTableBuilder {
         }
     }
 
-    private void visitSetStatement(SetStatementNode ss) {
-        // In Jinja2, {% set x = ... %} is assignment — re-setting an existing
-        // variable is valid. We overwrite rather than reject.
-        Symbol symbol = new Symbol(
-                ss.getVariableName(),
-                SymbolKind.VARIABLE,
-                ss.getLineNumber(),
-                ss.isBlock() ? null : ss.getValue()  // block-set has no single expression
-        );
-        symbolTable.overwrite(symbol);
+    private void visitSetStatement(SetStatementNode statement) {
+        /*
+         * With one inline target, the complete expression is that variable's
+         * value. With multiple targets, we cannot assign the same complete
+         * expression to every variable because it must eventually be unpacked.
+         */
+        ExpressionNode directlyAssignedValue =
+                !statement.isBlock()
+                        && statement.getTargets().size() == 1
+                        ? statement.getValue()
+                        : null;
 
-        if (ss.isBlock()) {
-            for (ContentNode child : ss.getBody())
+        for (IdentifierNode target : statement.getTargets()) {
+            Symbol symbol = new Symbol(
+                    target.getName(),
+                    SymbolKind.VARIABLE,
+                    target.getLineNumber(),
+                    directlyAssignedValue
+            );
+
+            symbolTable.overwrite(symbol);
+        }
+
+        if (statement.isBlock()) {
+            for (ContentNode child : statement.getBody()) {
                 visitContent(child);
-            // {% set x %}...{% endset %} captures the rendered body as text —
-            // not something we can evaluate to a compile-time constant here
-            //symbol.setResolvedValue(ConstantValue.unknown());
+            }
         } else {
-            visitExpression(ss.getValue());
-            // added: record the value when {% set x = <literal> %} is provably
-            // constant, so the resolver report and template-evaluation folding
-            // can use it — a non-literal expression is simply left as unknown.
-            //symbol.setResolvedValue(literalConstant(ss.getValue()));
+            visitExpression(statement.getValue());
         }
     }
 
