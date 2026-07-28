@@ -11,9 +11,7 @@ import jinja2.models.file.TemplateFile;
 import jinja2.models.statement.*;
 import jinja2.symbol_table.*;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class TypeCheckerRule implements ISemanticRule {
 
@@ -75,6 +73,15 @@ public class TypeCheckerRule implements ISemanticRule {
         else if (node instanceof SetStatementNode ss) {
             if (ss.isBlock()) for (ContentNode child : ss.getBody()) walkContent(child, ctx);
             else checkExpr(ss.getValue(), ctx);
+            if (ss.isBlock()
+                    && ss.getTargets().size() != 1) {
+                error(
+                        ctx,
+                        CompilerError.Kind.TYPE_ERROR,
+                        "Block set requires exactly one target",
+                        ss.getLineNumber()
+                );
+            }
         }
         else if (node instanceof MacroStatementNode ms) {
             for (ParameterNode p : ms.getParameters())
@@ -267,40 +274,125 @@ public class TypeCheckerRule implements ISemanticRule {
      * computed shallowly at construction time before the full symbol table
      * existed. At check time we have everything, so we can go deeper.
      */
-    public SymbolType resolveType(ExpressionNode expr, SymbolTable symbolTable) {
-        if (expr instanceof StringLiteralNode)        return SymbolType.STRING;
-        if (expr instanceof NumberLiteralNode)        return SymbolType.NUMBER;
-        if (expr instanceof BooleanLiteralNode)       return SymbolType.BOOLEAN;
-        if (expr instanceof NoneLiteralNode)          return SymbolType.NONE;
-        if (expr instanceof ListExpressionNode)       return SymbolType.LIST;
-        if (expr instanceof DictionaryExpressionNode) return SymbolType.DICT;
+    public SymbolType resolveType(
+            ExpressionNode expression,
+            SymbolTable symbolTable
+    ) {
+        Set<Symbol> resolvingSymbols =
+                Collections.newSetFromMap(
+                        new IdentityHashMap<>()
+                );
 
-        if (expr instanceof IdentifierNode id) {
-            Symbol sym = symbolTable.resolveGlobal(id.getName());
-            if (sym == null) return SymbolType.ANY;
-            // Re-resolve the stored expression with the now-complete symbol table.
-            // sym.getType() was computed shallowly at construction time and may
-            // be ANY for non-literal assignments like {% set x = 5 + 3 %}.
-            if (sym.getValue() != null)
-                return resolveType(sym.getValue(), symbolTable);
-            return sym.getType(); // macros (CALLABLE), loop vars, params (ANY)
+        return resolveType(
+                expression,
+                symbolTable,
+                resolvingSymbols
+        );
+    }
+    private SymbolType resolveType(
+            ExpressionNode expression,
+            SymbolTable symbolTable,
+            Set<Symbol> resolvingSymbols
+    ) {
+        if (expression instanceof StringLiteralNode) {
+            return SymbolType.STRING;
         }
 
-        if (expr instanceof UnaryExpressionNode un) {
-            return switch (un.getOperation()) {
-                case NOT   -> SymbolType.BOOLEAN;
+        if (expression instanceof NumberLiteralNode) {
+            return SymbolType.NUMBER;
+        }
+
+        if (expression instanceof BooleanLiteralNode) {
+            return SymbolType.BOOLEAN;
+        }
+
+        if (expression instanceof NoneLiteralNode) {
+            return SymbolType.NONE;
+        }
+
+        if (expression instanceof ListExpressionNode) {
+            return SymbolType.LIST;
+        }
+
+        if (expression instanceof DictionaryExpressionNode) {
+            return SymbolType.DICT;
+        }
+
+        if (expression instanceof IdentifierNode identifier) {
+            /*
+             * Prefer the declaration binding recorded while the symbol
+             * table was built. This preserves which version of a
+             * reassigned variable this specific identifier referred to.
+             */
+            Symbol symbol =
+                    symbolTable.getBinding(identifier);
+
+            /*
+             * Fallback for identifiers that were not explicitly bound,
+             * such as externally supplied context values.
+             */
+            if (symbol == null) {
+                symbol = symbolTable.resolveGlobal(
+                        identifier.getName()
+                );
+            }
+
+            if (symbol == null) {
+                return SymbolType.ANY;
+            }
+
+            if (symbol.getValue() == null) {
+                return symbol.getType();
+            }
+
+            /*
+             * Protect against malformed or genuinely recursive symbol
+             * definitions. Returning ANY is safer than overflowing and
+             * avoids producing false secondary errors.
+             */
+            if (!resolvingSymbols.add(symbol)) {
+                return SymbolType.ANY;
+            }
+
+            try {
+                return resolveType(
+                        symbol.getValue(),
+                        symbolTable,
+                        resolvingSymbols
+                );
+            } finally {
+                resolvingSymbols.remove(symbol);
+            }
+        }
+
+        if (expression instanceof UnaryExpressionNode unary) {
+            return switch (unary.getOperation()) {
+                case NOT -> SymbolType.BOOLEAN;
                 case PLUS, MINUS -> SymbolType.NUMBER;
-                default    -> SymbolType.ANY;
+                default -> SymbolType.ANY;
             };
         }
 
-        if (expr instanceof BinaryExpressionNode bin) {
-            SymbolType left  = resolveType(bin.getLeft(),  symbolTable);
-            SymbolType right = resolveType(bin.getRight(), symbolTable);
-            return inferBinaryResultType(left, right, bin.getOperation());
+        if (expression instanceof BinaryExpressionNode binary) {
+            SymbolType left = resolveType(
+                    binary.getLeft(),
+                    symbolTable,
+                    resolvingSymbols
+            );
+
+            SymbolType right = resolveType(
+                    binary.getRight(),
+                    symbolTable,
+                    resolvingSymbols
+            );
+
+            return inferBinaryResultType(
+                    left,
+                    right,
+                    binary.getOperation()
+            );
         }
 
-        // Calls, filters, property/index access — return type not statically known
         return SymbolType.ANY;
     }
 

@@ -338,43 +338,166 @@ public final class TemplateRenderer {
             Object item,
             RenderContext context
     ) {
-        List<IdentifierNode> variables =
-                statement.getVariables();
+        bindTargets(
+                statement.getVariables(),
+                item,
+                context,
+                statement.getLineNumber()
+        );
+    }
 
-        if (variables.size() == 1) {
+    private Map<String, Object> createLoopMetadata(
+            int index,
+            int length
+    ) {
+        Map<String, Object> loop = new LinkedHashMap<>();
+
+        loop.put("index", index + 1);
+        loop.put("index0", index);
+
+        loop.put("revindex", length - index);
+        loop.put("revindex0", length - index - 1);
+
+        loop.put("first", index == 0);
+        loop.put("last", index == length - 1);
+        loop.put("length", length);
+
+        return loop;
+    }
+    //endregion
+    private void renderIfStatement(
+            IfStatementNode ifStatement,
+            RenderContext context,
+            StringBuilder output
+    ) {
+        for (IfBranchNode branch :
+                ifStatement.getBranches()) {
+
+            boolean shouldRender =
+                    branch.isElseBranch()
+                            || expressionEvaluator.evaluateCondition(
+                            branch.getCondition(),
+                            context
+                    );
+
+            if (!shouldRender) {
+                continue;
+            }
+
+
+            renderContents(
+                    branch.getBody(),
+                    context,
+                    output
+            );
+
+            /*
+             * Only the first matching branch is rendered.
+             */
+            return;
+        }
+    }
+    //region set statement
+    private void renderSetStatement(
+            SetStatementNode statement,
+            RenderContext context
+    ) {
+        if (statement.isBlock()) {
+            renderBlockSet(
+                    statement,
+                    context
+            );
+
+            return;
+        }
+
+        Object value = expressionEvaluator.evaluate(
+                statement.getValue(),
+                context
+        );
+
+        bindTargets(
+                statement.getTargets(),
+                value,
+                context,
+                statement.getLineNumber()
+        );
+    }
+    private void renderBlockSet(
+            SetStatementNode statement,
+            RenderContext context
+    ) {
+        if (statement.getTargets().size() != 1) {
+            throw new IllegalStateException(
+                    "Block set requires exactly one target at line "
+                            + statement.getLineNumber()
+            );
+        }
+
+        StringBuilder capturedOutput =
+                new StringBuilder();
+
+        renderContents(
+                statement.getBody(),
+                context,
+                capturedOutput
+        );
+
+        context.setLocal(
+                statement.getTargets().getFirst().getName(),
+                capturedOutput.toString()
+        );
+    }
+    private void bindTargets(
+            List<IdentifierNode> targets,
+            Object value,
+            RenderContext context,
+            int lineNumber
+    ) {
+        if (targets.size() == 1) {
             context.setLocal(
-                    variables.getFirst().getName(),
-                    item
+                    targets.getFirst().getName(),
+                    value
             );
 
             return;
         }
 
         List<Object> unpackedValues =
-                unpackLoopItem(
-                        item,
-                        statement.getLineNumber()
+                unpackValue(
+                        value,
+                        lineNumber
                 );
 
-        if (unpackedValues.size() != variables.size()) {
+        if (unpackedValues.size() != targets.size()) {
             throw new IllegalStateException(
                     "Cannot unpack "
                             + unpackedValues.size()
                             + " values into "
-                            + variables.size()
-                            + " loop variables at line "
-                            + statement.getLineNumber()
+                            + targets.size()
+                            + " targets at line "
+                            + lineNumber
             );
         }
 
-        for (int index = 0; index < variables.size(); index++) {
+        for (int index = 0; index < targets.size(); index++) {
             context.setLocal(
-                    variables.get(index).getName(),
+                    targets.get(index).getName(),
                     unpackedValues.get(index)
             );
         }
     }
-    private List<Object> unpackLoopItem(
+    //endregion
+
+    private void appendValue(
+            Object value,
+            StringBuilder output
+    ) {
+        if (value != null) {
+            output.append(value);
+        }
+    }
+    private List<Object> unpackValue(
             Object item,
             int lineNumber
     ) {
@@ -432,66 +555,5 @@ public final class TemplateRenderer {
                         + " at line "
                         + lineNumber
         );
-    }
-    private Map<String, Object> createLoopMetadata(
-            int index,
-            int length
-    ) {
-        Map<String, Object> loop = new LinkedHashMap<>();
-
-        loop.put("index", index + 1);
-        loop.put("index0", index);
-
-        loop.put("revindex", length - index);
-        loop.put("revindex0", length - index - 1);
-
-        loop.put("first", index == 0);
-        loop.put("last", index == length - 1);
-        loop.put("length", length);
-
-        return loop;
-    }
-    //endregion
-    private void renderIfStatement(
-            IfStatementNode ifStatement,
-            RenderContext context,
-            StringBuilder output
-    ) {
-        for (IfBranchNode branch :
-                ifStatement.getBranches()) {
-
-            boolean shouldRender =
-                    branch.isElseBranch()
-                            || expressionEvaluator.evaluateCondition(
-                            branch.getCondition(),
-                            context
-                    );
-
-            if (!shouldRender) {
-                continue;
-            }
-
-            RenderContext branchContext =
-                    context.child();
-
-            renderContents(
-                    branch.getBody(),
-                    branchContext,
-                    output
-            );
-
-            /*
-             * Only the first matching branch is rendered.
-             */
-            return;
-        }
-    }
-    private void appendValue(
-            Object value,
-            StringBuilder output
-    ) {
-        if (value != null) {
-            output.append(value);
-        }
     }
 }

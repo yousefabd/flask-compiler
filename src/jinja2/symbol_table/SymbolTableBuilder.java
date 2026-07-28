@@ -125,12 +125,22 @@ public class SymbolTableBuilder {
         }
     }
 
-    private void visitSetStatement(SetStatementNode statement) {
+    private void visitSetStatement(
+            SetStatementNode statement
+    ) {
         /*
-         * With one inline target, the complete expression is that variable's
-         * value. With multiple targets, we cannot assign the same complete
-         * expression to every variable because it must eventually be unpacked.
+         * Analyze the right side/body before creating the new variables.
+         * This prevents an assignment from resolving references against
+         * the value currently being declared.
          */
+        if (statement.isBlock()) {
+            for (ContentNode child : statement.getBody()) {
+                visitContent(child);
+            }
+        } else {
+            visitExpression(statement.getValue());
+        }
+
         ExpressionNode directlyAssignedValue =
                 !statement.isBlock()
                         && statement.getTargets().size() == 1
@@ -138,22 +148,14 @@ public class SymbolTableBuilder {
                         : null;
 
         for (IdentifierNode target : statement.getTargets()) {
-            Symbol symbol = new Symbol(
-                    target.getName(),
-                    SymbolKind.VARIABLE,
-                    target.getLineNumber(),
-                    directlyAssignedValue
+            symbolTable.overwrite(
+                    new Symbol(
+                            target.getName(),
+                            SymbolKind.VARIABLE,
+                            target.getLineNumber(),
+                            directlyAssignedValue
+                    )
             );
-
-            symbolTable.overwrite(symbol);
-        }
-
-        if (statement.isBlock()) {
-            for (ContentNode child : statement.getBody()) {
-                visitContent(child);
-            }
-        } else {
-            visitExpression(statement.getValue());
         }
     }
 
