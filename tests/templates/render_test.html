@@ -1,2 +1,94 @@
+<section
+        id="{{ section_id }}"
+        class="card {{ theme }}"
+        title="{{ tooltip }}"
+>
+    <h1>{{ heading }}</h1>
 
-    {% set first, second = products %}
+    <p>
+        {{ greeting }}, <strong>{{ user.name }}</strong>!
+    </p>
+
+    <p>
+        User: {{ user.name }} |
+        Age: {{ user.age }} |
+        Active: {{ user.status.active }}
+    </p>
+
+
+    <p>
+        Calculated total: {{ total }}
+    </p>
+
+    <p>
+        Optional note: <span>{{ user.optional_note }}</span>
+    </p>
+
+    <input
+            type="text"
+            name="customer"
+            value="{{ user.name }}"
+            disabled
+    />
+
+    <img
+            src="{{ image_path }}"
+            alt="Avatar for {{ user.name }}"
+    />
+    <div class="arithmetic-tests">
+        <p>Addition: {{ 10 + 5 }}</p>
+        <p>Context addition: {{ total + 10 }}</p>
+
+        <p>Subtraction: {{ 10 - 3 }}</p>
+
+        <p>Multiplication: {{ 6 * 7 }}</p>
+
+        <p>Division: {{ 7 / 2 }}</p>
+
+        <p>Modulo: {{ 7 % 3 }}</p>
+
+        <p>String concatenation: {{ "Hello, " + user.name }}</p>
+
+        <p>String repetition: {{ "ha" * 3 }}</p>
+
+        <p>Operator precedence: {{ 2 + 3 * 4 }}</p>
+    </div>
+    <div class="relational-comparison-tests">
+        {% if user.age >= 18 + 4 * 2 %}
+        <p>User is old</p>
+        {% else %}
+        <p>User is young</p>
+        {% endif %}
+
+        {% if user.age <= 24 %}
+        <p>User is not older than 24</p>
+        {% endif %}
+
+        {% if total > 50 %}
+        <p>Total is greater than 50</p>
+        {% endif %}
+
+        {% if total < 100 %}
+        <p>Total is less than 100</p>
+        {% endif %}
+
+        {% if total > 100 %}
+        <p>This must not be rendered</p>
+        {% else %}
+        <p>Total is not greater than 100</p>
+        {% endif %}
+
+        {% if page >= "products" %}
+        <p>String comparison works</p>
+        {% endif %}
+    </div>
+    {% for key, value in [["name", "Yousef"], ["age", 24]] %}
+    <p>
+        {{ loop.index }}/{{ loop.length }}
+        {{ key }} = {{ value }}
+        first={{ loop.first }}
+        last={{ loop.last }}
+    </p>
+    {% endfor %}
+
+</section>

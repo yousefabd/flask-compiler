@@ -9,9 +9,7 @@ import utils.CompilerUtils;
 
 import java.lang.reflect.Array;
 import java.math.BigDecimal;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 public final class ExpressionEvaluator {
 
@@ -49,9 +47,14 @@ public final class ExpressionEvaluator {
                             binaryExpression,
                             context
                     );
-
+            case ListExpressionNode listExpression ->
+                    evaluateListExpression(
+                            listExpression,
+                            context
+                    );
             case NoneLiteralNode ignored ->
                     null;
+
 
             default -> throw new UnsupportedOperationException(
                     "Expression is not supported yet: "
@@ -508,5 +511,18 @@ public final class ExpressionEvaluator {
         }
 
         return true;
+    }
+    private List<Object> evaluateListExpression(
+            ListExpressionNode expression,
+            RenderContext context
+    ) {
+        List<Object> values =
+                new ArrayList<>(expression.getElements().size());
+
+        for (ExpressionNode element : expression.getElements()) {
+            values.add(evaluate(element, context));
+        }
+
+        return values;
     }
 }
