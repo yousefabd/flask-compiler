@@ -14,10 +14,18 @@ public class DictionaryExpressionNode extends ExpressionNode {
     public DictionaryExpressionNode(
             List<ExpressionNode> keys,
             List<ExpressionNode> values,
-            int lineNumber) {
+            int lineNumber
+    ) {
         super(lineNumber);
-        this.keys   = keys;
-        this.values = values;
+
+        if (keys.size() != values.size()) {
+            throw new IllegalArgumentException(
+                    "Dictionary keys and values must have equal sizes"
+            );
+        }
+
+        this.keys = List.copyOf(keys);
+        this.values = List.copyOf(values);
     }
 
     public List<ExpressionNode> getKeys()   { return keys; }

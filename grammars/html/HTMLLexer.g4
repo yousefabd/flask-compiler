@@ -3,7 +3,9 @@ lexer grammar HTMLLexer;
 @header{
     package antlr.html;
 }
-
+@members {
+    private int dictionaryBraceDepth = 0;
+}
 COMMENT
     : '<!--' .*? '-->' -> skip
     ;
@@ -15,11 +17,11 @@ COMMENT
 // --------------------
 
 DOUBLE_OPEN_BRACE
-    : '{{' -> pushMode(JINJA_EXPR)
+    : '{{' { dictionaryBraceDepth = 0; } -> pushMode(JINJA_EXPR)
     ;
 
 OPEN_TAG
-    : '{%' -> pushMode(JINJA_EXPR)
+    : '{%' { dictionaryBraceDepth = 0; } -> pushMode(JINJA_EXPR)
     ;
 
 COMMENT_START
@@ -208,7 +210,7 @@ CLOSE_TAG
     ;
 
 DOUBLE_CLOSE_BRACE
-    : '}}' -> popMode
+    : {dictionaryBraceDepth == 0}? '}}' -> popMode
     ;
 
 INCLUDE
@@ -386,7 +388,13 @@ LBRACK
 RBRACK
     : ']'
     ;
+LBRACE
+    : '{' { dictionaryBraceDepth++; }
+    ;
 
+RBRACE
+    : {dictionaryBraceDepth > 0}? '}' { dictionaryBraceDepth--; }
+    ;
 STRING
     : '"' ( ~["\\] | '\\' . )* '"'
     | '\'' ( ~['\\] | '\\' . )* '\''

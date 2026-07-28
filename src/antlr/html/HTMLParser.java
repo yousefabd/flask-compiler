@@ -29,8 +29,8 @@ public class HTMLParser extends Parser {
 		RAW=39, ENDRAW=40, IS=41, OR=42, AND=43, NOT=44, TRUE=45, FALSE=46, NONE=47, 
 		PLUS=48, MINUS=49, STAR=50, SLASH=51, PERCENT=52, EQ=53, NEQ=54, LT=55, 
 		GT=56, LTE=57, GTE=58, ASSIGN=59, PIPE=60, DOT=61, COMMA=62, COLON=63, 
-		LPAREN=64, RPAREN=65, LBRACK=66, RBRACK=67, STRING=68, NUMBER=69, ID=70, 
-		JINJA_WS=71, COMMENT_END=72, COMMENT_TEXT=73;
+		LPAREN=64, RPAREN=65, LBRACK=66, RBRACK=67, LBRACE=68, RBRACE=69, STRING=70, 
+		NUMBER=71, ID=72, JINJA_WS=73, COMMENT_END=74, COMMENT_TEXT=75;
 	public static final int
 		RULE_template = 0, RULE_tag = 1, RULE_htmlElement = 2, RULE_normalElement = 3, 
 		RULE_beginTag = 4, RULE_endTag = 5, RULE_voidElement = 6, RULE_attribute = 7, 
@@ -54,14 +54,15 @@ public class HTMLParser extends Parser {
 
 	private static String[] makeLiteralNames() {
 		return new String[] {
-			null, null, "'{{'", "'{%'", "'{#'", null, null, null, null, null, "'/>'", 
+			null, null, null, null, "'{#'", null, null, null, null, null, "'/>'", 
 			null, null, null, null, null, null, null, null, null, null, null, "'%}'", 
-			"'}}'", "'include'", "'for'", "'in'", "'endfor'", "'if'", "'elif'", "'else'", 
+			null, "'include'", "'for'", "'in'", "'endfor'", "'if'", "'elif'", "'else'", 
 			"'endif'", "'block'", "'endblock'", "'macro'", "'endmacro'", "'set'", 
 			"'endset'", "'extends'", "'raw'", "'endraw'", "'is'", "'or'", "'and'", 
 			"'not'", "'true'", "'false'", "'none'", "'+'", "'-'", "'*'", null, "'%'", 
 			"'=='", "'!='", null, null, "'<='", "'>='", null, "'|'", "'.'", "','", 
-			"':'", "'('", "')'", "'['", "']'", null, null, null, null, "'#}'"
+			"':'", "'('", "')'", "'['", "']'", "'{'", null, null, null, null, null, 
+			"'#}'"
 		};
 	}
 	private static final String[] _LITERAL_NAMES = makeLiteralNames();
@@ -77,7 +78,8 @@ public class HTMLParser extends Parser {
 			"OR", "AND", "NOT", "TRUE", "FALSE", "NONE", "PLUS", "MINUS", "STAR", 
 			"SLASH", "PERCENT", "EQ", "NEQ", "LT", "GT", "LTE", "GTE", "ASSIGN", 
 			"PIPE", "DOT", "COMMA", "COLON", "LPAREN", "RPAREN", "LBRACK", "RBRACK", 
-			"STRING", "NUMBER", "ID", "JINJA_WS", "COMMENT_END", "COMMENT_TEXT"
+			"LBRACE", "RBRACE", "STRING", "NUMBER", "ID", "JINJA_WS", "COMMENT_END", 
+			"COMMENT_TEXT"
 		};
 	}
 	private static final String[] _SYMBOLIC_NAMES = makeSymbolicNames();
@@ -2762,7 +2764,7 @@ public class HTMLParser extends Parser {
 				setState(396);
 				_errHandler.sync(this);
 				_la = _input.LA(1);
-				if (((((_la - 44)) & ~0x3f) == 0 && ((1L << (_la - 44)) & 122683455L) != 0)) {
+				if (((((_la - 44)) & ~0x3f) == 0 && ((1L << (_la - 44)) & 491782207L) != 0)) {
 					{
 					setState(395);
 					arguments();
@@ -2857,7 +2859,7 @@ public class HTMLParser extends Parser {
 				setState(411);
 				_errHandler.sync(this);
 				_la = _input.LA(1);
-				if (((((_la - 44)) & ~0x3f) == 0 && ((1L << (_la - 44)) & 122683455L) != 0)) {
+				if (((((_la - 44)) & ~0x3f) == 0 && ((1L << (_la - 44)) & 491782207L) != 0)) {
 					{
 					setState(410);
 					arguments();
@@ -3187,8 +3189,8 @@ public class HTMLParser extends Parser {
 		try {
 			setState(444);
 			_errHandler.sync(this);
-			switch ( getInterpreter().adaptivePredict(_input,62,_ctx) ) {
-			case 1:
+			switch (_input.LA(1)) {
+			case LPAREN:
 				_localctx = new ParenExpressionContext(_localctx);
 				enterOuterAlt(_localctx, 1);
 				{
@@ -3200,7 +3202,7 @@ public class HTMLParser extends Parser {
 				match(RPAREN);
 				}
 				break;
-			case 2:
+			case ID:
 				_localctx = new IDContext(_localctx);
 				enterOuterAlt(_localctx, 2);
 				{
@@ -3208,7 +3210,7 @@ public class HTMLParser extends Parser {
 				match(ID);
 				}
 				break;
-			case 3:
+			case TRUE:
 				_localctx = new BooleanContext(_localctx);
 				enterOuterAlt(_localctx, 3);
 				{
@@ -3216,7 +3218,7 @@ public class HTMLParser extends Parser {
 				match(TRUE);
 				}
 				break;
-			case 4:
+			case FALSE:
 				_localctx = new BooleanContext(_localctx);
 				enterOuterAlt(_localctx, 4);
 				{
@@ -3224,7 +3226,8 @@ public class HTMLParser extends Parser {
 				match(FALSE);
 				}
 				break;
-			case 5:
+			case MINUS:
+			case NUMBER:
 				_localctx = new NumberContext(_localctx);
 				enterOuterAlt(_localctx, 5);
 				{
@@ -3242,7 +3245,7 @@ public class HTMLParser extends Parser {
 				match(NUMBER);
 				}
 				break;
-			case 6:
+			case NONE:
 				_localctx = new NoneContext(_localctx);
 				enterOuterAlt(_localctx, 6);
 				{
@@ -3250,7 +3253,7 @@ public class HTMLParser extends Parser {
 				match(NONE);
 				}
 				break;
-			case 7:
+			case STRING:
 				_localctx = new StringContext(_localctx);
 				enterOuterAlt(_localctx, 7);
 				{
@@ -3258,7 +3261,7 @@ public class HTMLParser extends Parser {
 				match(STRING);
 				}
 				break;
-			case 8:
+			case LBRACK:
 				_localctx = new ListContext(_localctx);
 				enterOuterAlt(_localctx, 8);
 				{
@@ -3266,7 +3269,7 @@ public class HTMLParser extends Parser {
 				listdef();
 				}
 				break;
-			case 9:
+			case LBRACE:
 				_localctx = new DictionaryContext(_localctx);
 				enterOuterAlt(_localctx, 9);
 				{
@@ -3274,6 +3277,8 @@ public class HTMLParser extends Parser {
 				dictdef();
 				}
 				break;
+			default:
+				throw new NoViableAltException(this);
 			}
 		}
 		catch (RecognitionException re) {
@@ -3332,7 +3337,7 @@ public class HTMLParser extends Parser {
 			setState(455);
 			_errHandler.sync(this);
 			_la = _input.LA(1);
-			if (((((_la - 44)) & ~0x3f) == 0 && ((1L << (_la - 44)) & 122683455L) != 0)) {
+			if (((((_la - 44)) & ~0x3f) == 0 && ((1L << (_la - 44)) & 491782207L) != 0)) {
 				{
 				setState(447);
 				expr(0);
@@ -3372,8 +3377,8 @@ public class HTMLParser extends Parser {
 
 	@SuppressWarnings("CheckReturnValue")
 	public static class DictdefContext extends ParserRuleContext {
-		public TerminalNode LBRACK() { return getToken(HTMLParser.LBRACK, 0); }
-		public TerminalNode RBRACK() { return getToken(HTMLParser.RBRACK, 0); }
+		public TerminalNode LBRACE() { return getToken(HTMLParser.LBRACE, 0); }
+		public TerminalNode RBRACE() { return getToken(HTMLParser.RBRACE, 0); }
 		public List<ExprContext> expr() {
 			return getRuleContexts(ExprContext.class);
 		}
@@ -3415,11 +3420,11 @@ public class HTMLParser extends Parser {
 			enterOuterAlt(_localctx, 1);
 			{
 			setState(459);
-			match(LBRACK);
+			match(LBRACE);
 			setState(474);
 			_errHandler.sync(this);
 			_la = _input.LA(1);
-			if (((((_la - 44)) & ~0x3f) == 0 && ((1L << (_la - 44)) & 122683455L) != 0)) {
+			if (((((_la - 44)) & ~0x3f) == 0 && ((1L << (_la - 44)) & 491782207L) != 0)) {
 				{
 				{
 				setState(460);
@@ -3455,7 +3460,7 @@ public class HTMLParser extends Parser {
 			}
 
 			setState(476);
-			match(RBRACK);
+			match(RBRACE);
 			}
 		}
 		catch (RecognitionException re) {
@@ -3493,7 +3498,7 @@ public class HTMLParser extends Parser {
 	}
 
 	public static final String _serializedATN =
-		"\u0004\u0001I\u01df\u0002\u0000\u0007\u0000\u0002\u0001\u0007\u0001\u0002"+
+		"\u0004\u0001K\u01df\u0002\u0000\u0007\u0000\u0002\u0001\u0007\u0001\u0002"+
 		"\u0002\u0007\u0002\u0002\u0003\u0007\u0003\u0002\u0004\u0007\u0004\u0002"+
 		"\u0005\u0007\u0005\u0002\u0006\u0007\u0006\u0002\u0007\u0007\u0007\u0002"+
 		"\b\u0007\b\u0002\t\u0007\t\u0002\n\u0007\n\u0002\u000b\u0007\u000b\u0002"+
@@ -3625,8 +3630,8 @@ public class HTMLParser extends Parser {
 		"\u0000\u0000\u0000\u0090\u0092\u0005\u0003\u0000\u0000\u0091\u0093\u0005"+
 		"1\u0000\u0000\u0092\u0091\u0001\u0000\u0000\u0000\u0092\u0093\u0001\u0000"+
 		"\u0000\u0000\u0093\u0094\u0001\u0000\u0000\u0000\u0094\u0095\u0005\u0019"+
-		"\u0000\u0000\u0095\u009a\u0005F\u0000\u0000\u0096\u0097\u0005>\u0000\u0000"+
-		"\u0097\u0099\u0005F\u0000\u0000\u0098\u0096\u0001\u0000\u0000\u0000\u0099"+
+		"\u0000\u0000\u0095\u009a\u0005H\u0000\u0000\u0096\u0097\u0005>\u0000\u0000"+
+		"\u0097\u0099\u0005H\u0000\u0000\u0098\u0096\u0001\u0000\u0000\u0000\u0099"+
 		"\u009c\u0001\u0000\u0000\u0000\u009a\u0098\u0001\u0000\u0000\u0000\u009a"+
 		"\u009b\u0001\u0000\u0000\u0000\u009b\u009d\u0001\u0000\u0000\u0000\u009c"+
 		"\u009a\u0001\u0000\u0000\u0000\u009d\u009e\u0005\u001a\u0000\u0000\u009e"+
@@ -3674,8 +3679,8 @@ public class HTMLParser extends Parser {
 		"\u0000\u0000\u0000\u00e5\u00e3\u0001\u0000\u0000\u0000\u00e6\u00e8\u0005"+
 		"\u0003\u0000\u0000\u00e7\u00e9\u00051\u0000\u0000\u00e8\u00e7\u0001\u0000"+
 		"\u0000\u0000\u00e8\u00e9\u0001\u0000\u0000\u0000\u00e9\u00ea\u0001\u0000"+
-		"\u0000\u0000\u00ea\u00eb\u0005$\u0000\u0000\u00eb\u00f0\u0005F\u0000\u0000"+
-		"\u00ec\u00ed\u0005>\u0000\u0000\u00ed\u00ef\u0005F\u0000\u0000\u00ee\u00ec"+
+		"\u0000\u0000\u00ea\u00eb\u0005$\u0000\u0000\u00eb\u00f0\u0005H\u0000\u0000"+
+		"\u00ec\u00ed\u0005>\u0000\u0000\u00ed\u00ef\u0005H\u0000\u0000\u00ee\u00ec"+
 		"\u0001\u0000\u0000\u0000\u00ef\u00f2\u0001\u0000\u0000\u0000\u00f0\u00ee"+
 		"\u0001\u0000\u0000\u0000\u00f0\u00f1\u0001\u0000\u0000\u0000\u00f1\u00f3"+
 		"\u0001\u0000\u0000\u0000\u00f2\u00f0\u0001\u0000\u0000\u0000\u00f3\u00f4"+
@@ -3685,8 +3690,8 @@ public class HTMLParser extends Parser {
 		"\u0000\u0000\u00f9\u001f\u0001\u0000\u0000\u0000\u00fa\u00fc\u0005\u0003"+
 		"\u0000\u0000\u00fb\u00fd\u00051\u0000\u0000\u00fc\u00fb\u0001\u0000\u0000"+
 		"\u0000\u00fc\u00fd\u0001\u0000\u0000\u0000\u00fd\u00fe\u0001\u0000\u0000"+
-		"\u0000\u00fe\u00ff\u0005$\u0000\u0000\u00ff\u0104\u0005F\u0000\u0000\u0100"+
-		"\u0101\u0005>\u0000\u0000\u0101\u0103\u0005F\u0000\u0000\u0102\u0100\u0001"+
+		"\u0000\u00fe\u00ff\u0005$\u0000\u0000\u00ff\u0104\u0005H\u0000\u0000\u0100"+
+		"\u0101\u0005>\u0000\u0000\u0101\u0103\u0005H\u0000\u0000\u0102\u0100\u0001"+
 		"\u0000\u0000\u0000\u0103\u0106\u0001\u0000\u0000\u0000\u0104\u0102\u0001"+
 		"\u0000\u0000\u0000\u0104\u0105\u0001\u0000\u0000\u0000\u0105\u0108\u0001"+
 		"\u0000\u0000\u0000\u0106\u0104\u0001\u0000\u0000\u0000\u0107\u0109\u0005"+
@@ -3701,7 +3706,7 @@ public class HTMLParser extends Parser {
 		"!\u0001\u0000\u0000\u0000\u0116\u0118\u0005\u0003\u0000\u0000\u0117\u0119"+
 		"\u00051\u0000\u0000\u0118\u0117\u0001\u0000\u0000\u0000\u0118\u0119\u0001"+
 		"\u0000\u0000\u0000\u0119\u011a\u0001\u0000\u0000\u0000\u011a\u011b\u0005"+
-		"\"\u0000\u0000\u011b\u011c\u0005F\u0000\u0000\u011c\u011e\u0005@\u0000"+
+		"\"\u0000\u0000\u011b\u011c\u0005H\u0000\u0000\u011c\u011e\u0005@\u0000"+
 		"\u0000\u011d\u011f\u0003$\u0012\u0000\u011e\u011d\u0001\u0000\u0000\u0000"+
 		"\u011e\u011f\u0001\u0000\u0000\u0000\u011f\u0120\u0001\u0000\u0000\u0000"+
 		"\u0120\u0122\u0005A\u0000\u0000\u0121\u0123\u00051\u0000\u0000\u0122\u0121"+
@@ -3717,12 +3722,12 @@ public class HTMLParser extends Parser {
 		"\u0003&\u0013\u0000\u0133\u0131\u0001\u0000\u0000\u0000\u0134\u0137\u0001"+
 		"\u0000\u0000\u0000\u0135\u0133\u0001\u0000\u0000\u0000\u0135\u0136\u0001"+
 		"\u0000\u0000\u0000\u0136%\u0001\u0000\u0000\u0000\u0137\u0135\u0001\u0000"+
-		"\u0000\u0000\u0138\u013b\u0005F\u0000\u0000\u0139\u013a\u0005;\u0000\u0000"+
+		"\u0000\u0000\u0138\u013b\u0005H\u0000\u0000\u0139\u013a\u0005;\u0000\u0000"+
 		"\u013a\u013c\u0003.\u0017\u0000\u013b\u0139\u0001\u0000\u0000\u0000\u013b"+
 		"\u013c\u0001\u0000\u0000\u0000\u013c\'\u0001\u0000\u0000\u0000\u013d\u013f"+
 		"\u0005\u0003\u0000\u0000\u013e\u0140\u00051\u0000\u0000\u013f\u013e\u0001"+
 		"\u0000\u0000\u0000\u013f\u0140\u0001\u0000\u0000\u0000\u0140\u0141\u0001"+
-		"\u0000\u0000\u0000\u0141\u0142\u0005 \u0000\u0000\u0142\u0144\u0005F\u0000"+
+		"\u0000\u0000\u0000\u0141\u0142\u0005 \u0000\u0000\u0142\u0144\u0005H\u0000"+
 		"\u0000\u0143\u0145\u00051\u0000\u0000\u0144\u0143\u0001\u0000\u0000\u0000"+
 		"\u0144\u0145\u0001\u0000\u0000\u0000\u0145\u0146\u0001\u0000\u0000\u0000"+
 		"\u0146\u0147\u0005\u0016\u0000\u0000\u0147\u0148\u0003\u001c\u000e\u0000"+
@@ -3734,7 +3739,7 @@ public class HTMLParser extends Parser {
 		"\u0016\u0000\u0000\u0151)\u0001\u0000\u0000\u0000\u0152\u0154\u0005\u0003"+
 		"\u0000\u0000\u0153\u0155\u00051\u0000\u0000\u0154\u0153\u0001\u0000\u0000"+
 		"\u0000\u0154\u0155\u0001\u0000\u0000\u0000\u0155\u0156\u0001\u0000\u0000"+
-		"\u0000\u0156\u0157\u0005&\u0000\u0000\u0157\u0159\u0005D\u0000\u0000\u0158"+
+		"\u0000\u0156\u0157\u0005&\u0000\u0000\u0157\u0159\u0005F\u0000\u0000\u0158"+
 		"\u015a\u00051\u0000\u0000\u0159\u0158\u0001\u0000\u0000\u0000\u0159\u015a"+
 		"\u0001\u0000\u0000\u0000\u015a\u015b\u0001\u0000\u0000\u0000\u015b\u015c"+
 		"\u0005\u0016\u0000\u0000\u015c+\u0001\u0000\u0000\u0000\u015d\u015f\u0005"+
@@ -3767,12 +3772,12 @@ public class HTMLParser extends Parser {
 		"\u0000\u0000\u0000\u018a\u018c\u0005@\u0000\u0000\u018b\u018d\u00034\u001a"+
 		"\u0000\u018c\u018b\u0001\u0000\u0000\u0000\u018c\u018d\u0001\u0000\u0000"+
 		"\u0000\u018d\u018e\u0001\u0000\u0000\u0000\u018e\u0196\u0005A\u0000\u0000"+
-		"\u018f\u0190\u0005=\u0000\u0000\u0190\u0196\u0005F\u0000\u0000\u0191\u0192"+
+		"\u018f\u0190\u0005=\u0000\u0000\u0190\u0196\u0005H\u0000\u0000\u0191\u0192"+
 		"\u0005B\u0000\u0000\u0192\u0193\u0003.\u0017\u0000\u0193\u0194\u0005C"+
 		"\u0000\u0000\u0194\u0196\u0001\u0000\u0000\u0000\u0195\u018a\u0001\u0000"+
 		"\u0000\u0000\u0195\u018f\u0001\u0000\u0000\u0000\u0195\u0191\u0001\u0000"+
 		"\u0000\u0000\u01961\u0001\u0000\u0000\u0000\u0197\u0198\u0005<\u0000\u0000"+
-		"\u0198\u019e\u0005F\u0000\u0000\u0199\u019b\u0005@\u0000\u0000\u019a\u019c"+
+		"\u0198\u019e\u0005H\u0000\u0000\u0199\u019b\u0005@\u0000\u0000\u019a\u019c"+
 		"\u00034\u001a\u0000\u019b\u019a\u0001\u0000\u0000\u0000\u019b\u019c\u0001"+
 		"\u0000\u0000\u0000\u019c\u019d\u0001\u0000\u0000\u0000\u019d\u019f\u0005"+
 		"A\u0000\u0000\u019e\u0199\u0001\u0000\u0000\u0000\u019e\u019f\u0001\u0000"+
@@ -3785,11 +3790,11 @@ public class HTMLParser extends Parser {
 		"\u0000\u01ab\u01a9\u0001\u0000\u0000\u0000\u01ab\u01ac\u0001\u0000\u0000"+
 		"\u0000\u01ac7\u0001\u0000\u0000\u0000\u01ad\u01ae\u0005@\u0000\u0000\u01ae"+
 		"\u01af\u0003.\u0017\u0000\u01af\u01b0\u0005A\u0000\u0000\u01b0\u01bd\u0001"+
-		"\u0000\u0000\u0000\u01b1\u01bd\u0005F\u0000\u0000\u01b2\u01bd\u0005-\u0000"+
+		"\u0000\u0000\u0000\u01b1\u01bd\u0005H\u0000\u0000\u01b2\u01bd\u0005-\u0000"+
 		"\u0000\u01b3\u01bd\u0005.\u0000\u0000\u01b4\u01b6\u00051\u0000\u0000\u01b5"+
 		"\u01b4\u0001\u0000\u0000\u0000\u01b5\u01b6\u0001\u0000\u0000\u0000\u01b6"+
-		"\u01b7\u0001\u0000\u0000\u0000\u01b7\u01bd\u0005E\u0000\u0000\u01b8\u01bd"+
-		"\u0005/\u0000\u0000\u01b9\u01bd\u0005D\u0000\u0000\u01ba\u01bd\u0003:"+
+		"\u01b7\u0001\u0000\u0000\u0000\u01b7\u01bd\u0005G\u0000\u0000\u01b8\u01bd"+
+		"\u0005/\u0000\u0000\u01b9\u01bd\u0005F\u0000\u0000\u01ba\u01bd\u0003:"+
 		"\u001d\u0000\u01bb\u01bd\u0003<\u001e\u0000\u01bc\u01ad\u0001\u0000\u0000"+
 		"\u0000\u01bc\u01b1\u0001\u0000\u0000\u0000\u01bc\u01b2\u0001\u0000\u0000"+
 		"\u0000\u01bc\u01b3\u0001\u0000\u0000\u0000\u01bc\u01b5\u0001\u0000\u0000"+
@@ -3802,7 +3807,7 @@ public class HTMLParser extends Parser {
 		"\u0000\u0000\u01c5\u01c8\u0001\u0000\u0000\u0000\u01c6\u01c4\u0001\u0000"+
 		"\u0000\u0000\u01c7\u01bf\u0001\u0000\u0000\u0000\u01c7\u01c8\u0001\u0000"+
 		"\u0000\u0000\u01c8\u01c9\u0001\u0000\u0000\u0000\u01c9\u01ca\u0005C\u0000"+
-		"\u0000\u01ca;\u0001\u0000\u0000\u0000\u01cb\u01da\u0005B\u0000\u0000\u01cc"+
+		"\u0000\u01ca;\u0001\u0000\u0000\u0000\u01cb\u01da\u0005D\u0000\u0000\u01cc"+
 		"\u01cd\u0003.\u0017\u0000\u01cd\u01ce\u0005?\u0000\u0000\u01ce\u01cf\u0003"+
 		".\u0017\u0000\u01cf\u01d7\u0001\u0000\u0000\u0000\u01d0\u01d1\u0005>\u0000"+
 		"\u0000\u01d1\u01d2\u0003.\u0017\u0000\u01d2\u01d3\u0005?\u0000\u0000\u01d3"+
@@ -3811,7 +3816,7 @@ public class HTMLParser extends Parser {
 		"\u0001\u0000\u0000\u0000\u01d7\u01d8\u0001\u0000\u0000\u0000\u01d8\u01db"+
 		"\u0001\u0000\u0000\u0000\u01d9\u01d7\u0001\u0000\u0000\u0000\u01da\u01cc"+
 		"\u0001\u0000\u0000\u0000\u01da\u01db\u0001\u0000\u0000\u0000\u01db\u01dc"+
-		"\u0001\u0000\u0000\u0000\u01dc\u01dd\u0005C\u0000\u0000\u01dd=\u0001\u0000"+
+		"\u0001\u0000\u0000\u0000\u01dc\u01dd\u0005E\u0000\u0000\u01dd=\u0001\u0000"+
 		"\u0000\u0000CAKOU_nv|\u0080\u0089\u008e\u0092\u009a\u00a0\u00a6\u00aa"+
 		"\u00b0\u00b5\u00bb\u00c0\u00c7\u00cc\u00d0\u00d4\u00d8\u00dc\u00e3\u00e8"+
 		"\u00f0\u00f6\u00fc\u0104\u0108\u010e\u0112\u0118\u011e\u0122\u0128\u012c"+

@@ -208,5 +208,5 @@ listdef
     ;
 
 dictdef
-    : LBRACK ((expr COLON expr) (COMMA (expr COLON expr))*)? RBRACK
+    : LBRACE ((expr COLON expr) (COMMA (expr COLON expr))*)? RBRACE
     ;

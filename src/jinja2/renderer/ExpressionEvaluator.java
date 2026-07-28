@@ -52,9 +52,18 @@ public final class ExpressionEvaluator {
                             listExpression,
                             context
                     );
+            case DictionaryExpressionNode dictionaryExpression ->
+                    evaluateDictionaryExpression(
+                            dictionaryExpression,
+                            context
+                    );
+            case IndexAccessNode indexAccess ->
+                    evaluateIndexAccess(
+                            indexAccess,
+                            context
+                    );
             case NoneLiteralNode ignored ->
                     null;
-
 
             default -> throw new UnsupportedOperationException(
                     "Expression is not supported yet: "
@@ -482,28 +491,27 @@ public final class ExpressionEvaluator {
     }
 
     private boolean isTruthy(Object value) {
-        if (value == null) {
-            return false;
-        }
-
-        if (value instanceof Boolean booleanValue) {
-            return booleanValue;
-        }
-
-        if (value instanceof Number number) {
-            return number.doubleValue() != 0;
-        }
-
-        if (value instanceof CharSequence text) {
-            return !text.isEmpty();
-        }
-
-        if (value instanceof Collection<?> collection) {
-            return !collection.isEmpty();
-        }
-
-        if (value instanceof Map<?, ?> map) {
-            return !map.isEmpty();
+        switch (value) {
+            case null -> {
+                return false;
+            }
+            case Boolean booleanValue -> {
+                return booleanValue;
+            }
+            case Number number -> {
+                return number.doubleValue() != 0;
+            }
+            case CharSequence text -> {
+                return !text.isEmpty();
+            }
+            case Collection<?> collection -> {
+                return !collection.isEmpty();
+            }
+            case Map<?, ?> map -> {
+                return !map.isEmpty();
+            }
+            default -> {
+            }
         }
 
         if (value.getClass().isArray()) {
@@ -525,4 +533,254 @@ public final class ExpressionEvaluator {
 
         return values;
     }
+    //region evaluate dictionary
+    private Map<Object, Object> evaluateDictionaryExpression(
+            DictionaryExpressionNode expression,
+            RenderContext context
+    ) {
+        List<ExpressionNode> keys =
+                expression.getKeys();
+
+        List<ExpressionNode> values =
+                expression.getValues();
+
+        if (keys.size() != values.size()) {
+            throw new IllegalStateException(
+                    "Malformed dictionary expression at line "
+                            + expression.getLineNumber()
+            );
+        }
+
+        /*
+         * Keeps dictionary iteration in the same order as the
+         * entries appeared in the Jinja template.
+         */
+        Map<Object, Object> dictionary =
+                new LinkedHashMap<>();
+
+        for (int index = 0; index < keys.size(); index++) {
+            Object key = evaluate(
+                    keys.get(index),
+                    context
+            );
+
+            validateDictionaryKey(
+                    key,
+                    expression
+            );
+
+            Object value = evaluate(
+                    values.get(index),
+                    context
+            );
+
+            /*
+             * If the same key occurs more than once, the later
+             * value replaces the earlier one, like Python.
+             */
+            dictionary.put(key, value);
+        }
+
+        return dictionary;
+    }
+    private void validateDictionaryKey(
+            Object key,
+            DictionaryExpressionNode expression
+    ) {
+        /*
+         * These are the immutable/hashable values currently
+         * supported by the expression evaluator.
+         */
+        if (key == null
+                || key instanceof String
+                || key instanceof Number
+                || key instanceof Boolean) {
+            return;
+        }
+
+        throw new IllegalStateException(
+                "Dictionary key must be a string, number, boolean, or none, "
+                        + "but received "
+                        + describeType(key)
+                        + " at line "
+                        + expression.getLineNumber()
+        );
+    }
+    //endregion
+
+    //region evaluate index access
+    private Object evaluateIndexAccess(
+            IndexAccessNode expression,
+            RenderContext context
+    ) {
+        Object target = evaluate(
+                expression.getTarget(),
+                context
+        );
+
+        Object index = evaluate(
+                expression.getIndex(),
+                context
+        );
+
+        switch (target) {
+            case null -> throw new IllegalStateException(
+                    "Cannot index none at line "
+                            + expression.getLineNumber()
+            );
+            case Map<?, ?> map -> {
+                return evaluateMapIndex(
+                        map,
+                        index,
+                        expression
+                );
+            }
+            case List<?> list -> {
+                int normalizedIndex = normalizeSequenceIndex(
+                        requireIntegerIndex(index, expression),
+                        list.size(),
+                        expression
+                );
+
+                return list.get(normalizedIndex);
+            }
+            case CharSequence text -> {
+                return evaluateStringIndex(
+                        text,
+                        index,
+                        expression
+                );
+            }
+            default -> {
+            }
+        }
+
+        if (target.getClass().isArray()) {
+            int length = Array.getLength(target);
+
+            int normalizedIndex = normalizeSequenceIndex(
+                    requireIntegerIndex(index, expression),
+                    length,
+                    expression
+            );
+
+            return Array.get(target, normalizedIndex);
+        }
+
+        throw new IllegalStateException(
+                "Value of type "
+                        + describeType(target)
+                        + " does not support indexing at line "
+                        + expression.getLineNumber()
+        );
+    }
+    private Object evaluateMapIndex(
+            Map<?, ?> map,
+            Object index,
+            IndexAccessNode expression
+    ) {
+        if (map.containsKey(index)) {
+            return map.get(index);
+        }
+
+        /*
+         * Java considers Long(1) and Double(1.0) different map keys,
+         * while Python/Jinja considers them numerically equal.
+         */
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            if (valuesAreEqual(entry.getKey(), index)) {
+                return entry.getValue();
+            }
+        }
+
+        throw new IllegalStateException(
+                "Dictionary key '"
+                        + index
+                        + "' does not exist at line "
+                        + expression.getLineNumber()
+        );
+    }
+    private int requireIntegerIndex(
+            Object index,
+            IndexAccessNode expression
+    ) {
+        if (!(index instanceof Number number)) {
+            throw new IllegalStateException(
+                    "Sequence index must be a whole number, but received "
+                            + describeType(index)
+                            + " at line "
+                            + expression.getLineNumber()
+            );
+        }
+
+        try {
+            return new BigDecimal(
+                    number.toString()
+            ).intValueExact();
+        } catch (ArithmeticException | NumberFormatException exception) {
+            throw new IllegalStateException(
+                    "Sequence index must be a whole number within integer range, "
+                            + "but received "
+                            + number
+                            + " at line "
+                            + expression.getLineNumber()
+            );
+        }
+    }
+    private int normalizeSequenceIndex(
+            int index,
+            int size,
+            IndexAccessNode expression
+    ) {
+        int normalizedIndex =
+                index < 0
+                        ? size + index
+                        : index;
+
+        if (normalizedIndex < 0 || normalizedIndex >= size) {
+            throw new IllegalStateException(
+                    "Sequence index "
+                            + index
+                            + " is out of bounds for sequence of size "
+                            + size
+                            + " at line "
+                            + expression.getLineNumber()
+            );
+        }
+
+        return normalizedIndex;
+    }
+    private String evaluateStringIndex(
+            CharSequence text,
+            Object index,
+            IndexAccessNode expression
+    ) {
+        String string = text.toString();
+
+        int characterCount =
+                string.codePointCount(
+                        0,
+                        string.length()
+                );
+
+        int normalizedIndex = normalizeSequenceIndex(
+                requireIntegerIndex(index, expression),
+                characterCount,
+                expression
+        );
+
+        int characterOffset =
+                string.offsetByCodePoints(
+                        0,
+                        normalizedIndex
+                );
+
+        int codePoint =
+                string.codePointAt(characterOffset);
+
+        return new String(
+                Character.toChars(codePoint)
+        );
+    }
+    //endregion
 }
