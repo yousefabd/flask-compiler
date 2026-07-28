@@ -62,7 +62,7 @@ attributeName
 // ======================================================
 
 variable
-    : DOUBLE_OPEN_BRACE MINUS? expr MINUS? DOUBLE_CLOSE_BRACE
+    : DOUBLE_OPEN_BRACE expr DOUBLE_CLOSE_BRACE
     ;
 
 // ======================================================
@@ -88,9 +88,9 @@ inline_stmt
 // ======================================================
 
 for_block
-    : OPEN_TAG MINUS? FOR (ID (COMMA ID)*) IN expr MINUS? CLOSE_TAG
+    : OPEN_TAG FOR (ID (COMMA ID)*) IN expr CLOSE_TAG
       body
-      OPEN_TAG MINUS? ENDFOR MINUS? CLOSE_TAG
+      OPEN_TAG ENDFOR CLOSE_TAG
     ;
 
 // ======================================================
@@ -98,10 +98,10 @@ for_block
 // ======================================================
 
 if_block
-    : OPEN_TAG MINUS? IF expr MINUS? CLOSE_TAG body
-      (OPEN_TAG MINUS? ELIF expr MINUS? CLOSE_TAG body)*
-      (OPEN_TAG MINUS? ELSE MINUS? CLOSE_TAG body)?
-      OPEN_TAG MINUS? ENDIF MINUS? CLOSE_TAG
+    : OPEN_TAG IF expr CLOSE_TAG body
+      (OPEN_TAG ELIF expr CLOSE_TAG body)*
+      (OPEN_TAG ELSE CLOSE_TAG body)?
+      OPEN_TAG ENDIF CLOSE_TAG
     ;
 
 body
@@ -113,13 +113,13 @@ body
 // ======================================================
 
 set_inline
-    : OPEN_TAG MINUS? SET (ID (COMMA ID)*) ASSIGN expr MINUS? CLOSE_TAG
+    : OPEN_TAG SET (ID (COMMA ID)*) ASSIGN expr CLOSE_TAG
     ;
 
 set_block
-    : OPEN_TAG MINUS? SET (ID (COMMA ID)*) MINUS? CLOSE_TAG
+    : OPEN_TAG SET (ID (COMMA ID)*) CLOSE_TAG
       body
-      OPEN_TAG MINUS? ENDSET MINUS? CLOSE_TAG
+      OPEN_TAG ENDSET CLOSE_TAG
     ;
 
 // ======================================================
@@ -127,9 +127,9 @@ set_block
 // ======================================================
 
 macro_block
-    : OPEN_TAG MINUS? MACRO ID LPAREN parameters? RPAREN MINUS? CLOSE_TAG
+    : OPEN_TAG MACRO ID LPAREN parameters? RPAREN CLOSE_TAG
       body
-      OPEN_TAG MINUS? ENDMACRO MINUS? CLOSE_TAG
+      OPEN_TAG ENDMACRO CLOSE_TAG
     ;
 
 parameters
@@ -145,17 +145,17 @@ parameter
 // ======================================================
 
 block_block
-    : OPEN_TAG MINUS? BLOCK ID MINUS? CLOSE_TAG
+    : OPEN_TAG BLOCK ID CLOSE_TAG
       body
-      OPEN_TAG MINUS? ENDBLOCK MINUS? CLOSE_TAG
+      OPEN_TAG ENDBLOCK CLOSE_TAG
     ;
 
 extends_stmt
-    : OPEN_TAG MINUS? EXTENDS STRING MINUS? CLOSE_TAG
+    : OPEN_TAG EXTENDS STRING CLOSE_TAG
     ;
 
 include_stmt
-    : OPEN_TAG MINUS? INCLUDE expr MINUS? CLOSE_TAG
+    : OPEN_TAG INCLUDE expr CLOSE_TAG
     ;
 
 // ======================================================

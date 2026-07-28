@@ -175,13 +175,39 @@ public class TypeCheckerRule implements ISemanticRule {
         }
     }
 
-    private void checkUnary(UnaryExpressionNode un, SemanticContext ctx) {
-        checkExpr(un.getExpression(), ctx);
-        if (un.getOperation() == Operation.MINUS) {
-            SymbolType operand = resolveType(un.getExpression(), ctx.symbolTable());
-            if (operand != SymbolType.ANY && operand != SymbolType.NUMBER)
-                error(ctx, CompilerError.Kind.TYPE_ERROR,
-                        "Unary '-' cannot be applied to " + operand, un.getLineNumber());
+    private void checkUnary(
+            UnaryExpressionNode expression,
+            SemanticContext context
+    ) {
+        checkExpr(
+                expression.getExpression(),
+                context
+        );
+
+        Operation operation =
+                expression.getOperation();
+
+        if (operation != Operation.PLUS
+                && operation != Operation.MINUS) {
+            return;
+        }
+
+        SymbolType operandType = resolveType(
+                expression.getExpression(),
+                context.symbolTable()
+        );
+
+        if (operandType != SymbolType.ANY
+                && operandType != SymbolType.NUMBER) {
+            error(
+                    context,
+                    CompilerError.Kind.TYPE_ERROR,
+                    "Unary '"
+                            + (operation == Operation.PLUS ? "+" : "-")
+                            + "' cannot be applied to "
+                            + operandType,
+                    expression.getLineNumber()
+            );
         }
     }
 
@@ -263,7 +289,7 @@ public class TypeCheckerRule implements ISemanticRule {
         if (expr instanceof UnaryExpressionNode un) {
             return switch (un.getOperation()) {
                 case NOT   -> SymbolType.BOOLEAN;
-                case MINUS -> SymbolType.NUMBER;
+                case PLUS, MINUS -> SymbolType.NUMBER;
                 default    -> SymbolType.ANY;
             };
         }
@@ -302,7 +328,11 @@ public class TypeCheckerRule implements ISemanticRule {
                 if (left == SymbolType.STRING && right == SymbolType.NUMBER) yield SymbolType.STRING;
                 yield SymbolType.ANY;
             }
-            case LT, GT, LTE, GTE, EQ, NEQ, AND, OR, IN, IS, NOT -> SymbolType.BOOLEAN;
+            case LT, GT, LTE, GTE, EQ, NEQ, IN, IS, NOT -> SymbolType.BOOLEAN;
+            case AND, OR ->
+                    left == right
+                            ? left
+                            : SymbolType.ANY;
             default -> SymbolType.ANY;
         };
     }

@@ -14,6 +14,7 @@ import jinja2.models.file.TemplateFile;
 import jinja2.models.statement.ForStatementNode;
 import jinja2.models.statement.IfBranchNode;
 import jinja2.models.statement.IfStatementNode;
+import jinja2.models.statement.SetStatementNode;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
@@ -117,7 +118,14 @@ public final class TemplateRenderer {
 
             return;
         }
+        if (node instanceof SetStatementNode setStatement) {
+            renderSetStatement(
+                    setStatement,
+                    context
+            );
 
+            return;
+        }
         throw new UnsupportedOperationException(
                 "Template node is not supported yet: "
                         + node.getClass().getSimpleName()

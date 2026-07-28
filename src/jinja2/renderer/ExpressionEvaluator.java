@@ -62,6 +62,11 @@ public final class ExpressionEvaluator {
                             indexAccess,
                             context
                     );
+            case UnaryExpressionNode unaryExpression ->
+                    evaluateUnaryExpression(
+                            unaryExpression,
+                            context
+                    );
             case NoneLiteralNode ignored ->
                     null;
 
@@ -260,20 +265,60 @@ public final class ExpressionEvaluator {
             BinaryExpressionNode expression,
             RenderContext context
     ) {
+        Operation operation =
+                expression.getOperation();
+
         Object leftValue = evaluate(
                 expression.getLeft(),
                 context
         );
 
+        /*
+         * Python/Jinja short-circuit semantics:
+         *
+         * left and right:
+         *     return left when left is falsy;
+         *     otherwise evaluate and return right.
+         */
+        if (operation == Operation.AND) {
+            if (!isTruthy(leftValue)) {
+                return leftValue;
+            }
+
+            return evaluate(
+                    expression.getRight(),
+                    context
+            );
+        }
+
+        /*
+         * left or right:
+         *     return left when left is truthy;
+         *     otherwise evaluate and return right.
+         */
+        if (operation == Operation.OR) {
+            if (isTruthy(leftValue)) {
+                return leftValue;
+            }
+
+            return evaluate(
+                    expression.getRight(),
+                    context
+            );
+        }
+
+        /*
+         * Other binary operations require both operands.
+         */
         Object rightValue = evaluate(
                 expression.getRight(),
                 context
         );
 
-        return switch (expression.getOperation()) {
+        return switch (operation) {
             case PLUS, MINUS, STAR, SLASH, PERCENT ->
                     evaluateArithmetic(
-                            expression.getOperation(),
+                            operation,
                             leftValue,
                             rightValue,
                             expression
@@ -318,14 +363,110 @@ public final class ExpressionEvaluator {
                             rightValue,
                             expression
                     ) >= 0;
+            case IN ->
+                    evaluateMembership(
+                            leftValue,
+                            rightValue,
+                            expression
+                    );
 
             default -> throw new UnsupportedOperationException(
                     "Binary operation "
-                            + expression.getOperation()
+                            + operation
                             + " is not supported yet at line "
                             + expression.getLineNumber()
             );
         };
+    }
+    private boolean evaluateMembership(
+            Object searchedValue,
+            Object container,
+            BinaryExpressionNode expression
+    ) {
+        if (container == null) {
+            throw new IllegalStateException(
+                    "Cannot use 'in' with none at line "
+                            + expression.getLineNumber()
+            );
+        }
+
+        /*
+         * Dictionary membership checks keys, not values.
+         */
+        if (container instanceof Map<?, ?> map) {
+            if (map.containsKey(searchedValue)) {
+                return true;
+            }
+
+            /*
+             * Handles Java numeric-type differences such as
+             * Long(2) versus Double(2.0).
+             */
+            for (Object key : map.keySet()) {
+                if (valuesAreEqual(key, searchedValue)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /*
+         * String membership performs substring matching:
+         *
+         * "pile" in "compiler" -> true
+         */
+        if (container instanceof CharSequence text) {
+            if (!(searchedValue instanceof CharSequence searchedText)) {
+                throw new IllegalStateException(
+                        "String membership requires a string value, but received "
+                                + describeType(searchedValue)
+                                + " at line "
+                                + expression.getLineNumber()
+                );
+            }
+
+            return text.toString().contains(
+                    searchedText.toString()
+            );
+        }
+
+        /*
+         * Lists and other Java Iterable values.
+         */
+        if (container instanceof Iterable<?> iterable) {
+            for (Object item : iterable) {
+                if (valuesAreEqual(item, searchedValue)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /*
+         * Java arrays, including primitive arrays.
+         */
+        if (container.getClass().isArray()) {
+            int length = Array.getLength(container);
+
+            for (int index = 0; index < length; index++) {
+                Object item = Array.get(container, index);
+
+                if (valuesAreEqual(item, searchedValue)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        throw new IllegalStateException(
+                "Value of type "
+                        + describeType(container)
+                        + " does not support the 'in' operator at line "
+                        + expression.getLineNumber()
+        );
     }
     private int compareValues(
             Object left,
@@ -781,6 +922,77 @@ public final class ExpressionEvaluator {
         return new String(
                 Character.toChars(codePoint)
         );
+    }
+    //endregion
+
+    //region evaluate unary
+    private Object evaluateUnaryExpression(
+            UnaryExpressionNode expression,
+            RenderContext context
+    ) {
+        Object value = evaluate(
+                expression.getExpression(),
+                context
+        );
+
+        return switch (expression.getOperation()) {
+            case NOT -> !isTruthy(value);
+
+            case PLUS -> requireUnaryNumber(
+                    value,
+                    expression
+            );
+
+            case MINUS -> negateNumber(
+                    requireUnaryNumber(
+                            value,
+                            expression
+                    ),
+                    expression
+            );
+
+            default -> throw new IllegalStateException(
+                    "Operation "
+                            + expression.getOperation()
+                            + " is not a unary operation at line "
+                            + expression.getLineNumber()
+            );
+        };
+    }
+    private Number requireUnaryNumber(
+            Object value,
+            UnaryExpressionNode expression
+    ) {
+        if (value instanceof Number number) {
+            return number;
+        }
+
+        throw new IllegalStateException(
+                "Unary operator "
+                        + expression.getOperation()
+                        + " requires a number, but received "
+                        + describeType(value)
+                        + " at line "
+                        + expression.getLineNumber()
+        );
+    }
+    private Number negateNumber(
+            Number number,
+            UnaryExpressionNode expression
+    ) {
+        if (isIntegerNumber(number)) {
+            try {
+                return Math.negateExact(number.longValue());
+            } catch (ArithmeticException exception) {
+                throw new IllegalStateException(
+                        "Integer overflow while applying unary minus at line "
+                                + expression.getLineNumber(),
+                        exception
+                );
+            }
+        }
+
+        return -number.doubleValue();
     }
     //endregion
 }

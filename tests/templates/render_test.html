@@ -1,17 +1,24 @@
 <section>
-    <p>List value: {{ [10, 20 + 5, 30][-2] }}</p>
+    <p>List membership: {{ 2 in [1, 2, 3] }}</p>
 
     <p>
-        Dictionary value: {{ {"name": "Yousef", "age": 24}["name"] }}
+        Numeric equality:
+        {{ 2 in [1.0, 2.0, 3.0] }}
     </p>
 
-    <p>Last character: {{ "compiler"[-1] }}</p>
+    <p>
+        Dictionary key:
+        {{ "name" in {"name": "Yousef", "age": 24} }}
+    </p>
 
-    {% if [false, true][1] %}
-    <p>Indexing works inside conditions</p>
+    <p>
+        Dictionary value is not a key:
+        {{ "Yousef" in {"name": "Yousef"} }}
+    </p>
+
+    <p>Substring: {{ "pile" in "compiler" }}</p>
+
+    {% if "phones" in {"phones": [], "laptops": []} %}
+    <p>Phones category exists</p>
     {% endif %}
-
-    {% for number in {"groups": [[1, 2], [3, 4]]}["groups"][1] %}
-    <p>Number: {{ number }}</p>
-    {% endfor %}
 </section>
