@@ -319,6 +319,9 @@ public class SymbolTableBuilder {
             for (ExpressionNode key : dict.getKeys())   visitExpression(key);
             for (ExpressionNode val : dict.getValues()) visitExpression(val);
         }
+        else if (expr instanceof TestExpressionNode test) {
+            visitTestExpression(test);
+        }
         // LiteralExpressionNode subtypes — nothing to resolve
     }
 
@@ -352,5 +355,88 @@ public class SymbolTableBuilder {
                     "Undefined variable '" + id.getName() + "'",
                     id.getLineNumber()));
         }
+    }
+    private void visitTestExpression(TestExpressionNode test) {
+
+        /*
+         * These tests are specifically allowed to inspect a variable that
+         * doesn't exist:
+         *
+         *     missingVariable is defined
+         *     missingVariable is undefined
+         */
+        if (isDefinitionTest(test)) {
+            visitPotentiallyUndefinedExpression(test.getValue());
+        } else {
+            visitExpression(test.getValue());
+        }
+
+        /*
+         * Test arguments are normal expressions and must still be checked.
+         *
+         *     number is divisibleby(divisor)
+         */
+        for (ArgumentNode argument : test.getArguments()) {
+            visitExpression(argument.getValue());
+        }
+    }
+
+    private boolean isDefinitionTest(TestExpressionNode test) {
+        return test.getTestName().equals("defined")
+                || test.getTestName().equals("undefined");
+    }
+
+    private void visitPotentiallyUndefinedExpression(
+            ExpressionNode expression
+    ) {
+        if (expression instanceof IdentifierNode identifier) {
+            recordIdentifierIfVisible(identifier);
+            return;
+        }
+
+        /*
+         * user.name is defined
+         *
+         * The root object may itself be undefined.
+         */
+        if (expression instanceof PropertyAccessNode property) {
+            visitPotentiallyUndefinedExpression(
+                    property.getTarget()
+            );
+            return;
+        }
+
+        /*
+         * users[index] is defined
+         *
+         * "users" is allowed to be undefined, but "index" is still a
+         * normal expression and must exist.
+         */
+        if (expression instanceof IndexAccessNode index) {
+            visitPotentiallyUndefinedExpression(
+                    index.getTarget()
+            );
+
+            visitExpression(index.getIndex());
+            return;
+        }
+
+        /*
+         * Other expressions still receive normal checking.
+         */
+        visitExpression(expression);
+    }
+
+    private void recordIdentifierIfVisible(IdentifierNode identifier) {
+        Symbol visible = symbolTable.resolve(
+                identifier.getName()
+        );
+
+        if (visible == null) {
+            return;
+        }
+
+        symbolTable.recordBinding(identifier, visible);
+        visible.addUsage(identifier.getLineNumber());
     }
 }

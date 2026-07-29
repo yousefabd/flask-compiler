@@ -527,7 +527,65 @@ public class AntlrToTemplateAstVisitor extends HTMLParserBaseVisitor<TemplateNod
     // =====================================================
     // BINARY
     // =====================================================
+    // =====================================================
+// TEST: value is testName(...)
+// =====================================================
 
+    @Override
+    public TestExpressionNode visitTestExpression(
+            HTMLParser.TestExpressionContext ctx
+    ) {
+        ExpressionNode value =
+                (ExpressionNode) visit(ctx.expr());
+
+        HTMLParser.TestInvocationContext invocation =
+                ctx.testInvocation();
+
+        String testName =
+                invocation.testName().getText();
+
+        boolean negated =
+                ctx.NOT() != null;
+
+        List<ArgumentNode> arguments = new ArrayList<>();
+
+        HTMLParser.TestArgumentsContext testArguments =
+                invocation.testArguments();
+
+        if (testArguments != null) {
+
+            // Parenthesized arguments:
+            // value is divisibleby(3)
+            if (testArguments.arguments() != null) {
+                arguments.addAll(
+                        buildArgumentList(testArguments.arguments())
+                );
+            }
+
+            // One argument without parentheses:
+            // value is divisibleby 3
+            else if (testArguments.primary() != null) {
+                ExpressionNode argumentValue =
+                        (ExpressionNode) visit(testArguments.primary());
+
+                arguments.add(
+                        new ArgumentNode(
+                                null,
+                                argumentValue,
+                                testArguments.getStart().getLine()
+                        )
+                );
+            }
+        }
+
+        return new TestExpressionNode(
+                value,
+                testName,
+                arguments,
+                negated,
+                ctx.getStart().getLine()
+        );
+    }
     @Override
     public BinaryExpressionNode visitBinaryExpression(HTMLParser.BinaryExpressionContext ctx) {
 
@@ -715,7 +773,6 @@ public class AntlrToTemplateAstVisitor extends HTMLParserBaseVisitor<TemplateNod
             case "not" -> Operation.NOT;
 
             case "in"  -> Operation.IN;
-            case "is"  -> Operation.IS;
 
             default -> throw new RuntimeException("Unknown operator: " + text);
         };

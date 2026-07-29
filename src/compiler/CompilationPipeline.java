@@ -12,6 +12,7 @@ import jinja2.models.file.TemplateFile;
 import jinja2.renderer.ExpressionEvaluator;
 import jinja2.renderer.RenderContext;
 import jinja2.renderer.TemplateRenderer;
+import jinja2.tests.JinjaTestRegistry;
 import python.PythonFrontend;
 import python.models.root.Program;
 import utils.CompilerSettings;
@@ -29,18 +30,23 @@ public final class CompilationPipeline {
     private final ErrorReporter reporter;
     private final TemplateContextProvider contextProvider;
     private final TemplateRenderer templateRenderer;
+    private final JinjaTestRegistry testRegistry;
 
     public CompilationPipeline(
             TemplateContextProvider contextProvider
     ) {
-        this.reporter = new ErrorReporter();
+        this.reporter =
+                new ErrorReporter();
 
         this.contextProvider =
                 Objects.requireNonNull(contextProvider);
 
+        this.testRegistry =
+                new JinjaTestRegistry();
+
         this.templateRenderer =
                 new TemplateRenderer(
-                        new ExpressionEvaluator()
+                        new ExpressionEvaluator(testRegistry)
                 );
     }
 
@@ -102,7 +108,8 @@ public final class CompilationPipeline {
             TemplateFrontend templateFrontend =
                     new TemplateFrontend(
                             CompilerSettings.templatesDir,
-                            reporter
+                            reporter,
+                            testRegistry
                     );
 
             Map<String, TemplateFile> templates =

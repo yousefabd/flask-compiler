@@ -5,6 +5,7 @@ import jinja2.models.expression.literal.BooleanLiteralNode;
 import jinja2.models.expression.literal.NoneLiteralNode;
 import jinja2.models.expression.literal.NumberLiteralNode;
 import jinja2.models.expression.literal.StringLiteralNode;
+import jinja2.tests.*;
 import utils.CompilerUtils;
 
 import java.lang.reflect.Array;
@@ -12,7 +13,14 @@ import java.math.BigDecimal;
 import java.util.*;
 
 public final class ExpressionEvaluator {
+    private final JinjaTestRegistry testRegistry;
 
+    public ExpressionEvaluator(
+            JinjaTestRegistry testRegistry
+    ) {
+        this.testRegistry =
+                Objects.requireNonNull(testRegistry);
+    }
     public Object evaluate(
             ExpressionNode expression,
             RenderContext context
@@ -69,6 +77,11 @@ public final class ExpressionEvaluator {
                     );
             case NoneLiteralNode ignored ->
                     null;
+            case TestExpressionNode testExpression ->
+                    evaluateTestExpression(
+                            testExpression,
+                            context
+                    );
 
             default -> throw new UnsupportedOperationException(
                     "Expression is not supported yet: "
@@ -383,65 +396,69 @@ public final class ExpressionEvaluator {
             Object container,
             BinaryExpressionNode expression
     ) {
-        if (container == null) {
-            throw new IllegalStateException(
+        switch (container) {
+            case null -> throw new IllegalStateException(
                     "Cannot use 'in' with none at line "
                             + expression.getLineNumber()
             );
-        }
-
-        /*
-         * Dictionary membership checks keys, not values.
-         */
-        if (container instanceof Map<?, ?> map) {
-            if (map.containsKey(searchedValue)) {
-                return true;
-            }
 
             /*
-             * Handles Java numeric-type differences such as
-             * Long(2) versus Double(2.0).
+             * Dictionary membership checks keys, not values.
              */
-            for (Object key : map.keySet()) {
-                if (valuesAreEqual(key, searchedValue)) {
+            case Map<?, ?> map -> {
+                if (map.containsKey(searchedValue)) {
                     return true;
                 }
+
+                /*
+                 * Handles Java numeric-type differences such as
+                 * Long(2) versus Double(2.0).
+                 */
+                for (Object key : map.keySet()) {
+                    if (valuesAreEqual(key, searchedValue)) {
+                        return true;
+                    }
+                }
+
+                return false;
             }
 
-            return false;
-        }
 
-        /*
-         * String membership performs substring matching:
-         *
-         * "pile" in "compiler" -> true
-         */
-        if (container instanceof CharSequence text) {
-            if (!(searchedValue instanceof CharSequence searchedText)) {
-                throw new IllegalStateException(
-                        "String membership requires a string value, but received "
-                                + describeType(searchedValue)
-                                + " at line "
-                                + expression.getLineNumber()
+            /*
+             * String membership performs substring matching:
+             *
+             * "pile" in "compiler" -> true
+             */
+            case CharSequence text -> {
+                if (!(searchedValue instanceof CharSequence searchedText)) {
+                    throw new IllegalStateException(
+                            "String membership requires a string value, but received "
+                                    + describeType(searchedValue)
+                                    + " at line "
+                                    + expression.getLineNumber()
+                    );
+                }
+
+                return text.toString().contains(
+                        searchedText.toString()
                 );
             }
 
-            return text.toString().contains(
-                    searchedText.toString()
-            );
-        }
 
-        /*
-         * Lists and other Java Iterable values.
-         */
-        if (container instanceof Iterable<?> iterable) {
-            for (Object item : iterable) {
-                if (valuesAreEqual(item, searchedValue)) {
-                    return true;
+            /*
+             * Lists and other Java Iterable values.
+             */
+            case Iterable<?> iterable -> {
+                for (Object item : iterable) {
+                    if (valuesAreEqual(item, searchedValue)) {
+                        return true;
+                    }
                 }
-            }
 
-            return false;
+                return false;
+            }
+            default -> {
+            }
         }
 
         /*
@@ -993,6 +1010,117 @@ public final class ExpressionEvaluator {
         }
 
         return -number.doubleValue();
+    }
+    //endregion
+
+    //region evaluate test
+    private boolean evaluateTestExpression(
+            TestExpressionNode expression,
+            RenderContext context
+    ) {
+        JinjaTestDefinition definition =
+                testRegistry.find(expression.getTestName())
+                        .orElseThrow(() ->
+                                new UnsupportedOperationException(
+                                        "Unknown Jinja test '"
+                                                + expression.getTestName()
+                                                + "' at line "
+                                                + expression.getLineNumber()
+                                )
+                        );
+
+        int argumentCount =
+                expression.getArguments().size();
+
+        if (!definition.acceptsArgumentCount(argumentCount)) {
+            throw new IllegalStateException(
+                    "Jinja test '"
+                            + expression.getTestName()
+                            + "' received "
+                            + argumentCount
+                            + " argument(s) at line "
+                            + expression.getLineNumber()
+            );
+        }
+
+        TestValue subject =
+                evaluateTestSubject(
+                        expression.getValue(),
+                        definition,
+                        context
+                );
+
+        List<Object> arguments =
+                new ArrayList<>(argumentCount);
+
+        for (ArgumentNode argument : expression.getArguments()) {
+            if (argument.isKeyword()) {
+                throw new UnsupportedOperationException(
+                        "Keyword arguments are not supported for Jinja tests "
+                                + "at line "
+                                + argument.getLineNumber()
+                );
+            }
+
+            arguments.add(
+                    evaluate(
+                            argument.getValue(),
+                            context
+                    )
+            );
+        }
+
+        final boolean matches;
+
+        try {
+            matches =
+                    definition.implementation().evaluate(
+                            subject,
+                            arguments
+                    );
+        } catch (
+                IllegalArgumentException
+                | ArithmeticException exception
+        ) {
+            throw new IllegalStateException(
+                    "Failed to evaluate Jinja test '"
+                            + expression.getTestName()
+                            + "' at line "
+                            + expression.getLineNumber()
+                            + ": "
+                            + exception.getMessage(),
+                    exception
+            );
+        }
+
+        return expression.isNegated() != matches;
+    }
+
+    private TestValue evaluateTestSubject(
+            ExpressionNode expression,
+            JinjaTestDefinition definition,
+            RenderContext context
+    ) {
+        /*
+         * Normal tests require an actual value.
+         */
+        if (!definition.acceptsUndefined()) {
+            return TestValue.defined(
+                    evaluate(expression, context)
+            );
+        }
+
+        /*
+         * Tests such as "defined" and "undefined" are allowed to
+         * inspect expressions that resolve to no value.
+         */
+        try {
+            return TestValue.defined(
+                    evaluate(expression, context)
+            );
+        } catch (Exception ignored) {
+            return TestValue.undefined();
+        }
     }
     //endregion
 }

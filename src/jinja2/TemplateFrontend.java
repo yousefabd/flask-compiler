@@ -10,6 +10,7 @@ import jinja2.symbol_table.*;
 import jinja2.symbol_table.semantic_rules.ISemanticRule;
 import jinja2.symbol_table.semantic_rules.TypeCheckerRule;
 import jinja2.symbol_table.semantic_rules.UlLiRule;
+import jinja2.tests.JinjaTestRegistry;
 import jinja2.visitor.AntlrToTemplateAstVisitor;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -36,13 +37,21 @@ public final class TemplateFrontend {
 
     private final Path templatesDirectory;
     private final ErrorReporter reporter;
+    private JinjaTestRegistry testRegistry;
 
     public TemplateFrontend(
             Path templatesDirectory,
-            ErrorReporter reporter
+            ErrorReporter reporter,
+            JinjaTestRegistry testRegistry
     ) {
-        this.templatesDirectory = templatesDirectory;
-        this.reporter = reporter;
+        this.templatesDirectory =
+                Objects.requireNonNull(templatesDirectory);
+
+        this.reporter =
+                Objects.requireNonNull(reporter);
+
+        this.testRegistry =
+                Objects.requireNonNull(testRegistry);
     }
 
     public Map<String, TemplateFile> parseTemplates(
@@ -136,7 +145,7 @@ public final class TemplateFrontend {
 
         List<ISemanticRule> rules = List.of(
                 new UlLiRule(),
-                new TypeCheckerRule()
+                new TypeCheckerRule(testRegistry)
         );
 
         SymbolTableBuilder builder =

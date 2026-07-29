@@ -19,6 +19,5 @@ public enum Operation {
     OR,
     NOT,
 
-    IN,
-    IS
+    IN
 }

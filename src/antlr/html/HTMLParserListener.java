@@ -390,6 +390,18 @@ public interface HTMLParserListener extends ParseTreeListener {
 	 */
 	void exitBinaryExpression(HTMLParser.BinaryExpressionContext ctx);
 	/**
+	 * Enter a parse tree produced by the {@code TestExpression}
+	 * labeled alternative in {@link HTMLParser#expr}.
+	 * @param ctx the parse tree
+	 */
+	void enterTestExpression(HTMLParser.TestExpressionContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code TestExpression}
+	 * labeled alternative in {@link HTMLParser#expr}.
+	 * @param ctx the parse tree
+	 */
+	void exitTestExpression(HTMLParser.TestExpressionContext ctx);
+	/**
 	 * Enter a parse tree produced by the {@code UnaryExpression}
 	 * labeled alternative in {@link HTMLParser#expr}.
 	 * @param ctx the parse tree
@@ -413,6 +425,36 @@ public interface HTMLParserListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitIDTrFlExpression(HTMLParser.IDTrFlExpressionContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link HTMLParser#testInvocation}.
+	 * @param ctx the parse tree
+	 */
+	void enterTestInvocation(HTMLParser.TestInvocationContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link HTMLParser#testInvocation}.
+	 * @param ctx the parse tree
+	 */
+	void exitTestInvocation(HTMLParser.TestInvocationContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link HTMLParser#testName}.
+	 * @param ctx the parse tree
+	 */
+	void enterTestName(HTMLParser.TestNameContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link HTMLParser#testName}.
+	 * @param ctx the parse tree
+	 */
+	void exitTestName(HTMLParser.TestNameContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link HTMLParser#testArguments}.
+	 * @param ctx the parse tree
+	 */
+	void enterTestArguments(HTMLParser.TestArgumentsContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link HTMLParser#testArguments}.
+	 * @param ctx the parse tree
+	 */
+	void exitTestArguments(HTMLParser.TestArgumentsContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link HTMLParser#trailer}.
 	 * @param ctx the parse tree

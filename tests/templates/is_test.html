@@ -1,0 +1,259 @@
+<section>
+  <h1>{{ title }}</h1>
+
+  {% set passed = 0 %}
+  {% set failed = 0 %}
+
+
+
+
+  {% if generated is undefined %}
+  {% set generated = 9 %}
+  {% set passed = passed + 1 %}
+  <p>PASS: generated was initially undefined</p>
+  {% else %}
+  {% set failed = failed + 1 %}
+  <p>FAIL: generated should have been undefined</p>
+  {% endif %}
+
+
+
+  {% if generated is defined
+  and generated is odd
+  and generated is divisibleby(3) %}
+
+  {% set passed = passed + 1 %}
+  <p>PASS: generated is now 9, odd, and divisible by 3</p>
+  {% else %}
+  {% set failed = failed + 1 %}
+  <p>FAIL: generated was not correctly defined</p>
+  {% endif %}
+
+
+
+  {% set generated = generated + 1 %}
+
+  {% if generated is even
+  and generated is not odd
+  and generated is divisibleby 5 %}
+
+  {% set passed = passed + 1 %}
+  <p>PASS: generated became 10 and is even</p>
+  {% else %}
+  {% set failed = failed + 1 %}
+  <p>FAIL: generated should now be 10</p>
+  {% endif %}
+
+
+
+  {% if decimal is number
+  and decimal is not even
+  and decimal is not odd %}
+
+  {% set passed = passed + 1 %}
+  <p>PASS: 2.5 is neither even nor odd</p>
+  {% else %}
+  {% set failed = failed + 1 %}
+  <p>FAIL: 2.5 was incorrectly classified</p>
+  {% endif %}
+
+
+  {% if negative_odd is odd
+  and negative_odd is not even %}
+
+  {% set passed = passed + 1 %}
+  <p>PASS: -3 is odd</p>
+  {% else %}
+  {% set failed = failed + 1 %}
+  <p>FAIL: -3 should be odd</p>
+  {% endif %}
+
+
+  {% if whole_float is float
+  and whole_float is number
+  and whole_float is even
+  and whole_float is not integer %}
+
+  {% set passed = passed + 1 %}
+  <p>PASS: 4.0 is a float, number, and even</p>
+  {% else %}
+  {% set failed = failed + 1 %}
+  <p>FAIL: 4.0 was classified incorrectly</p>
+  {% endif %}
+
+
+  {% if integer_value is integer
+  and integer_value is number
+  and integer_value is odd
+  and integer_value is not float %}
+
+  {% set passed = passed + 1 %}
+  <p>PASS: 7 is an odd integer</p>
+  {% else %}
+  {% set failed = failed + 1 %}
+  <p>FAIL: 7 was classified incorrectly</p>
+  {% endif %}
+
+  {% if nothing is defined
+  and nothing is none %}
+
+  {% set passed = passed + 1 %}
+  <p>PASS: none is defined and is none</p>
+  {% else %}
+  {% set failed = failed + 1 %}
+  <p>FAIL: none was confused with undefined</p>
+  {% endif %}
+
+
+  {% if title is string
+  and title is iterable
+  and title is not none %}
+
+  {% set passed = passed + 1 %}
+  <p>PASS: title is a string and iterable</p>
+  {% else %}
+  {% set failed = failed + 1 %}
+  <p>FAIL: title tests failed</p>
+  {% endif %}
+
+
+  {% if enabled is boolean
+  and enabled is true
+  and enabled is not false %}
+
+  {% set passed = passed + 1 %}
+  <p>PASS: enabled is true</p>
+  {% else %}
+  {% set failed = failed + 1 %}
+  <p>FAIL: enabled tests failed</p>
+  {% endif %}
+
+
+  {% if disabled is boolean
+  and disabled is false
+  and disabled is not true %}
+
+  {% set passed = passed + 1 %}
+  <p>PASS: disabled is false</p>
+  {% else %}
+  {% set failed = failed + 1 %}
+  <p>FAIL: disabled tests failed</p>
+  {% endif %}
+
+
+  {% if user is mapping
+  and user is iterable
+  and user.name is defined
+  and user.name is string %}
+
+  {% set passed = passed + 1 %}
+  <p>PASS: user and user.name are defined</p>
+  {% else %}
+  {% set failed = failed + 1 %}
+  <p>FAIL: existing user property tests failed</p>
+  {% endif %}
+
+
+  {% if user.nickname is undefined %}
+  {% set passed = passed + 1 %}
+  <p>PASS: missing property is undefined</p>
+  {% else %}
+  {% set failed = failed + 1 %}
+  <p>FAIL: user.nickname should be undefined</p>
+  {% endif %}
+
+
+
+  {% if data["missing"] is undefined %}
+  {% set passed = passed + 1 %}
+  <p>PASS: missing dictionary key is undefined</p>
+  {% else %}
+  {% set failed = failed + 1 %}
+  <p>FAIL: missing dictionary key should be undefined</p>
+  {% endif %}
+
+
+
+  {% if items[99] is undefined %}
+  {% set passed = passed + 1 %}
+  <p>PASS: out-of-range index is undefined</p>
+  {% else %}
+  {% set failed = failed + 1 %}
+  <p>FAIL: items[99] should be undefined</p>
+  {% endif %}
+
+
+  {% set captured %}
+  <strong>{{ user.name }}</strong>
+  {% endset %}
+
+  {% if captured is defined
+  and captured is string
+  and captured is not none %}
+
+  {% set passed = passed + 1 %}
+  <p>PASS: block-set value is a string</p>
+  <div>{{ captured }}</div>
+  {% else %}
+  {% set failed = failed + 1 %}
+  <p>FAIL: block-set value tests failed</p>
+  {% endif %}
+
+
+
+  {% if items is iterable %}
+  {% set passed = passed + 1 %}
+  <p>PASS: items is iterable</p>
+  {% else %}
+  {% set failed = failed + 1 %}
+  <p>FAIL: items should be iterable</p>
+  {% endif %}
+
+
+
+  {% for item in items %}
+
+  {% if temporary is undefined
+  and item is string %}
+
+  <p>PASS: iteration {{ loop.index }} began without temporary</p>
+  {% else %}
+  <p>FAIL: temporary leaked into iteration {{ loop.index }}</p>
+  {% endif %}
+
+  {% set temporary = item %}
+
+  {% if temporary is defined
+  and temporary is string
+  and temporary is not none %}
+
+  <p>PASS: temporary became {{ temporary }}</p>
+  {% else %}
+  <p>FAIL: temporary was not assigned</p>
+  {% endif %}
+
+  {% if loop.index is integer
+  and loop.first is boolean
+  and loop.last is boolean %}
+
+  <p>PASS: loop metadata types are correct</p>
+  {% else %}
+  <p>FAIL: loop metadata types are incorrect</p>
+  {% endif %}
+
+  {% endfor %}
+
+
+
+  {% if temporary is undefined %}
+  {% set passed = passed + 1 %}
+  <p>PASS: loop-local temporary did not escape</p>
+  {% else %}
+  {% set failed = failed + 1 %}
+  <p>FAIL: loop-local temporary escaped</p>
+  {% endif %}
+
+
+  <h2>Passed: {{ passed }}</h2>
+  <h2>Failed: {{ failed }}</h2>
+</section>

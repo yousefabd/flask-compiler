@@ -163,16 +163,33 @@ include_stmt
 // ======================================================
 
 expr
-    : primary (trailer | filter)*                               #IDTrFlExpression
-    | primary                                                   #PrimaryExpression
-    | op=(PLUS | MINUS | NOT) expr                              #UnaryExpression
-    | expr op=(STAR | SLASH | PERCENT) expr                     #BinaryExpression
-    | expr op=(PLUS | MINUS) expr                               #BinaryExpression
-    | expr op=(LT | GT | LTE | GTE | EQ | NEQ | IN | IS) expr   #BinaryExpression
-    | expr op=AND expr                                          #BinaryExpression
-    | expr op=OR expr                                           #BinaryExpression
+    : primary (trailer | filter)*                         #IDTrFlExpression
+    | primary                                            #PrimaryExpression
+    | op=(PLUS | MINUS | NOT) expr                       #UnaryExpression
+    | expr op=(STAR | SLASH | PERCENT) expr              #BinaryExpression
+    | expr op=(PLUS | MINUS) expr                        #BinaryExpression
+    | expr op=(LT | GT | LTE | GTE | EQ | NEQ | IN) expr #BinaryExpression
+    | expr IS NOT? testInvocation                        #TestExpression
+    | expr op=AND expr                                   #BinaryExpression
+    | expr op=OR expr                                    #BinaryExpression
     ;
 
+testInvocation
+    : testName testArguments?
+    ;
+
+testName
+    : ID
+    | NONE
+    | TRUE
+    | FALSE
+    | IN
+    ;
+
+testArguments
+    : LPAREN arguments? RPAREN
+    | primary
+    ;
 trailer
     : LPAREN arguments? RPAREN
     | DOT ID

@@ -10,6 +10,8 @@ import jinja2.models.expression.literal.*;
 import jinja2.models.file.TemplateFile;
 import jinja2.models.statement.*;
 import jinja2.symbol_table.*;
+import jinja2.tests.JinjaTestDefinition;
+import jinja2.tests.JinjaTestRegistry;
 
 import java.util.*;
 
@@ -18,7 +20,14 @@ public class TypeCheckerRule implements ISemanticRule {
     // ─────────────────────────────────────────────────────────────
     // STATIC TABLES
     // ─────────────────────────────────────────────────────────────
+    private final JinjaTestRegistry testRegistry;
 
+    public TypeCheckerRule(
+            JinjaTestRegistry testRegistry
+    ) {
+        this.testRegistry =
+                Objects.requireNonNull(testRegistry);
+    }
     private static final Set<SymbolType> INDEXABLE = Set.of(
             SymbolType.LIST, SymbolType.DICT, SymbolType.STRING, SymbolType.ANY
     );
@@ -131,6 +140,8 @@ public class TypeCheckerRule implements ISemanticRule {
             for (ExpressionNode k : dict.getKeys())   checkExpr(k, ctx);
             for (ExpressionNode v : dict.getValues()) checkExpr(v, ctx);
         }
+        else if (expr instanceof TestExpressionNode test)
+            checkTest(test, ctx);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -238,24 +249,80 @@ public class TypeCheckerRule implements ISemanticRule {
                     bin.getLineNumber());
         }
     }
+    private void checkTest(
+            TestExpressionNode test,
+            SemanticContext context
+    ) {
+        checkExpr(test.getValue(), context);
 
+        for (ArgumentNode argument : test.getArguments()) {
+            checkExpr(argument.getValue(), context);
+        }
+
+        JinjaTestDefinition definition =
+                testRegistry.find(test.getTestName())
+                        .orElse(null);
+
+        if (definition == null) {
+            error(
+                    context,
+                    CompilerError.Kind.TYPE_ERROR,
+                    "Unknown Jinja test '"
+                            + test.getTestName()
+                            + "'",
+                    test.getLineNumber()
+            );
+
+            return;
+        }
+
+        int argumentCount =
+                test.getArguments().size();
+
+        if (!definition.acceptsArgumentCount(argumentCount)) {
+            error(
+                    context,
+                    CompilerError.Kind.TYPE_ERROR,
+                    "Jinja test '"
+                            + test.getTestName()
+                            + "' received "
+                            + argumentCount
+                            + " argument(s), but expects between "
+                            + definition.minimumArguments()
+                            + " and "
+                            + definition.maximumArguments(),
+                    test.getLineNumber()
+            );
+        }
+
+        for (ArgumentNode argument : test.getArguments()) {
+            if (argument.isKeyword()) {
+                error(
+                        context,
+                        CompilerError.Kind.TYPE_ERROR,
+                        "Keyword arguments are not supported for Jinja tests yet",
+                        argument.getLineNumber()
+                );
+            }
+        }
+    }
     private boolean isCompatible(SymbolType left, SymbolType right, Operation op) {
         return switch (op) {
             case MINUS, SLASH, PERCENT ->
                     left == SymbolType.NUMBER && right == SymbolType.NUMBER;
-            case PLUS ->
-                    (left == SymbolType.NUMBER && right == SymbolType.NUMBER)
-                            || (left == SymbolType.STRING && right == SymbolType.STRING);
             case STAR ->
                     (left == SymbolType.NUMBER && right == SymbolType.NUMBER)
                             || (left == SymbolType.STRING && right == SymbolType.NUMBER);
-            case LT, GT, LTE, GTE ->
+            case PLUS, LT, GT, LTE, GTE ->
                     (left == SymbolType.NUMBER && right == SymbolType.NUMBER)
                             || (left == SymbolType.STRING && right == SymbolType.STRING);
-            case EQ, NEQ, AND, OR, IS, NOT -> true;
+            case EQ, NEQ, AND, OR -> true;
             case IN -> right == SymbolType.LIST
                     || right == SymbolType.DICT
                     || right == SymbolType.STRING;
+            case NOT -> throw new IllegalStateException(
+                    "Unary NOT was passed to binary compatibility checking"
+            );
         };
     }
 
@@ -317,7 +384,8 @@ public class TypeCheckerRule implements ISemanticRule {
         if (expression instanceof DictionaryExpressionNode) {
             return SymbolType.DICT;
         }
-
+        if (expression instanceof TestExpressionNode)
+            return SymbolType.BOOLEAN;
         if (expression instanceof IdentifierNode identifier) {
             /*
              * Prefer the declaration binding recorded while the symbol
@@ -420,7 +488,7 @@ public class TypeCheckerRule implements ISemanticRule {
                 if (left == SymbolType.STRING && right == SymbolType.NUMBER) yield SymbolType.STRING;
                 yield SymbolType.ANY;
             }
-            case LT, GT, LTE, GTE, EQ, NEQ, IN, IS, NOT -> SymbolType.BOOLEAN;
+            case LT, GT, LTE, GTE, EQ, NEQ, IN, NOT -> SymbolType.BOOLEAN;
             case AND, OR ->
                     left == right
                             ? left

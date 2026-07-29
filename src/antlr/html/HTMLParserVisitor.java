@@ -238,6 +238,13 @@ public interface HTMLParserVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitBinaryExpression(HTMLParser.BinaryExpressionContext ctx);
 	/**
+	 * Visit a parse tree produced by the {@code TestExpression}
+	 * labeled alternative in {@link HTMLParser#expr}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitTestExpression(HTMLParser.TestExpressionContext ctx);
+	/**
 	 * Visit a parse tree produced by the {@code UnaryExpression}
 	 * labeled alternative in {@link HTMLParser#expr}.
 	 * @param ctx the parse tree
@@ -251,6 +258,24 @@ public interface HTMLParserVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitIDTrFlExpression(HTMLParser.IDTrFlExpressionContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link HTMLParser#testInvocation}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitTestInvocation(HTMLParser.TestInvocationContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link HTMLParser#testName}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitTestName(HTMLParser.TestNameContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link HTMLParser#testArguments}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitTestArguments(HTMLParser.TestArgumentsContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link HTMLParser#trailer}.
 	 * @param ctx the parse tree

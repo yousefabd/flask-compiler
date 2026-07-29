@@ -439,6 +439,18 @@ public class HTMLParserBaseListener implements HTMLParserListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterTestExpression(HTMLParser.TestExpressionContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitTestExpression(HTMLParser.TestExpressionContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterUnaryExpression(HTMLParser.UnaryExpressionContext ctx) { }
 	/**
 	 * {@inheritDoc}
@@ -458,6 +470,42 @@ public class HTMLParserBaseListener implements HTMLParserListener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitIDTrFlExpression(HTMLParser.IDTrFlExpressionContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterTestInvocation(HTMLParser.TestInvocationContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitTestInvocation(HTMLParser.TestInvocationContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterTestName(HTMLParser.TestNameContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitTestName(HTMLParser.TestNameContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterTestArguments(HTMLParser.TestArgumentsContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitTestArguments(HTMLParser.TestArgumentsContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *

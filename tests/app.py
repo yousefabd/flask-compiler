@@ -150,24 +150,65 @@ def render_test():
     calculated_total = unit_price * quantity
 
     return render_template(
-        'render_test.html',
-        pairs=[
-            ["name", "Yousef"],
-            ["age", 24]
-        ],
-        page='products',
-        section_id='profile-card',
-        theme='dark',
-        tooltip='User information',
+                       "is_test.html",
 
-        heading='Renderer integration test',
-        greeting='Welcome',
+                       title="Jinja is-expression stress test",
 
-        user=user,
-        products=test_products,
-        total=calculated_total,
+                       decimal=2.5,
+                       whole_float=4.0,
+                       integer_value=7,
+                       negative_odd=-3,
 
-        image_path='/static/avatar.png'
+                       nothing=None,
+
+                       enabled=True,
+                       disabled=False,
+
+                       user={
+                           "name": "Yousef",
+                           "age": 24
+                       },
+
+                       data={
+                           "present": "value"
+                       },
+
+                       items=[
+                           "first",
+                           "second",
+                           "third"
+                       ])
+@app.route("/is-test")
+def is_test():
+    return render_template(
+        "is_test.html",
+
+        title="Jinja is-expression stress test",
+
+        decimal=2.5,
+        whole_float=4.0,
+        integer_value=7,
+        negative_odd=-3,
+
+        nothing=None,
+
+        enabled=True,
+        disabled=False,
+
+        user={
+            "name": "Yousef",
+            "age": 24
+        },
+
+        data={
+            "present": "value"
+        },
+
+        items=[
+            "first",
+            "second",
+            "third"
+        ]
     )
 if __name__ == "__main__":
     app.run(debug=True)
