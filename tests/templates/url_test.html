@@ -1,34 +1,30 @@
 <section>
-    <link
-            rel="stylesheet"
-            href="{{ url_for('static', filename='styles.css') }}"
-    />
+    <h2>range(stop)</h2>
 
-    <a href="{{ url_for('index') }}">
-        Home
-    </a>
+    {% for number in range(4) %}
+    <p>
+        {{ loop.index }}/{{ loop.length }}:
+        {{ number }}
+    </p>
+    {% endfor %}
 
-    <a href="{{ url_for('view_products') }}">
-        Products
-    </a>
 
-    <a href="{{
-        url_for(
-            'product_details',
-            product_id=product.id
-        )
-    }}">
-        Product details
-    </a>
+    <h2>range(start, stop)</h2>
 
-    <a href="{{
-        url_for(
-            'index',
-            search='gaming laptop',
-            page=2,
-            _anchor='results'
-        )
-    }}">
-        Search
-    </a>
+    {% for number in range(2, 5) %}
+    <p>{{ number }}</p>
+    {% endfor %}
+
+
+    <h2>Negative step</h2>
+
+    {% for number in range(5, 0, -2) %}
+    <p>{{ number }}</p>
+    {% endfor %}
+
+
+    <p>
+        Generated range length:
+        {{ range(2, 8, 2)|length }}
+    </p>
 </section>

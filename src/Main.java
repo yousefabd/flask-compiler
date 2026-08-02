@@ -13,7 +13,7 @@ public class Main {
          */
         String functionToRender =
                 args.length == 0
-                        ? "add_product"
+                        ? "url_test"
                         : args[0];
 
         TemplateRenderRequestProvider renderRequestProvider =

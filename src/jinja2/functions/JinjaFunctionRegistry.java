@@ -45,6 +45,13 @@ public final class JinjaFunctionRegistry {
                 true,
                 new UrlForFunction()
         );
+        register(
+                "range",
+                1,
+                3,
+                false,
+                new RangeFunction()
+        );
     }
 
     private void register(
