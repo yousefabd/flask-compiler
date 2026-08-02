@@ -1,0 +1,17 @@
+<section data-count="{{ items|length }}">
+  <p>List length: {{ items|length }}</p>
+  <p>Dictionary length: {{ data|length }}</p>
+  <p>String length: {{ name|length }}</p>
+  <p>Empty length: {{ []|length }}</p>
+  <p>Unicode length: {{ "A😀B"|length }}</p>
+  <p>Price: {{ "%.2f"|format(price) }}</p>
+  <p>
+    Order:
+    {{ "%s bought %d products"|format(name, quantity) }}
+  </p>
+  <p>
+    Chained filter result:
+    {{ "%.2f"|format(price)|length }}
+  </p>
+
+</section>

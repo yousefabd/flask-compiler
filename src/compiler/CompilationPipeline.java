@@ -8,6 +8,7 @@ import errors.CompilerException;
 import errors.CompilerStage;
 import errors.ErrorReporter;
 import jinja2.TemplateFrontend;
+import jinja2.filters.JinjaFilterRegistry;
 import jinja2.models.file.TemplateFile;
 import jinja2.renderer.ExpressionEvaluator;
 import jinja2.renderer.RenderContext;
@@ -46,7 +47,10 @@ public final class CompilationPipeline {
 
         this.templateRenderer =
                 new TemplateRenderer(
-                        new ExpressionEvaluator(testRegistry)
+                        new ExpressionEvaluator(
+                                new JinjaTestRegistry(),
+                                new JinjaFilterRegistry()
+                        )
                 );
     }
 

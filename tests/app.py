@@ -149,34 +149,16 @@ def render_test():
     quantity = 3
     calculated_total = unit_price * quantity
 
+@app.route("/filter-test")
+def filter_test():
     return render_template(
-                       "render_test.html",
-
-                       title="Jinja is-expression stress test",
-
-                       decimal=2.5,
-                       whole_float=4.0,
-                       integer_value=7,
-                       negative_odd=-3,
-
-                       nothing=None,
-
-                       enabled=True,
-                       disabled=False,
-
-                       user={
-                           "name": "Yousef",
-                           "age": 24
-                       },
-
-                       data={
-                           "present": "value"
-                       },
-
-                       items=[
-                           "first",
-                           "second",
-                           "third"
-                       ])
-if __name__ == "__main__":
-    app.run(debug=True)
+        "filter_test.html",
+        items=["first", "second", "third"],
+        data={
+            "name": "Yousef",
+            "age": 24
+        },
+        name="Yousef",
+        price=999.99,
+        quantity=3
+    )

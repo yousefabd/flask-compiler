@@ -1,5 +1,7 @@
 package jinja2.renderer;
 
+import jinja2.filters.JinjaFilterDefinition;
+import jinja2.filters.JinjaFilterRegistry;
 import jinja2.models.expression.*;
 import jinja2.models.expression.literal.BooleanLiteralNode;
 import jinja2.models.expression.literal.NoneLiteralNode;
@@ -14,12 +16,17 @@ import java.util.*;
 
 public final class ExpressionEvaluator {
     private final JinjaTestRegistry testRegistry;
+    private final JinjaFilterRegistry filterRegistry;
 
     public ExpressionEvaluator(
-            JinjaTestRegistry testRegistry
+            JinjaTestRegistry testRegistry,
+            JinjaFilterRegistry filterRegistry
     ) {
         this.testRegistry =
                 Objects.requireNonNull(testRegistry);
+
+        this.filterRegistry =
+                Objects.requireNonNull(filterRegistry);
     }
     public Object evaluate(
             ExpressionNode expression,
@@ -80,6 +87,11 @@ public final class ExpressionEvaluator {
             case TestExpressionNode testExpression ->
                     evaluateTestExpression(
                             testExpression,
+                            context
+                    );
+            case FilterExpressionNode filterExpression ->
+                    evaluateFilterExpression(
+                            filterExpression,
                             context
                     );
 
@@ -1095,7 +1107,6 @@ public final class ExpressionEvaluator {
 
         return expression.isNegated() != matches;
     }
-
     private TestValue evaluateTestSubject(
             ExpressionNode expression,
             JinjaTestDefinition definition,
@@ -1120,6 +1131,84 @@ public final class ExpressionEvaluator {
             );
         } catch (Exception ignored) {
             return TestValue.undefined();
+        }
+    }
+    //endregion
+
+    //region evaluate filter
+    private Object evaluateFilterExpression(
+            FilterExpressionNode expression,
+            RenderContext context
+    ) {
+        Object targetValue = evaluate(
+                expression.getTarget(),
+                context
+        );
+
+        JinjaFilterDefinition definition =
+                filterRegistry
+                        .find(expression.getFilterName())
+                        .orElseThrow(() ->
+                                new IllegalStateException(
+                                        "Unknown Jinja filter '"
+                                                + expression.getFilterName()
+                                                + "' at line "
+                                                + expression.getLineNumber()
+                                )
+                        );
+
+        List<Object> arguments = new ArrayList<>();
+
+        for (ArgumentNode argument :
+                expression.getArguments()) {
+
+            if (argument.isKeyword()) {
+                throw new IllegalStateException(
+                        "Keyword arguments are not supported for filter '"
+                                + expression.getFilterName()
+                                + "' at line "
+                                + argument.getLineNumber()
+                );
+            }
+
+            arguments.add(
+                    evaluate(
+                            argument.getValue(),
+                            context
+                    )
+            );
+        }
+
+        if (!definition.acceptsArgumentCount(arguments.size())) {
+            throw new IllegalStateException(
+                    "Filter '"
+                            + definition.name()
+                            + "' received "
+                            + arguments.size()
+                            + " argument(s), but expects between "
+                            + definition.minimumArguments()
+                            + " and "
+                            + definition.maximumArguments()
+                            + " at line "
+                            + expression.getLineNumber()
+            );
+        }
+
+        try {
+            return definition.implementation().apply(
+                    targetValue,
+                    List.copyOf(arguments)
+            );
+        } catch (RuntimeException exception) {
+            throw new IllegalStateException(
+                    "Filter '"
+                            + definition.name()
+                            + "' failed at line "
+                            + expression.getLineNumber()
+                            + ": "
+                            + exception.getMessage(),
+                    exception
+            );
         }
     }
     //endregion
