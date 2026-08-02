@@ -25,7 +25,7 @@ OPEN_TAG
     ;
 
 COMMENT_START
-    : '{#' -> pushMode(JINJA_COMMENT)
+    : '{#' -> pushMode(JINJA_COMMENT), skip
     ;
 
 // --------------------
@@ -419,7 +419,7 @@ JINJA_WS
 mode JINJA_COMMENT;
 
 COMMENT_END
-    : '#}' -> popMode
+    : '#}' -> popMode, skip
     ;
 
 COMMENT_TEXT

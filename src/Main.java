@@ -13,7 +13,7 @@ public class Main {
          */
         String functionToRender =
                 args.length == 0
-                        ? "is_test"
+                        ? "render_test"
                         : args[0];
 
         TemplateContextProvider contextProvider =
