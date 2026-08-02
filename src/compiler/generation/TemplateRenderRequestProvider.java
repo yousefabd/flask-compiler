@@ -3,9 +3,9 @@ package compiler.generation;
 import compiler.template.TemplateCall;
 import java.util.Map;
 
-public interface TemplateContextProvider {
+public interface TemplateRenderRequestProvider {
 
-    Map<String, Object> provideContext(
+    TemplateRenderRequest provide(
             TemplateCall call
     );
 }

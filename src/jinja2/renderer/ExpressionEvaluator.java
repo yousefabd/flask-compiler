@@ -2,6 +2,9 @@ package jinja2.renderer;
 
 import jinja2.filters.JinjaFilterDefinition;
 import jinja2.filters.JinjaFilterRegistry;
+import jinja2.functions.JinjaCallArguments;
+import jinja2.functions.JinjaFunctionDefinition;
+import jinja2.functions.JinjaFunctionRegistry;
 import jinja2.models.expression.*;
 import jinja2.models.expression.literal.BooleanLiteralNode;
 import jinja2.models.expression.literal.NoneLiteralNode;
@@ -17,16 +20,21 @@ import java.util.*;
 public final class ExpressionEvaluator {
     private final JinjaTestRegistry testRegistry;
     private final JinjaFilterRegistry filterRegistry;
+    private final JinjaFunctionRegistry functionRegistry;
 
     public ExpressionEvaluator(
             JinjaTestRegistry testRegistry,
-            JinjaFilterRegistry filterRegistry
+            JinjaFilterRegistry filterRegistry,
+            JinjaFunctionRegistry functionRegistry
     ) {
         this.testRegistry =
                 Objects.requireNonNull(testRegistry);
 
         this.filterRegistry =
                 Objects.requireNonNull(filterRegistry);
+
+        this.functionRegistry =
+                Objects.requireNonNull(functionRegistry);
     }
     public Object evaluate(
             ExpressionNode expression,
@@ -92,6 +100,11 @@ public final class ExpressionEvaluator {
             case FilterExpressionNode filterExpression ->
                     evaluateFilterExpression(
                             filterExpression,
+                            context
+                    );
+            case CallExpressionNode callExpression ->
+                    evaluateCallExpression(
+                            callExpression,
                             context
                     );
 
@@ -1210,6 +1223,141 @@ public final class ExpressionEvaluator {
                     exception
             );
         }
+    }
+    //endregion
+
+    //region evaluate call
+    private Object evaluateCallExpression(
+            CallExpressionNode expression,
+            RenderContext context
+    ) {
+        if (!(expression.getCallee()
+                instanceof IdentifierNode identifier)) {
+
+            throw new UnsupportedOperationException(
+                    "Method and macro calls are not supported yet at line "
+                            + expression.getLineNumber()
+            );
+        }
+
+        String functionName =
+                identifier.getName();
+
+        JinjaFunctionDefinition definition =
+                functionRegistry
+                        .find(functionName)
+                        .orElseThrow(() ->
+                                new IllegalStateException(
+                                        "Unknown Jinja function '"
+                                                + functionName
+                                                + "' at line "
+                                                + expression.getLineNumber()
+                                )
+                        );
+
+        JinjaCallArguments arguments =
+                evaluateCallArguments(
+                        expression.getArguments(),
+                        context
+                );
+
+        if (!definition.acceptsArgumentCount(
+                arguments.count()
+        )) {
+            throw new IllegalStateException(
+                    "Function '"
+                            + functionName
+                            + "' received "
+                            + arguments.count()
+                            + " argument(s), but expects between "
+                            + definition.minimumArguments()
+                            + " and "
+                            + definition.maximumArguments()
+                            + " at line "
+                            + expression.getLineNumber()
+            );
+        }
+
+        if (arguments.hasKeywordArguments()
+                && !definition.acceptsKeywordArguments()) {
+
+            throw new IllegalStateException(
+                    "Function '"
+                            + functionName
+                            + "' does not accept keyword arguments at line "
+                            + expression.getLineNumber()
+            );
+        }
+
+        try {
+            return definition.implementation().invoke(
+                    arguments,
+                    context.getEnvironment()
+            );
+        } catch (RuntimeException exception) {
+            throw new IllegalStateException(
+                    "Function '"
+                            + functionName
+                            + "' failed at line "
+                            + expression.getLineNumber()
+                            + ": "
+                            + exception.getMessage(),
+                    exception
+            );
+        }
+    }
+    private JinjaCallArguments evaluateCallArguments(
+            List<ArgumentNode> argumentNodes,
+            RenderContext context
+    ) {
+        List<Object> positional =
+                new ArrayList<>();
+
+        Map<String, Object> keyword =
+                new LinkedHashMap<>();
+
+        boolean encounteredKeyword = false;
+
+        for (ArgumentNode argument : argumentNodes) {
+            Object value = evaluate(
+                    argument.getValue(),
+                    context
+            );
+
+            if (!argument.isKeyword()) {
+                if (encounteredKeyword) {
+                    throw new IllegalStateException(
+                            "Positional arguments cannot appear after "
+                                    + "keyword arguments at line "
+                                    + argument.getLineNumber()
+                    );
+                }
+
+                positional.add(value);
+                continue;
+            }
+
+            encounteredKeyword = true;
+
+            String name =
+                    argument.getKeyword();
+
+            if (keyword.containsKey(name)) {
+                throw new IllegalStateException(
+                        "Duplicate keyword argument '"
+                                + name
+                                + "' at line "
+                                + argument.getLineNumber()
+                );
+            }
+
+            keyword.put(name, value);
+        }
+
+        return new JinjaCallArguments(
+                positional,
+                keyword
+        );
     }
     //endregion
 }

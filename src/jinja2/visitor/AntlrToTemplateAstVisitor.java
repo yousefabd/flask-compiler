@@ -185,7 +185,11 @@ public class AntlrToTemplateAstVisitor extends HTMLParserBaseVisitor<TemplateNod
 
         List<AttributeValuePartNode> parts = new ArrayList<>();
         // Matches both {{ expr }} and {{- expr -}} (whitespace-control variants)
-        Pattern exprPattern = Pattern.compile("\\{\\{-?\\s*(.*?)\\s*-?}}");
+        Pattern exprPattern =
+                Pattern.compile(
+                        "\\{\\{-?\\s*(.*?)\\s*-?}}",
+                        Pattern.DOTALL
+                );
         Matcher matcher = exprPattern.matcher(raw);
 
         int last = 0;

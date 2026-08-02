@@ -4,9 +4,11 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParseException;
 import com.google.gson.ToNumberPolicy;
-import compiler.generation.TemplateContextProvider;
+import compiler.generation.TemplateRenderRequest;
+import compiler.generation.TemplateRenderRequestProvider;
 import compiler.template.TemplateCall;
 import errors.CodeGenError;
+import jinja2.runtime.RenderEnvironment;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -18,8 +20,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public final class CPythonTemplateContextProvider
-        implements TemplateContextProvider {
+public final class CPythonTemplateRenderRequestProvider
+        implements TemplateRenderRequestProvider {
 
     private static final String CONTEXT_MARKER =
             "__RENDER_CONTEXT__";
@@ -43,11 +45,12 @@ public final class CPythonTemplateContextProvider
      */
     private record CapturedRenderPayload(
             String templateName,
-            Map<String, Object> context
+            Map<String, Object> context,
+            RenderEnvironment environment
     ) {
     }
 
-    public CPythonTemplateContextProvider(
+    public CPythonTemplateRenderRequestProvider(
             Path pythonExecutable,
             Path captureScript,
             Path appSource
@@ -63,27 +66,29 @@ public final class CPythonTemplateContextProvider
     }
 
     @Override
-    public Map<String, Object> provideContext(
+    public TemplateRenderRequest provide(
             TemplateCall call
     ) {
         Objects.requireNonNull(call);
 
-        String capturedJson = executeCaptureAsJsonScript(call);
+        String capturedJson =
+                executeCaptureAsJsonScript(call);
 
         CapturedRenderPayload payload =
-                parsePayload(capturedJson, call);
+                parsePayload(
+                        capturedJson,
+                        call
+                );
 
-        validatePayload(call, payload);
+        validatePayload(
+                call,
+                payload
+        );
 
-        /*
-         * Make a copy so the rest of the compiler cannot accidentally
-         * modify the data returned by Gson.
-         *
-         * Collections.unmodifiableMap is used instead of Map.copyOf
-         * because Jinja/Python values may contain null.
-         */
-        return Collections.unmodifiableMap(
-                new LinkedHashMap<>(payload.context())
+        return new TemplateRenderRequest(
+                payload.templateName(),
+                payload.context(),
+                payload.environment()
         );
     }
 
@@ -101,10 +106,11 @@ public final class CPythonTemplateContextProvider
             if (payload == null
                     || payload.templateName() == null
                     || payload.templateName().isBlank()
-                    || payload.context() == null) {
+                    || payload.context() == null
+                    || payload.environment() == null) {
 
                 throw new JsonParseException(
-                        "Missing templateName or context"
+                        "Missing templateName, context, or environment"
                 );
             }
 

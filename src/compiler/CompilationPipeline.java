@@ -1,6 +1,7 @@
 package compiler;
 
-import compiler.generation.TemplateContextProvider;
+import compiler.generation.TemplateRenderRequest;
+import compiler.generation.TemplateRenderRequestProvider;
 import compiler.template.TemplateCall;
 import compiler.template.TemplateCallFinder;
 import errors.CodeGenError;
@@ -9,6 +10,7 @@ import errors.CompilerStage;
 import errors.ErrorReporter;
 import jinja2.TemplateFrontend;
 import jinja2.filters.JinjaFilterRegistry;
+import jinja2.functions.JinjaFunctionRegistry;
 import jinja2.models.file.TemplateFile;
 import jinja2.renderer.ExpressionEvaluator;
 import jinja2.renderer.RenderContext;
@@ -29,18 +31,18 @@ import java.util.Set;
 public final class CompilationPipeline {
 
     private final ErrorReporter reporter;
-    private final TemplateContextProvider contextProvider;
+    private final TemplateRenderRequestProvider renderRequestProvider;
     private final TemplateRenderer templateRenderer;
     private final JinjaTestRegistry testRegistry;
 
     public CompilationPipeline(
-            TemplateContextProvider contextProvider
+            TemplateRenderRequestProvider renderRequestProvider
     ) {
         this.reporter =
                 new ErrorReporter();
 
-        this.contextProvider =
-                Objects.requireNonNull(contextProvider);
+        this.renderRequestProvider =
+                Objects.requireNonNull(renderRequestProvider);
 
         this.testRegistry =
                 new JinjaTestRegistry();
@@ -49,14 +51,14 @@ public final class CompilationPipeline {
                 new TemplateRenderer(
                         new ExpressionEvaluator(
                                 new JinjaTestRegistry(),
-                                new JinjaFilterRegistry()
+                                new JinjaFilterRegistry(),
+                                new JinjaFunctionRegistry()
                         )
                 );
     }
 
     /**
      * Performs all analysis and generates one static snapshot.
-     *
      * The function name is temporary input for the current development
      * stage. Later, it can be replaced by a generation plan containing
      * all snapshots that should be produced.
@@ -259,26 +261,7 @@ public final class CompilationPipeline {
             List<TemplateCall> templateCalls,
             String ownerFunctionName
     ) {
-        List<TemplateCall> matches =
-                new ArrayList<>();
-
-        for (TemplateCall call : templateCalls) {
-            if (call.ownerFunctionName()
-                    .equals(ownerFunctionName)) {
-
-                matches.add(call);
-            }
-        }
-
-        if (matches.isEmpty()) {
-            throw new CodeGenError(
-                    CompilerSettings.appSource.toString(),
-                    -1,
-                    "Function '"
-                            + ownerFunctionName
-                            + "' does not contain a render_template call"
-            );
-        }
+        List<TemplateCall> matches = getTemplateCalls(templateCalls, ownerFunctionName);
 
         /*
          * If one function contains multiple render_template calls,
@@ -301,22 +284,34 @@ public final class CompilationPipeline {
         return matches.getFirst();
     }
 
+    private static List<TemplateCall> getTemplateCalls(List<TemplateCall> templateCalls, String ownerFunctionName) {
+        List<TemplateCall> matches =
+                new ArrayList<>();
+
+        for (TemplateCall call : templateCalls) {
+            if (call.ownerFunctionName()
+                    .equals(ownerFunctionName)) {
+
+                matches.add(call);
+            }
+        }
+
+        if (matches.isEmpty()) {
+            throw new CodeGenError(
+                    CompilerSettings.appSource.toString(),
+                    -1,
+                    "Function '"
+                            + ownerFunctionName
+                            + "' does not contain a render_template call"
+            );
+        }
+        return matches;
+    }
+
     private String renderTemplateCall(
             TemplateCall call,
             Map<String, TemplateFile> templates
     ) {
-        TemplateFile template =
-                templates.get(call.templateName());
-
-        if (template == null) {
-            throw new CodeGenError(
-                    CompilerSettings.templatesDir
-                            .resolve(call.templateName())
-                            .toString(),
-                    call.line(),
-                    "The parsed template AST is unavailable"
-            );
-        }
 
         /*
          * This is the important replacement:
@@ -327,11 +322,23 @@ public final class CompilationPipeline {
          * Now:
          * actual values produced by executing Python.
          */
-        Map<String, Object> resolvedValues =
-                contextProvider.provideContext(call);
+        TemplateRenderRequest renderRequest =
+                renderRequestProvider.provide(call);
+        TemplateFile template =
+                templates.get(call.templateName());
+
+        if (template == null) {
+            throw new CodeGenError(
+                    CompilerSettings.templatesDir
+                            .resolve(renderRequest.templateName())
+                            .toString(),
+                    call.line(),
+                    "The parsed template AST is unavailable"
+            );
+        }
 
         RenderContext renderContext =
-                RenderContext.root(resolvedValues);
+                RenderContext.root(renderRequest.context(),renderRequest.environment());
 
         return templateRenderer.render(
                 template,

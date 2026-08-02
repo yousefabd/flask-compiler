@@ -1,0 +1,34 @@
+<section>
+    <link
+            rel="stylesheet"
+            href="{{ url_for('static', filename='styles.css') }}"
+    />
+
+    <a href="{{ url_for('index') }}">
+        Home
+    </a>
+
+    <a href="{{ url_for('view_products') }}">
+        Products
+    </a>
+
+    <a href="{{
+        url_for(
+            'product_details',
+            product_id=product.id
+        )
+    }}">
+        Product details
+    </a>
+
+    <a href="{{
+        url_for(
+            'index',
+            search='gaming laptop',
+            page=2,
+            _anchor='results'
+        )
+    }}">
+        Search
+    </a>
+</section>

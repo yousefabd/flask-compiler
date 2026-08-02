@@ -162,3 +162,21 @@ def filter_test():
         price=999.99,
         quantity=3
     )
+
+@app.route("/flash-test")
+def flash_test():
+    flash("Product saved successfully")
+    flash("Check the product price", "warning")
+
+    return render_template(
+        "flash_test.html"
+    )
+
+@app.route("/url-test")
+def url_test():
+    return render_template(
+        "url_test.html",
+        product={
+            "id": 2
+        }
+    )

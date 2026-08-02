@@ -1,0 +1,27 @@
+<section>
+    {% set messages = get_flashed_messages() %}
+
+    <p>Message count: {{ messages|length }}</p>
+
+    {% for message in messages %}
+    <p>Message: {{ message }}</p>
+    {% endfor %}
+
+
+    {% set categorized =
+    get_flashed_messages(with_categories=true)
+    %}
+
+    {% for category, message in categorized %}
+    <p>{{ category }}: {{ message }}</p>
+    {% endfor %}
+
+
+    {% set warnings =
+    get_flashed_messages(
+    category_filter=["warning"]
+    )
+    %}
+
+    <p>Warning count: {{ warnings|length }}</p>
+</section>

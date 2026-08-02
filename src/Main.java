@@ -1,6 +1,6 @@
 import compiler.CompilationPipeline;
-import compiler.generation.TemplateContextProvider;
-import python.execution.CPythonTemplateContextProvider;
+import compiler.generation.TemplateRenderRequestProvider;
+import python.execution.CPythonTemplateRenderRequestProvider;
 import utils.CompilerSettings;
 
 public class Main {
@@ -13,11 +13,11 @@ public class Main {
          */
         String functionToRender =
                 args.length == 0
-                        ? "filter_test"
+                        ? "add_product"
                         : args[0];
 
-        TemplateContextProvider contextProvider =
-                new CPythonTemplateContextProvider(
+        TemplateRenderRequestProvider renderRequestProvider =
+                new CPythonTemplateRenderRequestProvider(
                         CompilerSettings.pythonExecutable,
                         CompilerSettings.renderCaptureScript,
                         CompilerSettings.appSource
@@ -25,7 +25,7 @@ public class Main {
 
         CompilationPipeline pipeline =
                 new CompilationPipeline(
-                        contextProvider
+                        renderRequestProvider
                 );
 
         pipeline.compileSnapshot(
