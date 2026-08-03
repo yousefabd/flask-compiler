@@ -1,16 +1,27 @@
 package jinja2.symbol_table;
 public final class CompilerError {
 
+    // added: display names, so the report names a template problem the same way it
+    // names the equivalent Python one — the file path is what tells them apart.
     public enum Kind {
-        UNDEFINED_VARIABLE,
-        SCOPE,
-        DUPLICATE_VARIABLE,
-        DUPLICATE_MACRO,
-        DUPLICATE_PARAMETER,
-        DUPLICATE_BLOCK,
-        INVALID_HTML_STRUCTURE,
-        TYPE_ERROR,
-        TYPE_MISMATCH,
+        UNDEFINED_VARIABLE     ("UndefinedError"),
+        SCOPE                  ("ScopeError"),
+        DUPLICATE_VARIABLE     ("DuplicateDeclarationError"),
+        DUPLICATE_MACRO        ("DuplicateMacroError"),
+        DUPLICATE_PARAMETER    ("DuplicateParameterError"),
+        DUPLICATE_BLOCK        ("DuplicateBlockError"),
+        INVALID_HTML_STRUCTURE ("InvalidHtmlStructureError"),
+        TYPE_ERROR             ("TypeError"),
+        TYPE_MISMATCH          ("TypeMismatchError");
+
+        private final String errorName;
+
+        Kind(String errorName) {
+            this.errorName = errorName;
+        }
+
+        /** Human-readable error name used in the compiler report. */
+        public String errorName() { return errorName; }
     }
 
     private final Kind   kind;
@@ -29,6 +40,6 @@ public final class CompilerError {
 
     @Override
     public String toString() {
-        return "[" + kind + "] line " + line + ": " + message;
+        return "[" + kind.errorName() + "] line " + line + ": " + message;
     }
 }

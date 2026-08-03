@@ -61,7 +61,7 @@ public class PythonLexer extends MidLexBase {
 		return new String[] {
 			null, null, null, "'global'", "'def'", "'return'", "'import'", "'if'", 
 			"'elif'", "'else'", "'while'", "'for'", "'try'", "'finally'", "'or'", 
-			"'not'", "'and'", "'true'", "'pass'", "'false'", "'continue'", "'break'", 
+			"'not'", "'and'", "'True'", "'pass'", "'False'", "'continue'", "'break'", 
 			"'in'", "'is'", "'from'", "'None'", "'->'", "'**='", "'+='", "'-='", 
 			"'*='", "'/='", "'%='", "'&='", "'|='", "'^='", "'<<='", "'>>='", "'//='", 
 			"'.'", "'*'", "','", "':'", "';'", "'='", "'|'", "'^'", "'&'", "'<<'", 
@@ -399,12 +399,12 @@ public class PythonLexer extends MidLexBase {
 		"\u0005n\u0000\u0000\u00e3\u00e4\u0005o\u0000\u0000\u00e4\u00e5\u0005t"+
 		"\u0000\u0000\u00e5\u001a\u0001\u0000\u0000\u0000\u00e6\u00e7\u0005a\u0000"+
 		"\u0000\u00e7\u00e8\u0005n\u0000\u0000\u00e8\u00e9\u0005d\u0000\u0000\u00e9"+
-		"\u001c\u0001\u0000\u0000\u0000\u00ea\u00eb\u0005t\u0000\u0000\u00eb\u00ec"+
+		"\u001c\u0001\u0000\u0000\u0000\u00ea\u00eb\u0005T\u0000\u0000\u00eb\u00ec"+
 		"\u0005r\u0000\u0000\u00ec\u00ed\u0005u\u0000\u0000\u00ed\u00ee\u0005e"+
 		"\u0000\u0000\u00ee\u001e\u0001\u0000\u0000\u0000\u00ef\u00f0\u0005p\u0000"+
 		"\u0000\u00f0\u00f1\u0005a\u0000\u0000\u00f1\u00f2\u0005s\u0000\u0000\u00f2"+
 		"\u00f3\u0005s\u0000\u0000\u00f3 \u0001\u0000\u0000\u0000\u00f4\u00f5\u0005"+
-		"f\u0000\u0000\u00f5\u00f6\u0005a\u0000\u0000\u00f6\u00f7\u0005l\u0000"+
+		"F\u0000\u0000\u00f5\u00f6\u0005a\u0000\u0000\u00f6\u00f7\u0005l\u0000"+
 		"\u0000\u00f7\u00f8\u0005s\u0000\u0000\u00f8\u00f9\u0005e\u0000\u0000\u00f9"+
 		"\"\u0001\u0000\u0000\u0000\u00fa\u00fb\u0005c\u0000\u0000\u00fb\u00fc"+
 		"\u0005o\u0000\u0000\u00fc\u00fd\u0005n\u0000\u0000\u00fd\u00fe\u0005t"+

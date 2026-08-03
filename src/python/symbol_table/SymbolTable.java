@@ -117,12 +117,57 @@ public class SymbolTable
         return allScopes;
     }
 
+    // added: prints the scope tree the way jinja2.symbol_table.SymbolTable does,
+    // so both tables read the same in the compiler output. Builtins are left out —
+    // they are injected by PythonFrontend, identical on every run, and burying the
+    // program's own symbols under forty of them helps nobody.
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        for (Scope scope : allScopes) {
-            sb.append(scope.toString()).append("\n");
+        printScopeTree(globalScope, "", true, sb);
+        return sb.toString().stripTrailing();
+    }
+
+    private void printScopeTree(
+            Scope scope,
+            String prefix,
+            boolean isLast,
+            StringBuilder sb) {
+
+        sb.append(prefix);
+
+        if (!prefix.isEmpty())
+            sb.append(isLast ? "└── " : "├── ");
+
+        sb.append('"').append(scope.getName()).append('"').append('\n');
+
+        String childPrefix = prefix + (isLast ? "    " : "│   ");
+
+        for (Symbol symbol : scope.getSymbols()) {
+            if (symbol.getKind() == SymbolKind.BUILTIN) continue;
+
+            sb.append(childPrefix).append("• ").append(symbol).append('\n');
         }
-        return sb.toString();
+
+        List<Scope> children = getChildren(scope);
+
+        for (int i = 0; i < children.size(); i++) {
+            printScopeTree(
+                    children.get(i),
+                    childPrefix,
+                    i == children.size() - 1,
+                    sb);
+        }
+    }
+
+    private List<Scope> getChildren(Scope parent) {
+        List<Scope> result = new ArrayList<>();
+
+        for (Scope scope : allScopes) {
+            if (scope.getParent() == parent)
+                result.add(scope);
+        }
+
+        return result;
     }
 }

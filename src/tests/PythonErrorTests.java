@@ -35,12 +35,9 @@ import java.util.Map;
  *
  * <p>Run it with:</p>
  * <pre>
- *   mvn -q compile
- *   mvn -q exec:java -Dexec.mainClass=tests.PythonErrorTests
- * </pre>
- * <p>or, without the exec plugin, straight from the compiled classes:</p>
- * <pre>
- *   java -cp target/classes;&lt;antlr-runtime&gt;;&lt;gson&gt; tests.PythonErrorTests
+ *   build.bat
+ *   run.bat tests.PythonErrorTests
+ *   run.bat tests.PythonErrorTests --show    (also prints every report)
  * </pre>
  *
  * <p>Exits with status 0 when every case passes and 1 otherwise, so it can be wired
@@ -126,6 +123,11 @@ public final class PythonErrorTests {
     private static boolean show;
 
     public static void main(String[] args) {
+        System.exit(run(args) == 0 ? 0 : 1);
+    }
+
+    /** Runs every case. @return the number that failed, so {@link AllTests} can total them up. */
+    public static int run(String[] args) {
         show = args.length > 0 && args[0].equals("--show");
 
         List<String> failures = new ArrayList<>();
@@ -169,7 +171,7 @@ public final class PythonErrorTests {
                 System.out.println("  " + failure);
         }
 
-        System.exit(failures.isEmpty() ? 0 : 1);
+        return failures.size();
     }
 
     // ─────────────────────────────────────────────────────────────

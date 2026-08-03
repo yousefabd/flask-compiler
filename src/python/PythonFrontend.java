@@ -40,12 +40,7 @@ public class PythonFrontend {
                     "id", "next", "iter", "super", "object",
                     "Exception", "ValueError", "TypeError", "KeyError",
                     "IndexError", "AttributeError", "RuntimeError",
-                    "__name__", "__file__", "__doc__",
-                    // The lexer spells these literals lowercase (TRUE: 'true'), so
-                    // Python's real `True`/`False` arrive here as identifiers. Until the
-                    // grammar is regenerated they are covered as builtin names, which
-                    // keeps them out of the report either way.
-                    "True", "False"
+                    "__name__", "__file__", "__doc__"
             );
 
     private final Path appSource;

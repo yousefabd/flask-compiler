@@ -27,7 +27,7 @@ public class ErrorReporter {
     public void report(String file, jinja2.symbol_table.CompilerError error) {
         problems.add(new CompilerProblem(
                 CompilerStage.SEMANTIC_ANALYSIS,
-                error.getKind().name(),
+                error.getKind().errorName(),
                 file,
                 error.getLine(),
                 error.getMessage()));

@@ -1,5 +1,6 @@
 package compiler;
 
+import compiler.generation.FallbackTemplateRenderRequestProvider;
 import compiler.generation.TemplateRenderRequest;
 import compiler.generation.TemplateRenderRequestProvider;
 import compiler.template.TemplateCall;
@@ -18,6 +19,7 @@ import jinja2.renderer.RenderContext;
 import jinja2.renderer.TemplateRenderer;
 import jinja2.tests.JinjaTestRegistry;
 import python.PythonFrontend;
+import python.execution.StaticTemplateRenderRequestProvider;
 import python.models.root.Program;
 import utils.CompilerSettings;
 
@@ -91,7 +93,10 @@ public final class CompilationPipeline {
             currentStage =
                     CompilerStage.SEMANTIC_ANALYSIS;
 
-            pythonFrontend.analyzePython(program);
+            python.symbol_table.SymbolTable pythonSymbolTable =
+                    pythonFrontend.analyzePython(program);
+
+            printPythonSymbolTable(pythonSymbolTable);
 
             /*
              * Discover render_template calls exactly once.
@@ -170,10 +175,29 @@ public final class CompilationPipeline {
                             ownerFunctionName
                     );
 
+            /*
+             * Prefer proving the render context from the AST over executing the
+             * route. Only this scope has the parsed Program, so the static provider
+             * is composed here rather than injected; the provider handed to the
+             * constructor stays as the fallback for contexts that cannot be folded.
+             */
+            TemplateRenderRequestProvider effectiveProvider =
+                    new FallbackTemplateRenderRequestProvider(
+                            CompilerSettings.appSource.toString(),
+                            List.of(
+                                    new StaticTemplateRenderRequestProvider(
+                                            program,
+                                            CompilerSettings.appSource
+                                    ),
+                                    renderRequestProvider
+                            )
+                    );
+
             String renderedHtml =
                     renderTemplateCall(
                             callToRender,
-                            templates
+                            templates,
+                            effectiveProvider
                     );
 
             System.out.println();
@@ -325,7 +349,8 @@ public final class CompilationPipeline {
 
     private String renderTemplateCall(
             TemplateCall call,
-            Map<String, TemplateFile> templates
+            Map<String, TemplateFile> templates,
+            TemplateRenderRequestProvider provider
     ) {
 
         /*
@@ -338,7 +363,7 @@ public final class CompilationPipeline {
          * actual values produced by executing Python.
          */
         TemplateRenderRequest renderRequest =
-                renderRequestProvider.provide(call);
+                provider.provide(call);
         TemplateFile template =
                 templates.get(call.templateName());
 
@@ -359,6 +384,16 @@ public final class CompilationPipeline {
                 template,
                 renderContext
         );
+    }
+
+    private void printPythonSymbolTable(
+            python.symbol_table.SymbolTable symbolTable
+    ) {
+        System.out.println();
+        System.out.println("Python Symbol Table: "
+                + CompilerSettings.appSource);
+
+        System.out.println(symbolTable);
     }
 
     private void printTemplateSymbolTables(

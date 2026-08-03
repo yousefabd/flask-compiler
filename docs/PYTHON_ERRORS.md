@@ -162,23 +162,19 @@ promises the error handling makes:
 2. the expected error **appears in the report**, with its error name and message;
 3. it appears in the **correct section** (`Semantic Errors`).
 
-```bash
-mvn -q compile
-mvn -q exec:java -Dexec.mainClass=tests.PythonErrorTests
-```
-
-Or straight from the compiled classes:
-
-```bash
-java -cp "target/classes;<antlr4-runtime.jar>;<gson.jar>" tests.PythonErrorTests
+```bat
+build.bat
+run.bat tests.PythonErrorTests
 ```
 
 Add `--show` to print the full compiler report each case produced — the exact text
 that appears in the output/report area:
 
-```bash
-java -cp "target/classes;<antlr4-runtime.jar>;<gson.jar>" tests.PythonErrorTests --show
+```bat
+run.bat tests.PythonErrorTests --show
 ```
+
+See [BUILD_AND_RUN.md](BUILD_AND_RUN.md) for what the scripts do.
 
 The runner prints `PASS`/`FAIL` per case, a summary line, and exits `0` only when
 everything passes, so it can be wired into a build.
@@ -236,11 +232,6 @@ or call `PythonFrontend.parsePython()` / `analyzePython()` directly the way
   bodies their own scope, which is why `if True: x = 10` followed by `print(x)` is a
   `ScopeError` here. Real CPython has no block scope; the behaviour is kept as the
   project already defined it.
-- **`True` / `False` are treated as builtin names.** The lexer spells these literals
-  lowercase (`TRUE: 'true'` in `grammars/python/PythonLexer.g4`), so Python's real
-  `True`/`False` reach the analyzer as identifiers. They are declared as builtins so
-  they are not reported. Regenerating the lexer with the correct spelling would let
-  them become `BoolAtom` literals and this entry could be dropped.
 - **Type inference is shallow, by design.** Literals, parenthesized expressions,
   unary and binary operations, and plain names are inferred; call results, attributes
   and subscripts are `Any`. This keeps the checks provable and the report free of
