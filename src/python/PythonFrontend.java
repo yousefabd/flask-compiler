@@ -8,6 +8,7 @@ import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import python.models.root.Program;
+import python.semantic.PythonSemanticAnalyzer;
 import python.symbol_table.CompilerError;
 import python.symbol_table.SymbolTable;
 import python.symbol_table.SymbolTableBuilder;
@@ -64,5 +65,25 @@ public class PythonFrontend {
         }
 
         return symbolTable;
+    }
+
+    /**
+     * Name resolution and type checking over the Python AST.
+     *
+     * <p>Kept separate from {@link #analyzePython(Program)} because the two
+     * answer different questions: the symbol-table builder performs the
+     * declaration-level checks (duplicate function, duplicate parameter,
+     * statement placement), while this stage resolves every identifier
+     * against the real Python scope chain and checks types.</p>
+     */
+    public PythonSemanticAnalyzer.Result analyzeSemantics(Program program) {
+        PythonSemanticAnalyzer.Result result =
+                new PythonSemanticAnalyzer().analyze(program);
+
+        for (python.symbol_table.CompilerError error : result.errors()) {
+            reporter.report(appSource.toString(), error);
+        }
+
+        return result;
     }
 }

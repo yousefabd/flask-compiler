@@ -22,7 +22,12 @@ import java.util.*;
 
 public final class TemplateFrontend {
 
-    private static final List<String> TEMPLATE_BUILTINS =
+    /**
+     * Names Jinja makes available without the route supplying them. Public so
+     * the missing-Flask-variable check excludes exactly the same set instead
+     * of keeping a second copy that could drift.
+     */
+    public static final List<String> TEMPLATE_BUILTINS =
             List.of(
                     "url_for",
                     "get_flashed_messages",

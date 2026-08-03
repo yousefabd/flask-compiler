@@ -14,7 +14,19 @@ public final class CompilerError {
         BREAK_OUTSIDE_LOOP,
         CONTINUE_OUTSIDE_LOOP,
         GLOBAL_AT_MODULE_LEVEL,
+
+        /** Name cannot be resolved through the visible Python scope chain. */
         UNDEFINED_VARIABLE,
+        /** Name exists, but only in a scope that is not reachable from here. */
+        SCOPE,
+        /** Name is declared in this scope but read before it is assigned. */
+        USE_BEFORE_ASSIGNMENT,
+        /** Operand types are statically known and the operation is invalid. */
+        TYPE_ERROR,
+        /** A value contradicts an explicit type expectation (a parameter annotation). */
+        TYPE_MISMATCH,
+        /** A Jinja template needs a variable that no render_template() call supplies. */
+        MISSING_FLASK_VARIABLE,
     }
 
     private final Kind   kind;

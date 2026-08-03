@@ -37,3 +37,5 @@ lib/
 target/
 ### Mac OS ###
 .DS_Store
+### semantic test build output ###
+build/

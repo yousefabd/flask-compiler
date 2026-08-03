@@ -2,6 +2,7 @@ package compiler;
 
 import compiler.generation.TemplateRenderRequest;
 import compiler.generation.TemplateRenderRequestProvider;
+import compiler.semantic.MissingFlaskVariableAnalyzer;
 import compiler.template.TemplateCall;
 import compiler.template.TemplateCallFinder;
 import errors.CodeGenError;
@@ -93,6 +94,22 @@ public final class CompilationPipeline {
             pythonFrontend.analyzePython(program);
 
             /*
+             * Name resolution and type checking. Reported through the same
+             * ErrorReporter as every other stage.
+             */
+            pythonFrontend.analyzeSemantics(program);
+
+            /*
+             * Python semantics are the foundation everything after this
+             * depends on. Continuing past a broken program only produces
+             * follow-on noise, so stop here.
+             */
+            if (reporter.hasErrors()) {
+                finishCompilation();
+                return;
+            }
+
+            /*
              * Discover render_template calls exactly once.
              */
             List<TemplateCall> templateCalls =
@@ -137,6 +154,22 @@ public final class CompilationPipeline {
             printTemplateSymbolTables(
                     templateSymbolTables
             );
+
+            /*
+             * Cross-stage check: what the templates need versus what the
+             * routes actually pass.
+             */
+            for (python.symbol_table.CompilerError error :
+                    MissingFlaskVariableAnalyzer.analyze(
+                            templates,
+                            callsByTemplate
+                    )) {
+
+                reporter.report(
+                        CompilerSettings.appSource.toString(),
+                        error
+                );
+            }
 
             if (reporter.hasErrors()) {
                 finishCompilation();
