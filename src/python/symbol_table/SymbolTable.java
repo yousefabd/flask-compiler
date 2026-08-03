@@ -1,15 +1,25 @@
 package python.symbol_table;
 
+import python.models.atom_statement.ID;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
-public class SymbolTable 
+public class SymbolTable
 {
     private final Scope globalScope;
     private final Deque<Scope> scopeStack = new ArrayDeque<>();
     List<Scope> allScopes = new ArrayList<>();
+
+    // added: every ID node the builder resolved, mapped to the Symbol it refers to.
+    // Mirrors jinja2.symbol_table.SymbolTable.bindings — it is what lets
+    // semantic_rules.TypeCheckerRule ask "what type is this identifier?" without
+    // redoing scope resolution.
+    private final Map<ID, Symbol> bindings = new IdentityHashMap<>();
 
     public SymbolTable() {
         globalScope = new Scope("global", null);
@@ -69,6 +79,30 @@ public class SymbolTable
         target.define(candidate);
         return candidate;
     }
+
+    // added: mirrors jinja2 SymbolTable.resolveGlobal — searches EVERY scope opened
+    // during the walk, not just the visible chain. SymbolTableBuilder uses it to tell
+    // "this name exists, but not here" (ScopeError) from "this name exists nowhere"
+    // (UndefinedError).
+    /** Finds {@code name} in any scope of the program, ignoring visibility. */
+    public Symbol resolveAnywhere(String name) {
+        for (Scope scope : allScopes) {
+            Symbol sym = scope.resolveLocal(name);
+            if (sym != null) return sym;
+        }
+        return null;
+    }
+
+    // added: called by SymbolTableBuilder once it resolves an identifier, so the AST
+    // node stays traceable back to its declaring Symbol (same contract as the Jinja
+    // symbol table's recordBinding).
+    public void recordBinding(ID node, Symbol symbol) {
+        bindings.put(node, symbol);
+    }
+
+    public Symbol getBinding(ID node) { return bindings.get(node); }
+
+    public Map<ID, Symbol> getBindings() { return bindings; }
 
     // added: entry point used by SymbolTableBuilder when it visits a GlobalStatement
     /** Records that {@code name} refers to the module-level variable for the rest of the current scope. */

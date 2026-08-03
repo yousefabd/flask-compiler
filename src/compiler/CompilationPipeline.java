@@ -4,6 +4,7 @@ import compiler.generation.TemplateRenderRequest;
 import compiler.generation.TemplateRenderRequestProvider;
 import compiler.template.TemplateCall;
 import compiler.template.TemplateCallFinder;
+import compiler.template.TemplateContextChecker;
 import errors.CodeGenError;
 import errors.CompilerException;
 import errors.CompilerStage;
@@ -136,6 +137,20 @@ public final class CompilationPipeline {
 
             printTemplateSymbolTables(
                     templateSymbolTables
+            );
+
+            /*
+             * Backend/template contract: a name the template reads but no
+             * render_template call supplies is reported against app.py, at the
+             * call site that has to be fixed.
+             */
+            reporter.reportAll(
+                    CompilerSettings.appSource.toString(),
+                    TemplateContextChecker.findMissingContextVariables(
+                            templateFrontend,
+                            templates,
+                            callsByTemplate
+                    )
             );
 
             if (reporter.hasErrors()) {

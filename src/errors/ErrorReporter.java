@@ -33,14 +33,27 @@ public class ErrorReporter {
                 error.getMessage()));
     }
 
-    /** Adopts a Python semantic error, preserving its kind and line. */
+    /**
+     * Adopts a Python semantic error, preserving its kind, line and scope.
+     *
+     * <p>Python kinds print under their error name ({@code UndefinedError},
+     * {@code ScopeError}, {@code TypeMismatchError}, ...) so the report reads the
+     * way Python itself names these failures.</p>
+     */
     public void report(String file, python.symbol_table.CompilerError error) {
         problems.add(new CompilerProblem(
                 CompilerStage.SEMANTIC_ANALYSIS,
-                error.getKind().name(),
+                error.getKind().errorName(),
                 file,
                 error.getLine(),
-                error.getMessage()));
+                error.getMessage(),
+                error.getContext()));
+    }
+
+    /** Adopts a whole batch of Python semantic errors. */
+    public void reportAll(String file, List<python.symbol_table.CompilerError> errors) {
+        for (python.symbol_table.CompilerError error : errors)
+            report(file, error);
     }
 
     /** Wraps an unexpected exception so it is reported instead of crashing. */

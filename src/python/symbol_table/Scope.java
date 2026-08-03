@@ -40,6 +40,23 @@ public class Scope {
         return null;
     }
 
+    // added: SymbolTableBuilder needs more than "is it visible?" — to tell a
+    // use-before-declaration (declared *here*, but later on) apart from a forward
+    // reference to an enclosing scope (perfectly legal), it has to know which scope
+    // actually owns the name. Returns null when the name is not visible at all.
+    /** The nearest enclosing scope (including this one) that declares {@code name}. */
+    public Scope findOwner(String name) {
+        if (symbols.containsKey(name)) return this;
+        if (parent != null) return parent.findOwner(name);
+        return null;
+    }
+
+    /** Fully qualified scope path, e.g. {@code global > function index > if}. */
+    public String getQualifiedName() {
+        if (parent == null) return name;
+        return parent.getQualifiedName() + " > " + name;
+    }
+
     // added: record that `name` was declared `global` in this scope - SymbolTable.define()
     // checks this to redirect later assignments to the module/global scope instead
     /** Marks {@code name} as referring to the module-level scope for the rest of this scope. */

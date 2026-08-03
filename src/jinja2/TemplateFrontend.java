@@ -166,4 +166,59 @@ public final class TemplateFrontend {
 
         return symbolTable;
     }
+
+    /**
+     * The names a template needs the backend to supply — its free variables.
+     *
+     * <p>Analyzes the template with the Jinja builtins in place but <b>no</b>
+     * render_template context, so every name the template still cannot resolve is,
+     * by definition, one that has to arrive through {@code render_template(...)}.
+     * Loop variables, macro parameters and {@code {% set %}} names resolve against
+     * the template's own scopes and are therefore never returned.</p>
+     *
+     * <p>Used by {@code compiler.template.TemplateContextChecker} to raise
+     * {@code MissingFlaskVariableError} on the Python side of the pipeline.</p>
+     */
+    public Set<String> collectRequiredContextVariables(TemplateFile template) {
+        SymbolTable symbolTable = new SymbolTable();
+
+        for (String builtin : TEMPLATE_BUILTINS) {
+            symbolTable.define(
+                    new Symbol(builtin, SymbolKind.VARIABLE, 0, null)
+            );
+        }
+
+        List<CompilerError> errors = new ArrayList<>();
+
+        // No extra semantic rules here: this pass exists only to find unresolved
+        // names, and the real analyzeTemplate() run already reports everything else.
+        new SymbolTableBuilder(symbolTable, errors, List.of())
+                .build(template);
+
+        Set<String> required = new LinkedHashSet<>();
+
+        for (CompilerError error : errors) {
+            if (error.getKind() != CompilerError.Kind.UNDEFINED_VARIABLE) continue;
+
+            String name = quotedName(error.getMessage());
+            if (name != null) required.add(name);
+        }
+
+        return required;
+    }
+
+    /**
+     * Reads the variable name out of an "Undefined variable 'x'" message.
+     * The Jinja CompilerError carries the name only inside its message, so this is
+     * where the two representations meet.
+     */
+    private static String quotedName(String message) {
+        int start = message.indexOf('\'');
+        if (start < 0) return null;
+
+        int end = message.indexOf('\'', start + 1);
+        if (end < 0) return null;
+
+        return message.substring(start + 1, end);
+    }
 }
