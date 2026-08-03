@@ -112,14 +112,20 @@ Compilation failed:
 Semantic Errors:
   [TypeMismatchError] tests\errors\broken_app.py line 9: Expected str, got int for 'title' (declared at line 8) (in global > function index)
   [UndefinedError] tests\errors\broken_app.py line 10: Variable 'missing_name' is not defined (in global > function index)
-  [UNDEFINED_VARIABLE] tests\templates\index.html line 10: Undefined variable 'product'
+  [UndefinedError] tests\templates\index.html line 10: Undefined variable 'product' (in template)
   [MissingFlaskVariableError] tests\errors\broken_app.py line 10: 'product' was not passed to render_template('index.html') (in function 'index')
 ```
 
-The format is `[Kind] file line N: message (in scope)`. Python kinds print under
-their **error name** (`UndefinedError`, `ScopeError`, ...) so the report reads the
-way Python names these failures; Jinja2 kinds keep printing under their enum name
-(`UNDEFINED_VARIABLE`), unchanged.
+The format is `[Kind] file line N: message (in scope)` for both front ends. Kinds
+print under their **error name** (`UndefinedError`, `ScopeError`, ...) so the report
+reads the way Python and Jinja name these failures, and the file path is what tells
+a template problem apart from a Python one.
+
+Both `CompilerError` classes carry the same five fields — kind, message, line,
+scope context and symbol name — so neither front end reports less than the other.
+Errors raised by a *semantic rule* rather than the symbol table builder have no
+scope to record, in either language, because the rules walk the tree without a
+scope stack.
 
 Syntax errors land in **Syntax Errors**, generation errors in **Code Generation
 Errors**, as before.
@@ -179,11 +185,16 @@ See [BUILD_AND_RUN.md](BUILD_AND_RUN.md) for what the scripts do.
 The runner prints `PASS`/`FAIL` per case, a summary line, and exits `0` only when
 everything passes, so it can be wired into a build.
 
-Two cases guard against over-reporting rather than under-reporting:
+Three cases guard against over-reporting rather than under-reporting — that
+correct code stays silent is as much a requirement as that broken code does not:
 
 - **A correct program reports nothing** — `tests/errors/clean.py` uses the same
   patterns as `tests/app.py` (module-level state, `global`, loops, route handlers)
   and must produce `No errors.`
+- **The project's own app.py analyzes clean** — runs the real `tests/app.py`, not a
+  sample written to suit the checker. This is the case that catches a new check
+  firing on real code: every route, the module-level product list, `global`,
+  request handling and the flash calls.
 - **The whole pipeline survives a broken app** — runs the real
   `CompilationPipeline` over `tests/errors/broken_app.py` and asserts it returns
   normally, prints `Compilation failed:` and lists both Python errors.

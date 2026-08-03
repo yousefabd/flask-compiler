@@ -158,6 +158,10 @@ public final class PythonErrorTests {
                 runCleanProgramCase(), failures);
 
         total++;
+        report("The project's own app.py analyzes clean",
+                runProjectAppCase(), failures);
+
+        total++;
         report("The whole pipeline survives a broken app",
                 runPipelineCase(), failures);
 
@@ -255,6 +259,32 @@ public final class PythonErrorTests {
         // `name` IS passed, so it must not be reported.
         if (report.contains("'name' was not passed"))
             return "reported 'name' as missing even though the route passes it";
+
+        return null;
+    }
+
+    /**
+     * The real project backend must analyze clean.
+     *
+     * <p>{@code clean.py} is a synthetic stand-in; this runs the actual
+     * {@code tests/app.py} the compiler ships with. It is the case that catches a
+     * new check firing on real code — every route, the module-level product list,
+     * {@code global}, request handling and the flash calls — rather than on a
+     * sample written to suit the checker.</p>
+     */
+    private static String runProjectAppCase() {
+        String report;
+
+        try {
+            report = analyze(CompilerSettings.appSource);
+        } catch (RuntimeException crash) {
+            return "the compiler crashed with "
+                    + crash.getClass().getSimpleName() + ": " + crash.getMessage();
+        }
+
+        if (!report.strip().equals("No errors."))
+            return "expected " + CompilerSettings.appSource
+                    + " to analyze clean but got:\n" + indent(report);
 
         return null;
     }

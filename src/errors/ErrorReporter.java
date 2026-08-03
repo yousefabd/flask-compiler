@@ -23,14 +23,15 @@ public class ErrorReporter {
         problems.add(exception.toProblem());
     }
 
-    /** Adopts a Jinja2 semantic error, preserving its kind and line. */
+    /** Adopts a Jinja2 semantic error, preserving its kind, line and scope. */
     public void report(String file, jinja2.symbol_table.CompilerError error) {
         problems.add(new CompilerProblem(
                 CompilerStage.SEMANTIC_ANALYSIS,
                 error.getKind().errorName(),
                 file,
                 error.getLine(),
-                error.getMessage()));
+                error.getMessage(),
+                error.getContext()));
     }
 
     /**

@@ -95,14 +95,13 @@ public class SymbolTableBuilder {
             );
 
             if (!symbolTable.define(loopVariable)) {
-                errors.add(
-                        new CompilerError(
-                                CompilerError.Kind.DUPLICATE_VARIABLE,
-                                "Duplicate loop variable '"
-                                        + loopVariable.getName()
-                                        + "'",
-                                variable.getLineNumber()
-                        )
+                error(
+                        CompilerError.Kind.DUPLICATE_VARIABLE,
+                        "Duplicate loop variable '"
+                                + loopVariable.getName()
+                                + "'",
+                        variable.getLineNumber(),
+                        loopVariable.getName()
                 );
             }
         }
@@ -205,10 +204,9 @@ public class SymbolTableBuilder {
                 ms.getParameters()         // uses the MACRO constructor
         );
         if (!symbolTable.define(macroSym))
-            errors.add(new CompilerError(
-                    CompilerError.Kind.DUPLICATE_MACRO,
+            error(CompilerError.Kind.DUPLICATE_MACRO,
                     "Duplicate macro '" + ms.getMacroName() + "'",
-                    ms.getLineNumber()));
+                    ms.getLineNumber(), ms.getMacroName());
 
         // Default values are evaluated in the CALLER's scope, so visit them
         // before entering the macro scope.
@@ -226,11 +224,10 @@ public class SymbolTableBuilder {
                     param.hasDefault() ? param.getDefaultValue() : null
             );
             if (!symbolTable.define(paramSym))
-                errors.add(new CompilerError(
-                        CompilerError.Kind.DUPLICATE_PARAMETER,
+                error(CompilerError.Kind.DUPLICATE_PARAMETER,
                         "Duplicate parameter '" + param.getName()
                                 + "' in macro '" + ms.getMacroName() + "'",
-                        param.getLineNumber()));
+                        param.getLineNumber(), param.getName());
         }
 
         for (ContentNode child : ms.getBody())
@@ -248,10 +245,9 @@ public class SymbolTableBuilder {
                 null  // blocks have no initializer expression
         );
         if (!symbolTable.defineInTemplateScope(blockSym))
-            errors.add(new CompilerError(
-                    CompilerError.Kind.DUPLICATE_BLOCK,
+            error(CompilerError.Kind.DUPLICATE_BLOCK,
                     "Duplicate block '" + bs.getBlockName() + "'",
-                    bs.getLineNumber()));
+                    bs.getLineNumber(), bs.getBlockName());
 
         symbolTable.enterScope("block " + bs.getBlockName(), ScopeKind.BLOCK);
 
@@ -344,17 +340,23 @@ public class SymbolTableBuilder {
                 symbolTable.resolveGlobal(id.getName());
 
         if (declaredSomewhere != null) {
-            errors.add(new CompilerError(
-                    CompilerError.Kind.SCOPE,
+            error(CompilerError.Kind.SCOPE,
                     "Variable '" + id.getName() + "' is not visible in this scope",
-                    id.getLineNumber()));
+                    id.getLineNumber(), id.getName());
         }
         else {
-            errors.add(new CompilerError(
-                    CompilerError.Kind.UNDEFINED_VARIABLE,
+            error(CompilerError.Kind.UNDEFINED_VARIABLE,
                     "Undefined variable '" + id.getName() + "'",
-                    id.getLineNumber()));
+                    id.getLineNumber(), id.getName());
         }
+    }
+
+    // added: records the scope the error was found in, so a template problem
+    // reports the same "(in ...)" context a Python problem does. Mirrors
+    // python.symbol_table.SymbolTableBuilder.error().
+    private void error(CompilerError.Kind kind, String message, int line, String symbolName) {
+        errors.add(new CompilerError(kind, message, line,
+                symbolTable.getCurrentScope().getQualifiedName(), symbolName));
     }
     private void visitTestExpression(TestExpressionNode test) {
 

@@ -27,19 +27,36 @@ public final class CompilerError {
     private final Kind   kind;
     private final String message;
     private final int    line;
+    // added: the same two structured fields python.symbol_table.CompilerError
+    // carries, so a template problem and a Python problem report identically.
+    private final String context;     // scope the error was found in, may be null
+    private final String symbolName;  // variable/macro/block name, may be null
 
     public CompilerError(Kind kind, String message, int line) {
-        this.kind    = kind;
-        this.message = message;
-        this.line    = line;
+        this(kind, message, line, null, null);
     }
 
-    public Kind   getKind()    { return kind; }
-    public String getMessage() { return message; }
-    public int    getLine()    { return line; }
+    public CompilerError(Kind kind, String message, int line,
+                         String context, String symbolName) {
+        this.kind       = kind;
+        this.message    = message;
+        this.line       = line;
+        this.context    = context;
+        this.symbolName = symbolName;
+    }
+
+    public Kind   getKind()       { return kind; }
+    public String getMessage()    { return message; }
+    public int    getLine()       { return line; }
+    public String getContext()    { return context; }
+    public String getSymbolName() { return symbolName; }
 
     @Override
     public String toString() {
-        return "[" + kind.errorName() + "] line " + line + ": " + message;
+        StringBuilder sb = new StringBuilder();
+        sb.append('[').append(kind.errorName()).append("] line ")
+          .append(line).append(": ").append(message);
+        if (context != null) sb.append(" (in ").append(context).append(')');
+        return sb.toString();
     }
 }

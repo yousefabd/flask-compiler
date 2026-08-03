@@ -49,7 +49,9 @@ public class UlLiRule implements ISemanticRule {
             errors.add(new CompilerError(
                     CompilerError.Kind.INVALID_HTML_STRUCTURE,
                     "{{ }} output directly inside <" + parentListTag + "> — wrap it in <li>",
-                    node.getLineNumber()));
+                    node.getLineNumber(),
+                    null,
+                    parentListTag));
             return;
         }
 
@@ -65,7 +67,9 @@ public class UlLiRule implements ISemanticRule {
                     CompilerError.Kind.INVALID_HTML_STRUCTURE,
                     "<" + parentListTag + "> can only contain <li>"
                             + " but found <" + element.getTagName() + ">",
-                    element.getLineNumber()));
+                    element.getLineNumber(),
+                    null,
+                    element.getTagName()));
         }
 
         if (!(element instanceof HTMLNormalElementNode normal)) return;

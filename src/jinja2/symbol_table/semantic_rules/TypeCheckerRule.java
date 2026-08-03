@@ -501,7 +501,11 @@ public class TypeCheckerRule implements ISemanticRule {
     // HELPER
     // ─────────────────────────────────────────────────────────────
 
+    /*
+     * The rule walks the template without tracking scopes, so it has no context to
+     * record — the same position python's TypeCheckerRule is in.
+     */
     private void error(SemanticContext ctx, CompilerError.Kind kind, String msg, int line) {
-        ctx.errors().add(new CompilerError(kind, msg, line));
+        ctx.error(kind, msg, line, null, null);
     }
 }

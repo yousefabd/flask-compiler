@@ -45,6 +45,15 @@ public class Scope {
 
     public Collection<Symbol> getSymbols() { return symbols.values(); }
 
+    // added: the scope path an error was found in, e.g. `template > for > macro card`.
+    // Mirrors python.symbol_table.Scope.getQualifiedName() so both front ends can
+    // report the same "(in ...)" context.
+    /** Fully qualified scope path, from the template scope down to this one. */
+    public String getQualifiedName() {
+        if (parent == null) return name;
+        return parent.getQualifiedName() + " > " + name;
+    }
+
     @Override
     public String toString() {
         return "Scope[" + kind + " \"" + name + "\"]: " + symbols.values();

@@ -69,9 +69,9 @@ your grammar change.
 
 | Suite | Covers | Cases |
 |---|---|---|
-| `tests.PythonErrorTests` | Python semantic errors — see [PYTHON_ERRORS.md](PYTHON_ERRORS.md) | 17 |
+| `tests.PythonErrorTests` | Python semantic errors — see [PYTHON_ERRORS.md](PYTHON_ERRORS.md) | 18 |
 | `tests.StaticRenderTests` | compile-time render contexts, routes, flash, provider fallback | 8 |
-| `tests.AllTests` | all of the above | 25 |
+| `tests.AllTests` | all of the above | 26 |
 
 Each exits `0` only when everything passes, so a build can gate on
 `run.bat tests.AllTests`.
