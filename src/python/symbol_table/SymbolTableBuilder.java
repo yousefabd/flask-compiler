@@ -70,23 +70,23 @@ public class SymbolTableBuilder {
             visitDecoratorStatement(ds);
     }
 
+    // fixed: if/for/while do not open a Python scope — a name assigned inside
+    // one stays visible in the surrounding function/module scope. This table's
+    // result is unused by the pipeline (python.semantic.NameResolver owns real
+    // scoping now), but enterScope/exitScope here previously modeled Python
+    // incorrectly, which is worth not doing even in dead code.
     private void visitWhileStatement(WhileStatement ws)
     {
-        symbolTable.enterScope("while");
         loopDepth++;
         visitBody(ws.body);
         loopDepth--;
-        symbolTable.exitScope();
         if(ws.last != null) {
-            symbolTable.enterScope("else");
             visitBody(ws.last);
-            symbolTable.exitScope();
         }
     }
 
-    private void visitForStatement(ForStatement fs) 
+    private void visitForStatement(ForStatement fs)
     {
-        symbolTable.enterScope("for");
         fs.iterators.forEach(id -> {
             Symbol sym = new Symbol(id.name, SymbolKind.VARIABLE);
             symbolTable.define(sym);
@@ -94,34 +94,22 @@ public class SymbolTableBuilder {
         loopDepth++;
         visitBody(fs.body);
         loopDepth--;
-        symbolTable.exitScope();
-        if(fs.last != null) 
+        if(fs.last != null)
         {
-            symbolTable.enterScope("else");
             visitBody(fs.last);
-            symbolTable.exitScope();
         }
     }
 
     private void visitIfStatement(IfStatement is)
     {
-        symbolTable.enterScope("if");
-
-        
-
         visitBody(is.bodies.get(0));
-        
-        symbolTable.exitScope();
+
         for (int i = 1; i < is.bodies.size(); i++) {
-            symbolTable.enterScope("elif");
             visitBody(is.bodies.get(i));
-            symbolTable.exitScope();
         }
         if(is.last != null)
         {
-            symbolTable.enterScope("else");
             visitBody(is.last);
-            symbolTable.exitScope();
         }
     }
 
@@ -148,14 +136,13 @@ public class SymbolTableBuilder {
 
     private void visitFunctionDef(FunctionDef fd)
     {
+        // fixed: redefining a function is ordinary, legal Python name rebinding
+        // (the second `def` simply replaces the first at runtime) — CPython
+        // raises nothing for it, so this is no longer reported as an error.
+        // `define()` is still called so the name occupies this scope for the
+        // duplicate-parameter check below; its boolean result is unused.
         Symbol funcSym = new Symbol(fd.id.name, SymbolKind.FUNCTION);
-        // added: a function name may not be defined twice in the same scope
-        if (!this.symbolTable.define(funcSym)) {
-            errors.add(new CompilerError(
-                    CompilerError.Kind.DUPLICATE_FUNCTION,
-                    "Function '" + fd.id.name + "' is already defined in this scope",
-                    fd.getLine()));
-        }
+        this.symbolTable.define(funcSym);
 
         this.symbolTable.enterScope("function " + fd.id.name);
 
@@ -206,12 +193,10 @@ public class SymbolTableBuilder {
                         CompilerError.Kind.CONTINUE_OUTSIDE_LOOP,
                         "'continue' outside of a loop", cs.getLine()));
         } else if (sm instanceof GlobalStatement gs) {
-            // added: `global` at module level is meaningless — flag it
-            if (functionDepth == 0)
-                errors.add(new CompilerError(
-                        CompilerError.Kind.GLOBAL_AT_MODULE_LEVEL,
-                        "'global' declaration at module level has no effect", gs.getLine()));
-            // added: `global x, y` - mark each name as global in the current scope so that
+            // fixed: `global` at module level compiles and runs fine in CPython
+            // (the module namespace already is the global namespace) — it is
+            // redundant, not an error, so this no longer reports one.
+            // `global x, y` - mark each name as global in the current scope so that
             // any later assignment to it (handled above/in visitExpressionStatement) is
             // defined in the module/global scope instead of this local scope
             for (ID id : gs.names)
@@ -222,14 +207,20 @@ public class SymbolTableBuilder {
     private void visitImportStatement(ImportStatement is) {
         if(is instanceof FromImportStatement fis)
         {
-            fis.targets.forEach(id -> {
-                Symbol sym = new Symbol(id.name, SymbolKind.VARIABLE);
-                symbolTable.define(sym);
-            });
+            // fixed: `from math import *` parses with targets == null (see
+            // PythonVisitor.visitFromImport) — this used to NullPointerException.
+            if (fis.targets != null) {
+                fis.targets.forEach(id -> {
+                    Symbol sym = new Symbol(id.name, SymbolKind.VARIABLE);
+                    symbolTable.define(sym);
+                });
+            }
         }
         else if (is instanceof SimpleImportStatement sis)
         {
-            String name = sis.dottedName.get(sis.dottedName.size() - 1).name;
+            // fixed: `import os.path` binds the name `os`, not `path` — Python
+            // only binds the first component of a dotted import.
+            String name = sis.dottedName.get(0).name;
             Symbol sym = new Symbol(name, SymbolKind.VARIABLE);
             symbolTable.define(sym);
         }

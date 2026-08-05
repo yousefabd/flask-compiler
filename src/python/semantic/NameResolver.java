@@ -46,7 +46,7 @@ import java.util.Map;
 
 /**
  * Resolves every identifier in the Python AST against the legal, visible
- * Python scope chain and reports the three name-level semantic errors.
+ * Python scope chain and reports the two name-level semantic errors.
  *
  * <p>Read-only with respect to the AST: nothing here mutates AST nodes or any
  * other compiler stage. It produces a {@link ResolutionResult} and appends to
@@ -59,8 +59,22 @@ import java.util.Map;
  *
  * <h2>Which error is reported</h2>
  * <ol>
- *   <li>declared in this scope but not assigned yet at this point →
- *       {@code USE_BEFORE_ASSIGNMENT} (Python's NameError/UnboundLocalError)</li>
+ *   <li>declared in this scope, at any position → resolved, no error. A read
+ *       that textually precedes its assignment in the same scope (a real
+ *       Python {@code UnboundLocalError} for some inputs, not others,
+ *       depending on which branch or iteration actually ran) is <em>not</em>
+ *       distinguished from an ordinary read, because doing that soundly needs
+ *       control-flow analysis — which branch of an {@code if} was taken,
+ *       which iteration of a loop. An earlier version approximated this with
+ *       execution-order tracking and got it wrong in both directions: it
+ *       accepted {@code for x in xs: print(carry); carry = x} (a real
+ *       {@code UnboundLocalError} on iteration one) and rejected nothing for
+ *       {@code if flag: value = 1} followed by {@code print(value)} outside
+ *       the branch (also a possible {@code UnboundLocalError}, just one the
+ *       loop-body heuristic didn't happen to touch). Rather than ship a
+ *       check that is confidently wrong in specific, findable cases, this
+ *       distinction is not made at all: any name declared anywhere in a
+ *       reachable scope resolves.</li>
  *   <li>visible through an enclosing scope → resolved, no error. Function
  *       bodies run later than they are written, so a function may reference a
  *       module global declared further down the file.</li>
@@ -144,8 +158,10 @@ public final class NameResolver {
                 for (ID target : fromImport.targets) remember(target.name, enclosingFunction);
         }
         else if (node instanceof SimpleImportStatement simpleImport) {
+            // `import os.path` binds `os`, not `path` — Python only binds the
+            // first component of a dotted import.
             if (simpleImport.dottedName != null && !simpleImport.dottedName.isEmpty())
-                remember(simpleImport.dottedName.getLast().name, enclosingFunction);
+                remember(simpleImport.dottedName.getFirst().name, enclosingFunction);
         }
 
         for (ASTNode child : node.getChildren())
@@ -262,9 +278,10 @@ public final class NameResolver {
                     declareIn(scope, target.name, BindingKind.IMPORT, target.getLine());
         }
         else if (importStatement instanceof SimpleImportStatement simpleImport) {
+            // `import os.path` binds `os`, not `path`.
             if (simpleImport.dottedName != null && !simpleImport.dottedName.isEmpty()) {
-                ID last = simpleImport.dottedName.getLast();
-                declareIn(scope, last.name, BindingKind.IMPORT, last.getLine());
+                ID first = simpleImport.dottedName.getFirst();
+                declareIn(scope, first.name, BindingKind.IMPORT, first.getLine());
             }
         }
     }
@@ -296,8 +313,6 @@ public final class NameResolver {
         }
         else if (statement instanceof WhileStatement whileStatement) {
             walkCondition(whileStatement.condition, scope);
-            preAssignLoopBindings(whileStatement.body, scope);
-            preAssignLoopBindings(whileStatement.last, scope);
             walkBody(whileStatement.body, scope);
             walkBody(whileStatement.last, scope);
         }
@@ -306,13 +321,10 @@ public final class NameResolver {
             if (forStatement.iterators != null) {
                 for (ID iterator : forStatement.iterators) {
                     PyScope owner = targetScopeFor(scope, iterator.name);
-                    owner.markAssigned(iterator.name);
                     Binding binding = owner.resolveLocal(iterator.name);
                     if (binding != null) result.recordBinding(iterator, binding);
                 }
             }
-            preAssignLoopBindings(forStatement.body, scope);
-            preAssignLoopBindings(forStatement.last, scope);
             walkBody(forStatement.body, scope);
             walkBody(forStatement.last, scope);
         }
@@ -337,20 +349,6 @@ public final class NameResolver {
         if (body != null && body.statements != null) walkStatements(body.statements, scope);
     }
 
-    /**
-     * A loop body runs more than once, so a name assigned near its end is
-     * already bound on the next iteration. Marking the whole body's bindings
-     * as assigned up front keeps that from being reported as a use before
-     * assignment.
-     */
-    private void preAssignLoopBindings(Body body, PyScope scope) {
-        if (body == null || body.statements == null) return;
-        PyScope probe = new PyScope("loop-probe", scope.getKind(), null);
-        collectScopeBindings(body.statements, probe);
-        for (Binding binding : probe.getBindings())
-            targetScopeFor(scope, binding.getName()).markAssigned(binding.getName());
-    }
-
     private void walkSmallStatement(SmallStatement small, PyScope scope) {
         if (small instanceof ExpressionStatement statement) {
             walkExpressionStatement(statement, scope);
@@ -359,30 +357,14 @@ public final class NameResolver {
             // x += 1 reads x before writing it.
             if (augAssign.id != null) resolveUse(augAssign.id, augAssign.id.name, augAssign.getLine(), scope);
             walkCondition(augAssign.expression, scope);
-            if (augAssign.id != null) targetScopeFor(scope, augAssign.id.name).markAssigned(augAssign.id.name);
         }
         else if (small instanceof ReturnStatement returnStatement) {
             if (returnStatement.conditions != null)
                 for (Condition condition : returnStatement.conditions) walkCondition(condition, scope);
         }
-        else if (small instanceof ImportStatement importStatement) {
-            markImportAssigned(importStatement, scope);
-        }
-        // pass / break / continue / global — nothing to resolve
-    }
-
-    private void markImportAssigned(ImportStatement importStatement, PyScope scope) {
-        if (importStatement instanceof FromImportStatement fromImport) {
-            if (fromImport.targets != null)
-                for (ID target : fromImport.targets)
-                    targetScopeFor(scope, target.name).markAssigned(target.name);
-        }
-        else if (importStatement instanceof SimpleImportStatement simpleImport) {
-            if (simpleImport.dottedName != null && !simpleImport.dottedName.isEmpty()) {
-                String name = simpleImport.dottedName.getLast().name;
-                targetScopeFor(scope, name).markAssigned(name);
-            }
-        }
+        // pass / break / continue / global / import — nothing left to resolve;
+        // imports are already bound in the collect phase and have no
+        // expression of their own to read.
     }
 
     private void walkExpressionStatement(ExpressionStatement statement, PyScope scope) {
@@ -407,7 +389,6 @@ public final class NameResolver {
                 continue;
             }
             PyScope owner = targetScopeFor(scope, name);
-            owner.markAssigned(name);
             Binding binding = owner.resolveLocal(name);
             if (binding != null) result.recordBinding(identifierNodeOf(target), binding);
         }
@@ -431,11 +412,15 @@ public final class NameResolver {
 
         if (function.id != null) {
             PyScope owner = targetScopeFor(enclosing, functionName);
-            owner.markAssigned(functionName);
             Binding binding = owner.resolveLocal(functionName);
-            if (binding != null) result.recordBinding(function.id, binding);
+            if (binding != null) {
+                result.recordBinding(function.id, binding);
+                // Keyed by this specific Binding, not by the bare name — two
+                // functions can share a name in different scopes, and each
+                // keeps its own parameter annotations (see ResolutionResult).
+                result.recordFunction(binding, function);
+            }
         }
-        result.recordFunction(function);
 
         // Annotations and defaults are evaluated in the enclosing scope.
         if (function.parameters != null) {
@@ -456,7 +441,6 @@ public final class NameResolver {
                 Binding binding = functionScope.declare(new Binding(
                         parameter.id.name, BindingKind.PARAMETER, parameter.getLine(), functionScope));
                 binding.setAnnotatedType(annotationType(parameter.type));
-                functionScope.markAssigned(parameter.id.name);
                 result.recordBinding(parameter.id, binding);
             }
         }
@@ -551,16 +535,6 @@ public final class NameResolver {
 
         Binding local = scope.resolveLocal(name);
         if (local != null) {
-            if (!scope.isAssigned(name)) {
-                errors.add(new CompilerError(
-                        CompilerError.Kind.USE_BEFORE_ASSIGNMENT,
-                        "Variable '" + name + "' is used before it is assigned"
-                                + (local.getDeclarationLine() >= 0
-                                        ? " (assigned at line " + local.getDeclarationLine() + ")"
-                                        : ""),
-                        line));
-                return;
-            }
             local.addUsage(line);
             result.recordBinding(node, local);
             return;

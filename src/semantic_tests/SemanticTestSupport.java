@@ -111,4 +111,25 @@ public final class SemanticTestSupport {
             // ditto
         }
     }
+
+    /**
+     * Runs {@code body} with {@code System.out} redirected, and returns
+     * everything it printed. The compiler's only output channel is
+     * {@code System.out} (see {@code errors.ErrorReporter#printReport}), so
+     * this is how a test observes the integrated pipeline's full report
+     * without duplicating its formatting logic. Restores the original
+     * {@code System.out} even if {@code body} throws. Test suite runs
+     * single-threaded, so redirecting the process-wide stream is safe here.
+     */
+    public static String captureStdout(Runnable body) {
+        java.io.PrintStream original = System.out;
+        java.io.ByteArrayOutputStream buffer = new java.io.ByteArrayOutputStream();
+        try {
+            System.setOut(new java.io.PrintStream(buffer, true, java.nio.charset.StandardCharsets.UTF_8));
+            body.run();
+        } finally {
+            System.setOut(original);
+        }
+        return buffer.toString(java.nio.charset.StandardCharsets.UTF_8);
+    }
 }

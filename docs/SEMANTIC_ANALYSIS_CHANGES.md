@@ -9,7 +9,52 @@ of the change.
 
 ---
 
-## 1. Summary
+## 0. Round 2 — response to adversarial review
+
+Everything below section 1 describes the change as it stood after the first
+pass. A follow-up adversarial review (`important-semantic-findings.md`) ran
+the analyzer against inputs beyond the original test suite and found eight
+confirmed defects — a crash, two legacy checks that flagged legal Python, a
+flow-insensitivity check that was wrong in both directions, an incorrect
+rebinding model, a name-keyed function lookup that let one function's
+annotations leak into another's checks, several real type-checker gaps, and
+one case of duplicate diagnostics. This section is the record of that pass;
+the full mechanics and the code-level before/after are in
+[SEMANTIC_ERRORS.md §6](SEMANTIC_ERRORS.md#6-review-record).
+
+| Finding | File(s) touched | Fix |
+|---|---|---|
+| `from math import *` → `NullPointerException` | `SymbolTableBuilder.java` | Null-check `targets` (it's `null` for a star import) |
+| `DUPLICATE_FUNCTION` flagged legal redefinition | `SymbolTableBuilder.java`, `CompilerError.java` | Error-reporting removed; enum constant removed |
+| `GLOBAL_AT_MODULE_LEVEL` flagged legal `global` | `SymbolTableBuilder.java`, `CompilerError.java` | Error-reporting removed; enum constant removed |
+| Legacy builder still opened scopes for `if`/`for`/`while` | `SymbolTableBuilder.java` | `enterScope`/`exitScope` calls removed (see §4.1 below — now resolved) |
+| `USE_BEFORE_ASSIGNMENT` wrong in both directions | `NameResolver.java`, `PyScope.java`, `CompilerError.java` | Removed entirely, with its flow-tracking code; resolution is now explicitly flow-insensitive |
+| Rebinding function↔variable modeled wrong (false negative *and* false positive) | `PyScope.java`, `Binding.java`, `TypeCheckerRule.java` | `PyScope.declare()` marks a `Binding` "rebound" on a function/variable clash; a rebound binding types `ANY` |
+| Functions looked up by bare name, not resolved binding | `ResolutionResult.java`, `NameResolver.java`, `TypeCheckerRule.java` | Function registry re-keyed from `Map<String, FunctionDef>` to `Map<Binding, FunctionDef>` |
+| `"" or "fallback"` typed `BOOL` unconditionally | `TypeCheckerRule.java` | `and`/`or` now type as "common operand type, or ANY" (mirrors Jinja's own rule); `not` still always `BOOL` |
+| `5 @ 2` accepted | `TypeCheckerRule.java` | `@` is now unconditionally invalid for every known type |
+| `1 in "abc"` accepted | `TypeCheckerRule.java` | String containment now requires a string left operand |
+| `hex(10)` reported `UNDEFINED_VARIABLE` | `PythonBuiltins.java` | ~30 builtins added (`hex`/`oct`/`bin`, more exceptions, `globals`/`locals`/`eval`, …) |
+| Return annotations never checked | `TypeCheckerRule.java` | `def f() -> int: return "x"` now `TYPE_MISMATCH` |
+| Parameter default values never checked against their own annotation | `TypeCheckerRule.java` | `def f(x: int = "x")` now `TYPE_MISMATCH` |
+| `import os.path` bound `path` instead of `os` | `NameResolver.java`, `SymbolTableBuilder.java` | `.getLast()` → `.getFirst()` on the dotted name |
+| Missing-Flask-variable duplicated Jinja's own `UNDEFINED_VARIABLE` | `CompilationPipeline.java` | Reordered: the `hasErrors()` check after Jinja's own analysis now runs *before* `MissingFlaskVariableAnalyzer`, not after |
+
+One implementation bug was introduced and caught **during** this same pass by
+the test suite's own `INTERNAL`-failure detection, not by the review: the
+return-annotation fix pushed `null` (no annotation) onto an `ArrayDeque`,
+which throws on `null` elements. Fixed by switching that stack to
+`LinkedList`. This is the exact mechanism §7's "Verification" section
+describes — an escaping exception fails the run instead of passing silently.
+
+Test count went from 34 to 56: every fix above has a dedicated regression
+test (`SemanticTestRunner`'s "Adversarial regressions" group), each written
+to reproduce the original bug and confirmed failing before the fix, passing
+after.
+
+---
+
+## 1. Summary (round 1)
 
 | | Count |
 |---|---|
@@ -23,7 +68,8 @@ of the change.
 Both "removed" lines are trivial: one `private` → `public` on a constant, and
 a missing trailing newline in `.gitignore`. **No existing logic was deleted or
 rewritten.** The change is overwhelmingly new files sitting beside the
-existing code.
+existing code. (Round 2, summarized in section 0 above, does delete and
+rewrite some of this logic — the round-1 claim held only up to that point.)
 
 ---
 
@@ -143,26 +189,26 @@ is the missing trailing newline on the last line.
 
 ## 4. Decisions that are yours to make
 
-Four places where I had to interpret the brief. All are cheap to reverse.
+Three places where I had to interpret the brief remain open (a fourth,
+§4.1 below, was resolved during round 2). All are cheap to reverse.
 
-### 4.1 The old block-scope behaviour still physically exists
+### 4.1 The old block-scope behaviour — resolved in round 2
 
 You wrote: *"Do not preserve the old project's incorrect block-scope behavior
 merely because it already exists."*
 
-`python/symbol_table/SymbolTableBuilder` still calls `enterScope("if")`,
-`enterScope("for")` and `enterScope("while")`. I did **not** remove them,
-because two other rules pointed the other way — the analyzer must be read-only
-with respect to other compiler stages, and unrequested changes were out of
-scope.
+Round 1 left `python/symbol_table/SymbolTableBuilder`'s `enterScope("if")`,
+`enterScope("for")` and `enterScope("while")` calls in place, reasoning that
+they drove no observable result (that table's return value is discarded) and
+that touching them was an unrequested change to a file outside the analyzer.
 
-What makes this defensible: those scopes now drive **nothing**. That symbol
-table's return value is discarded by the pipeline, and `NameResolver` owns all
-scoping with the correct Python model. Test *"if/for/while do not create a
-scope"* proves the behaviour you asked for.
-
-**If you meant "delete them," that is a separate ~10-line edit I intentionally
-did not make.**
+The round-2 review flagged this same code as "still creates incorrect scopes
+for if/for/while" among its confirmed findings, in the context of auditing
+that whole file for correctness. Given that mandate, the `enterScope`/
+`exitScope` calls for `if`/`for`/`while` were removed (statements now walk
+flat, keeping only the `loopDepth`/`functionDepth` counters the legitimate
+checks need) — see `SEMANTIC_ERRORS.md` §6.2. This decision is no longer
+open.
 
 ### 4.2 The pipeline stops earlier than you asked
 
@@ -178,10 +224,10 @@ Minimum-compliance alternative: delete the early return at
 `CompilationPipeline` and rely on the pre-existing `hasErrors()` check that
 already sits before code generation. One block, ~7 lines.
 
-### 4.3 `TYPE_ERROR` covers more than your two examples
+### 4.3 `TYPE_ERROR` covers more than your two examples — and grew further in round 2
 
-You gave `value = 5 + "hello"` and `number[0]`. Both are implemented. Beyond
-them, the same *kind* also fires for:
+You gave `value = 5 + "hello"` and `number[0]`. Both are implemented. Round 1
+additionally fires the same *kind* for:
 
 | Case | Example |
 |---|---|
@@ -190,11 +236,21 @@ them, the same *kind* also fires for:
 | `in` against a non-container | `x in 5` |
 | Unary `-` / `~` on a wrong type | `-"abc"` |
 
+Round 2's adversarial review found two more provably-invalid cases the
+checker was silently accepting and confirmed them as real gaps, so these were
+added too:
+
+| Case | Example |
+|---|---|
+| `@` (matrix multiplication) — no built-in type supports it | `5 @ 2` |
+| String containment with a non-string left operand | `1 in "abc"` |
+
 Each satisfies your stated rule — operand types statically known, operation
 provably invalid — and none introduces a new error *kind*. But if you read
 *"no other unrequested errors"* as limiting `TYPE_ERROR` to your two examples,
-these should be trimmed. They are four self-contained blocks in
-`TypeCheckerRule`.
+these should be trimmed. They are self-contained blocks/branches in
+`TypeCheckerRule` (`isBinaryValid`'s `AT` case, `checkComparison`'s `IN`/
+`NOTIN` case, and the other four already noted in round 1).
 
 ### 4.4 `is defined` guarding was not in your exclusion list
 
@@ -280,7 +336,12 @@ the suite.
 run_semantic_tests.bat
 ```
 
-→ `34 passed, 0 failed`
+→ `56 passed, 0 failed` (34 from round 1; round 2 added the 15-case
+"Adversarial regressions" group, one per confirmed finding, plus additional
+cases for the newly-checked return/default annotations and the
+declaration-placement checks that gained coverage, while removing the tests
+that asserted the now-reversed `USE_BEFORE_ASSIGNMENT`/`DUPLICATE_FUNCTION`
+behaviour)
 
 The two whole-project cases matter most:
 

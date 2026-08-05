@@ -19,14 +19,15 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
-import static python.symbol_table.CompilerError.Kind.DUPLICATE_FUNCTION;
+import static python.symbol_table.CompilerError.Kind.BREAK_OUTSIDE_LOOP;
+import static python.symbol_table.CompilerError.Kind.CONTINUE_OUTSIDE_LOOP;
 import static python.symbol_table.CompilerError.Kind.DUPLICATE_PARAMETER;
 import static python.symbol_table.CompilerError.Kind.MISSING_FLASK_VARIABLE;
+import static python.symbol_table.CompilerError.Kind.RETURN_OUTSIDE_FUNCTION;
 import static python.symbol_table.CompilerError.Kind.SCOPE;
 import static python.symbol_table.CompilerError.Kind.TYPE_ERROR;
 import static python.symbol_table.CompilerError.Kind.TYPE_MISMATCH;
 import static python.symbol_table.CompilerError.Kind.UNDEFINED_VARIABLE;
-import static python.symbol_table.CompilerError.Kind.USE_BEFORE_ASSIGNMENT;
 import static semantic_tests.TestReport.expectKinds;
 import static semantic_tests.TestReport.expectMessageContains;
 import static semantic_tests.TestReport.expectNoErrors;
@@ -43,6 +44,17 @@ import static semantic_tests.TestReport.expectTrue;
  * </pre>
  *
  * <p>Exits with status 1 when any case fails, so it can gate a build.</p>
+ *
+ * <p>This suite was revised after an adversarial review found several
+ * confirmed defects (see {@code docs/SEMANTIC_ANALYSIS_CHANGES.md} for the
+ * full list): a crash on {@code from x import *}, two legacy checks that
+ * flagged legal Python as an error, a flow-insensitivity error kind that was
+ * wrong in both directions and was removed rather than patched, an incorrect
+ * function/variable rebinding model, function annotations looked up by name
+ * instead of by resolved binding, several confirmed type-checker gaps, a
+ * dotted-import binding bug, and a case where the integrated pipeline
+ * double-reported one problem under two different error kinds. Each fix has
+ * a dedicated regression test below, grouped under "Adversarial regressions".</p>
  */
 public final class SemanticTestRunner {
 
@@ -55,8 +67,8 @@ public final class SemanticTestRunner {
         System.out.println("Scope");
         scopeTests(report);
 
-        System.out.println("Use before assignment (NameError)");
-        useBeforeAssignmentTests(report);
+        System.out.println("Flow-insensitive resolution (documented limitation)");
+        flowInsensitivityTests(report);
 
         System.out.println("Type error");
         typeErrorTests(report);
@@ -64,11 +76,14 @@ public final class SemanticTestRunner {
         System.out.println("Type mismatch");
         typeMismatchTests(report);
 
-        System.out.println("Duplicate declarations");
-        duplicateTests(report);
+        System.out.println("Legacy declaration-placement checks (bonus errors)");
+        declarationPlacementTests(report);
 
         System.out.println("Missing Flask variable");
         missingFlaskVariableTests(report);
+
+        System.out.println("Adversarial regressions (post-review)");
+        adversarialRegressionTests(report);
 
         System.out.println("Whole-project");
         projectTests(report);
@@ -187,40 +202,50 @@ public final class SemanticTestRunner {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // USE BEFORE ASSIGNMENT  (bonus error #1)
+    // FLOW-INSENSITIVE RESOLUTION
+    //
+    // A name declared anywhere in a scope resolves everywhere in that scope,
+    // regardless of textual position. This under-approximates real CPython,
+    // which can raise UnboundLocalError / NameError for a read that precedes
+    // its assignment on the branch/iteration actually taken. Reporting that
+    // correctly needs control-flow analysis (which branch of an `if` ran,
+    // which loop iteration). An earlier version approximated it with
+    // execution-order tracking and got it wrong in both directions — see
+    // docs/SEMANTIC_ANALYSIS_CHANGES.md. Rather than ship a check that is
+    // confidently wrong on findable inputs, the distinction is not attempted.
     // ─────────────────────────────────────────────────────────────
 
-    private static void useBeforeAssignmentTests(TestReport report) {
+    private static void flowInsensitivityTests(TestReport report) {
 
-        report.check("reading a local before it is assigned is reported", () -> {
+        report.check("a name read before its assignment in the same function is accepted", () -> {
+            // A real CPython UnboundLocalError. Deliberately not reported —
+            // see the section comment above.
             List<CompilerError> errors = SemanticTestSupport.analyze("""
                     def compute():
                         print(total)
                         total = 5
                     """);
-            expectKinds(errors, USE_BEFORE_ASSIGNMENT);
-            expectOnLine(errors, USE_BEFORE_ASSIGNMENT, 2);
+            expectNoErrors(errors);
         });
 
-        report.check("use before assignment is distinct from undefined", () -> {
-            // `declared` exists but not yet; `never_declared` does not exist at all.
-            List<CompilerError> errors = SemanticTestSupport.analyze("""
-                    print(declared)
-                    print(never_declared)
-                    declared = 1
-                    """);
-            expectKinds(errors, USE_BEFORE_ASSIGNMENT, UNDEFINED_VARIABLE);
-            expectOnLine(errors, USE_BEFORE_ASSIGNMENT, 1);
-            expectOnLine(errors, UNDEFINED_VARIABLE, 2);
-        });
-
-        report.check("a name assigned later in a loop body is not reported", () -> {
-            // On the second iteration `carry` is bound, so this is legal.
+        report.check("a name assigned only inside one loop iteration is accepted on read", () -> {
+            // A real CPython UnboundLocalError on the first iteration.
             List<CompilerError> errors = SemanticTestSupport.analyze("""
                     def run(items):
                         for item in items:
                             print(carry)
                             carry = item
+                    """);
+            expectNoErrors(errors);
+        });
+
+        report.check("a name assigned only inside one 'if' branch is accepted after it", () -> {
+            // A real CPython UnboundLocalError whenever `flag` is falsy.
+            List<CompilerError> errors = SemanticTestSupport.analyze("""
+                    def compute(flag):
+                        if flag:
+                            value = 1
+                        print(value)
                     """);
             expectNoErrors(errors);
         });
@@ -365,6 +390,54 @@ public final class SemanticTestRunner {
             expectNoErrors(errors);
         });
 
+        report.check("a return value contradicting its return annotation is reported", () -> {
+            List<CompilerError> errors = SemanticTestSupport.analyze("""
+                    def get_id() -> int:
+                        return "x"
+                    """);
+            expectKinds(errors, TYPE_MISMATCH);
+            expectMessageContains(errors, "return annotation");
+        });
+
+        report.check("a return value matching its return annotation is accepted", () -> {
+            List<CompilerError> errors = SemanticTestSupport.analyze("""
+                    def get_id() -> int:
+                        return 5
+                    """);
+            expectNoErrors(errors);
+        });
+
+        report.check("a bare return under a return annotation is not checked", () -> {
+            // Bare `return` implies None; checking that against a concrete
+            // annotation like `-> int` would need Optional-aware annotations
+            // this grammar's bare-name annotations cannot express.
+            List<CompilerError> errors = SemanticTestSupport.analyze("""
+                    def maybe_get(flag) -> int:
+                        if flag:
+                            return 5
+                        return
+                    """);
+            expectNoErrors(errors);
+        });
+
+        report.check("a default value contradicting its parameter annotation is reported", () -> {
+            List<CompilerError> errors = SemanticTestSupport.analyze("""
+                    def set_age(x: int = "x"):
+                        pass
+                    """);
+            expectKinds(errors, TYPE_MISMATCH);
+            expectOnLine(errors, TYPE_MISMATCH, 1);
+            expectMessageContains(errors, "default value");
+        });
+
+        report.check("a default value matching its parameter annotation is accepted", () -> {
+            List<CompilerError> errors = SemanticTestSupport.analyze("""
+                    def set_age(x: int = 5):
+                        pass
+                    """);
+            expectNoErrors(errors);
+        });
+
         report.check("normal reassignment to a different type is legal Python", () -> {
             // Explicitly not a type mismatch: the first assignment must not
             // fix the variable's type.
@@ -388,21 +461,18 @@ public final class SemanticTestRunner {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // DUPLICATES  (bonus errors #2 and #3 — already present, now covered)
+    // LEGACY DECLARATION-PLACEMENT CHECKS  (bonus errors)
+    //
+    // All four are real CPython SyntaxErrors, already implemented in
+    // python.symbol_table.SymbolTableBuilder before this work started; they
+    // had no test coverage. Two siblings that were also in that builder —
+    // reporting a redefined function, and reporting `global` at module level
+    // — were removed after adversarial review confirmed both flag completely
+    // legal Python (see the "rebinding" and "declaration placement"
+    // regressions below).
     // ─────────────────────────────────────────────────────────────
 
-    private static void duplicateTests(TestReport report) {
-
-        report.check("a function defined twice is reported", () -> {
-            List<CompilerError> errors = SemanticTestSupport.analyzeAll("""
-                    def handle():
-                        pass
-
-                    def handle():
-                        pass
-                    """);
-            expectKinds(errors, DUPLICATE_FUNCTION);
-        });
+    private static void declarationPlacementTests(TestReport report) {
 
         report.check("a duplicated parameter name is reported", () -> {
             List<CompilerError> errors = SemanticTestSupport.analyzeAll("""
@@ -412,13 +482,40 @@ public final class SemanticTestRunner {
             expectKinds(errors, DUPLICATE_PARAMETER);
         });
 
-        report.check("distinct functions and parameters are accepted", () -> {
+        report.check("'return' outside a function is reported", () -> {
+            List<CompilerError> errors = SemanticTestSupport.analyzeAll("""
+                    return 5
+                    """);
+            expectKinds(errors, RETURN_OUTSIDE_FUNCTION);
+        });
+
+        report.check("'break' outside a loop is reported", () -> {
+            List<CompilerError> errors = SemanticTestSupport.analyzeAll("""
+                    break
+                    """);
+            expectKinds(errors, BREAK_OUTSIDE_LOOP);
+        });
+
+        report.check("'continue' outside a loop is reported", () -> {
+            List<CompilerError> errors = SemanticTestSupport.analyzeAll("""
+                    continue
+                    """);
+            expectKinds(errors, CONTINUE_OUTSIDE_LOOP);
+        });
+
+        report.check("return/break/continue in their proper place are accepted", () -> {
             List<CompilerError> errors = SemanticTestSupport.analyzeAll("""
                     def first(a, b):
                         return a
 
                     def second(a, b):
                         return b
+
+                    for value in [1, 2, 3]:
+                        if value == 2:
+                            continue
+                        if value == 3:
+                            break
                     """);
             expectNoErrors(errors);
         });
@@ -481,7 +578,10 @@ public final class SemanticTestRunner {
 
         report.check("a variable supplied by any route satisfies every route", () -> {
             // The same template is rendered from several routes with different
-            // context — the conservative rule accepts the union.
+            // context — the conservative rule accepts the union. See the
+            // "MissingFlaskVariableAnalyzer" section of
+            // docs/SEMANTIC_ANALYSIS_CHANGES.md for why this stays a
+            // documented limitation rather than being fixed here.
             List<CompilerError> errors = analyzeFlask(
                     """
                     from flask import Flask, render_template
@@ -525,6 +625,206 @@ public final class SemanticTestRunner {
                     {% endif %}
                     """));
             expectNoErrors(errors);
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // ADVERSARIAL REGRESSIONS  (post-review)
+    // ─────────────────────────────────────────────────────────────
+
+    private static void adversarialRegressionTests(TestReport report) {
+
+        report.check("'from x import *' does not crash the legacy declaration checks", () -> {
+            // Previously an NPE: FromImportStatement.targets is null for a
+            // star import (see PythonVisitor.visitFromImport), and the legacy
+            // builder dereferenced it unconditionally.
+            List<CompilerError> errors = SemanticTestSupport.analyzeAll("""
+                    from math import *
+                    """);
+            expectNoErrors(errors);
+        });
+
+        report.check("redefining a function is legal Python, not an error", () -> {
+            // The second `def` simply replaces the first at runtime — CPython
+            // raises nothing. Previously reported DUPLICATE_FUNCTION.
+            List<CompilerError> errors = SemanticTestSupport.analyzeAll("""
+                    def handle():
+                        pass
+
+                    def handle():
+                        pass
+                    """);
+            expectNoErrors(errors);
+        });
+
+        report.check("'global' at module level is legal Python, not an error", () -> {
+            // Redundant (the module namespace already is the global
+            // namespace) but not a SyntaxError. Previously reported
+            // GLOBAL_AT_MODULE_LEVEL.
+            List<CompilerError> errors = SemanticTestSupport.analyzeAll("""
+                    global x
+                    x = 1
+                    print(x)
+                    """);
+            expectNoErrors(errors);
+        });
+
+        report.check("a dotted import binds only its first component", () -> {
+            // `import os.path` binds `os`, not `path`.
+            List<CompilerError> errors = SemanticTestSupport.analyze("""
+                    import os.path
+                    print(os)
+                    """);
+            expectNoErrors(errors);
+        });
+
+        report.check("the unbound tail of a dotted import is not treated as available", () -> {
+            List<CompilerError> errors = SemanticTestSupport.analyze("""
+                    import os.path
+                    print(path)
+                    """);
+            expectKinds(errors, UNDEFINED_VARIABLE);
+            expectMessageContains(errors, "path");
+        });
+
+        report.check("a function later reassigned to a value is not confidently callable", () -> {
+            // CPython raises TypeError at convert() here (`convert` is 3 by
+            // then). Reporting that correctly needs execution-order modeling,
+            // which is out of scope — so this types ANY rather than
+            // confidently claiming the call is fine.
+            List<CompilerError> errors = SemanticTestSupport.analyze("""
+                    def convert(value: int):
+                        pass
+
+                    convert = 3
+                    convert()
+                    """);
+            expectNoErrors(errors);
+        });
+
+        report.check("a value later reassigned to a function is not confidently non-callable", () -> {
+            // CPython calls the function successfully here. Previously
+            // reported TYPE_ERROR "'int' object is not callable", because the
+            // name stayed bound to its first (VARIABLE) declaration.
+            List<CompilerError> errors = SemanticTestSupport.analyze("""
+                    convert = 3
+
+                    def convert(value: int):
+                        pass
+
+                    convert("text")
+                    """);
+            expectNoErrors(errors);
+        });
+
+        report.check("same-named functions in different scopes keep separate annotations", () -> {
+            // Previously, a name-keyed function registry let the call inside
+            // outer() get checked against the module-level helper's
+            // annotation (x: int) instead of the actually-called, shadowing
+            // helper(y: str) — wrongly reporting TYPE_MISMATCH for "ok".
+            List<CompilerError> errors = SemanticTestSupport.analyze("""
+                    def helper(x: int):
+                        pass
+
+                    def outer():
+                        def helper(y: str):
+                            pass
+                        helper("ok")
+                    """);
+            expectNoErrors(errors);
+        });
+
+        report.check("'and'/'or' do not force a boolean result type", () -> {
+            // `"" or "fallback"` evaluates to the string "fallback", not a
+            // bool. Previously typed unconditionally as BOOL, which made
+            // `value + "!"` a false TYPE_ERROR ('bool' and 'str').
+            List<CompilerError> errors = SemanticTestSupport.analyze("""
+                    value = "" or "fallback"
+                    combined = value + "!"
+                    """);
+            expectNoErrors(errors);
+        });
+
+        report.check("'not' still yields a real boolean", () -> {
+            List<CompilerError> errors = SemanticTestSupport.analyze("""
+                    flag = True
+                    negated = not flag
+                    combined = negated + "!"
+                    """);
+            expectKinds(errors, TYPE_ERROR);
+        });
+
+        report.check("matrix multiplication on plain numbers is reported", () -> {
+            // No built-in type supports `@` — only custom __matmul__
+            // implementations (e.g. numpy arrays), which type ANY and never
+            // reach this check.
+            List<CompilerError> errors = SemanticTestSupport.analyze("""
+                    value = 5 @ 2
+                    """);
+            expectKinds(errors, TYPE_ERROR);
+        });
+
+        report.check("'in' against a string requires a string left operand", () -> {
+            List<CompilerError> errors = SemanticTestSupport.analyze("""
+                    found = 1 in "abc"
+                    """);
+            expectKinds(errors, TYPE_ERROR);
+        });
+
+        report.check("'in' against a list allows any left operand type", () -> {
+            // Unlike string containment, list/dict/set membership is a plain
+            // equality scan — no left-operand type restriction.
+            List<CompilerError> errors = SemanticTestSupport.analyze("""
+                    found = 1 in [1, 2, 3]
+                    also_found = "x" in {"x": 1}
+                    """);
+            expectNoErrors(errors);
+        });
+
+        report.check("'hex' and other numeric-formatting builtins are recognized", () -> {
+            List<CompilerError> errors = SemanticTestSupport.analyze("""
+                    print(hex(10))
+                    print(oct(10))
+                    print(bin(10))
+                    """);
+            expectNoErrors(errors);
+        });
+
+        report.check("integrated pipeline does not double-report one missing Flask variable", () -> {
+            // Jinja's own analysis already reports UNDEFINED_VARIABLE for a
+            // name absent from the (unioned) context set — the same
+            // condition MissingFlaskVariableAnalyzer checks, since both are
+            // fed the identical union. Previously both fired for the same
+            // root cause. The pipeline now stops as soon as Jinja reports
+            // anything, before the Flask-side check runs.
+            Path fixture = Path.of("build", "fixtures", "dedup-missing-flask");
+            SemanticTestSupport.deleteRecursively(fixture);
+
+            SemanticTestSupport.write(fixture.resolve("app.py"), """
+                    from flask import Flask, render_template
+
+                    app = Flask(__name__)
+
+                    @app.route('/')
+                    def index():
+                        return render_template('page.html')
+                    """);
+            SemanticTestSupport.write(fixture.resolve("templates").resolve("page.html"),
+                    "<h1>{{ title }}</h1>\n");
+
+            RecordingProvider provider = new RecordingProvider();
+            String output = SemanticTestSupport.captureStdout(
+                    () -> runPipeline(fixture, provider, "index"));
+
+            expectTrue(output.contains("UNDEFINED_VARIABLE"),
+                    "expected Jinja's own UNDEFINED_VARIABLE in the report:\n" + output);
+            expectTrue(!output.contains("MISSING_FLASK_VARIABLE"),
+                    "MISSING_FLASK_VARIABLE should not also fire once Jinja already reported "
+                            + "the same problem:\n" + output);
+            expectTrue(!provider.wasCalled,
+                    "code generation ran despite a reported semantic error");
+
+            SemanticTestSupport.deleteRecursively(fixture);
         });
     }
 

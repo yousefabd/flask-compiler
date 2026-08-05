@@ -156,8 +156,26 @@ public final class CompilationPipeline {
             );
 
             /*
+             * Jinja's own analysis already reports UNDEFINED_VARIABLE for any
+             * name a template needs that isn't in the (unioned) context set —
+             * exactly the condition MissingFlaskVariableAnalyzer also checks,
+             * since both are fed the same union of every call's arguments.
+             * Running the Flask-side check anyway would double-report the
+             * same root cause under two different error kinds. Stopping here
+             * when Jinja already found something skips that overlap, the same
+             * way a Python semantic error already skips template analysis
+             * entirely above.
+             */
+            if (reporter.hasErrors()) {
+                finishCompilation();
+                return;
+            }
+
+            /*
              * Cross-stage check: what the templates need versus what the
-             * routes actually pass.
+             * routes actually pass. Only reachable when Jinja found nothing,
+             * so anything reported here is guaranteed not to already be
+             * covered by a Jinja UNDEFINED_VARIABLE for the same template.
              */
             for (python.symbol_table.CompilerError error :
                     MissingFlaskVariableAnalyzer.analyze(

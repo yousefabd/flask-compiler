@@ -5,7 +5,6 @@ import python.models.funcdef.FunctionDef;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -24,8 +23,15 @@ public final class ResolutionResult {
     /** Identifier AST node -> the declaration it refers to. */
     private final Map<ASTNode, Binding> bindings = new IdentityHashMap<>();
 
-    /** Module-level functions, used for annotated-parameter checking. */
-    private final Map<String, FunctionDef> functions = new LinkedHashMap<>();
+    /**
+     * A function's own {@link Binding} -> its declaration. Keyed by the
+     * resolved binding rather than by the function's bare name: two
+     * functions can share a name in different scopes (a nested {@code def}
+     * shadowing a module-level one), and each must keep its own parameter
+     * annotations. A name-keyed map let one function's annotations leak into
+     * type-mismatch checks for the other.
+     */
+    private final Map<Binding, FunctionDef> functionDefinitions = new IdentityHashMap<>();
 
     public ResolutionResult(PyScope moduleScope) {
         this.moduleScope = moduleScope;
@@ -46,14 +52,14 @@ public final class ResolutionResult {
 
     public Map<ASTNode, Binding> getBindings() { return bindings; }
 
-    public void recordFunction(FunctionDef function) {
-        if (function != null && function.id != null)
-            functions.putIfAbsent(function.id.name, function);
+    public void recordFunction(Binding binding, FunctionDef function) {
+        if (binding != null && function != null) functionDefinitions.put(binding, function);
     }
 
-    public FunctionDef getFunction(String name) { return functions.get(name); }
-
-    public Map<String, FunctionDef> getFunctions() { return functions; }
+    /** The declaration for a name resolved to {@code binding}, or null if it is not a function. */
+    public FunctionDef getFunction(Binding binding) {
+        return binding != null ? functionDefinitions.get(binding) : null;
+    }
 
     @Override
     public String toString() {

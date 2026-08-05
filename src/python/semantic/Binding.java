@@ -32,6 +32,17 @@ public final class Binding {
     /** Explicit annotation type ({@code def f(age: int)}), null when absent. */
     private PythonType annotatedType;
 
+    /**
+     * Set when this name was declared as both a function and a plain variable
+     * in the same scope ({@code def convert(): ...} then {@code convert = 3},
+     * or the reverse order). Python allows this — the name simply refers to
+     * whichever declaration ran last — but the analyzer does not model
+     * execution order, so it cannot know which one a given read sees. A
+     * rebound name types as {@link PythonType#ANY} rather than confidently
+     * guessing the wrong one of the two.
+     */
+    private boolean rebound;
+
     private final Set<Integer> usageLines = new LinkedHashSet<>();
 
     public Binding(String name, BindingKind kind, int declarationLine, PyScope owner) {
@@ -53,6 +64,9 @@ public final class Binding {
 
     public PythonType getAnnotatedType() { return annotatedType; }
     public void setAnnotatedType(PythonType annotatedType) { this.annotatedType = annotatedType; }
+
+    public void markRebound() { rebound = true; }
+    public boolean isRebound() { return rebound; }
 
     public void addUsage(int line) { usageLines.add(line); }
     public Set<Integer> getUsageLines() { return usageLines; }

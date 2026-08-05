@@ -19,6 +19,7 @@ import python.models.expr_statement.RelationalComparison;
 import python.models.expr_statement.UnaryExpression;
 import python.models.funcdef.FunctionDef;
 import python.models.funcdef.Parameter;
+import python.models.small_statement.ReturnStatement;
 import python.models.trailer.Argument;
 import python.models.trailer.CallArguments;
 import python.models.trailer.SubscriptArguments;
@@ -31,7 +32,9 @@ import python.semantic.ResolutionResult;
 import python.symbol_table.CompilerError;
 
 import java.util.Collections;
+import java.util.Deque;
 import java.util.IdentityHashMap;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -43,9 +46,12 @@ import java.util.List;
  *       operation is provably invalid: {@code 5 + "hello"}, indexing an
  *       {@code int}, calling something that is not callable.</li>
  *   <li>{@code TYPE_MISMATCH} — a value contradicts an <em>explicit</em> type
- *       expectation. The only such expectation in this grammar is a function
- *       parameter annotation: {@code def set_age(age: int)} called with
- *       {@code "twenty"}.</li>
+ *       expectation. This grammar has three: a parameter annotation checked
+ *       against a call argument ({@code def set_age(age: int)} called with
+ *       {@code "twenty"}), a parameter annotation checked against its own
+ *       default value ({@code def f(x: int = "x")}), and a return annotation
+ *       checked against a {@code return} value
+ *       ({@code def f() -> int: return "x"}).</li>
  * </ul>
  *
  * <p>A type that cannot be proven is {@link PythonType#ANY} and every check
@@ -67,6 +73,18 @@ public final class TypeCheckerRule implements ISemanticRule {
     private final java.util.Set<Binding> inferring =
             Collections.newSetFromMap(new IdentityHashMap<>());
 
+    /**
+     * The enclosing function's return annotation, so a {@code return} deep
+     * inside nested {@code if}/{@code for}/{@code while} can still be checked
+     * against it. A stack because a nested {@code def} has its own return
+     * type, and the outer one's must be restored once the nested body is
+     * done. {@code null} on top means "no provable annotation here" (absent,
+     * or a generic form {@link python.semantic.NameResolver#annotationType}
+     * cannot resolve). ArrayDeque forbids null elements outright, so this
+     * uses LinkedList, which allows them.
+     */
+    private final Deque<PythonType> returnTypeStack = new LinkedList<>();
+
     @Override
     public void validate(SemanticContext context) {
         this.resolution = context.resolution();
@@ -80,15 +98,92 @@ public final class TypeCheckerRule implements ISemanticRule {
 
     /**
      * Expressions know how to check their own subtree, so the generic walk
-     * stops as soon as it reaches one.
+     * stops as soon as it reaches one. {@link FunctionDef} and
+     * {@link ReturnStatement} are also intercepted, to connect a
+     * {@code return} value to the return annotation of the function it is
+     * actually inside of.
      */
     private void walk(ASTNode node) {
         if (node == null) return;
+        if (node instanceof FunctionDef function) {
+            checkFunctionDef(function);
+            return;
+        }
+        if (node instanceof ReturnStatement returnStatement) {
+            checkReturnStatement(returnStatement);
+            return;
+        }
         if (node instanceof Condition condition) {
             checkExpression(condition);
             return;
         }
         for (ASTNode child : node.getChildren()) walk(child);
+    }
+
+    /**
+     * Walks a function's parameters (each checked against its own
+     * annotation), its return annotation, and its body — deliberately not via
+     * the generic per-child loop, since parameters need the paired
+     * annotation+default check in {@link #checkParameter}, not two
+     * independent visits.
+     */
+    private void checkFunctionDef(FunctionDef function) {
+        returnTypeStack.push(python.semantic.NameResolver.annotationType(function.returnType));
+
+        if (function.parameters != null)
+            for (Parameter parameter : function.parameters) checkParameter(parameter);
+
+        if (function.returnType != null) checkExpression(function.returnType);
+        if (function.body != null) walk(function.body);
+
+        returnTypeStack.pop();
+    }
+
+    private void checkParameter(Parameter parameter) {
+        checkExpression(parameter.type);
+        if (parameter.defaultValue == null) return;
+
+        PythonType actual = checkExpression(parameter.defaultValue);
+        PythonType expected = python.semantic.NameResolver.annotationType(parameter.type);
+        if (expected == null || !actual.isKnown()) return;
+
+        if (!isAssignable(actual, expected)) {
+            error(CompilerError.Kind.TYPE_MISMATCH,
+                    "Parameter '" + (parameter.id != null ? parameter.id.name : "?")
+                            + "' default value is '" + actual.display()
+                            + "' but its annotation expects '" + expected.display() + "'",
+                    parameter.defaultValue.getLine());
+        }
+    }
+
+    /**
+     * Only a {@code return <single-expression>} is checked. A bare
+     * {@code return} (implicitly returns {@code None}) and a tuple return
+     * ({@code return a, b}) are not compared against a scalar annotation —
+     * both would need a more expressive annotation model than this grammar's
+     * bare-name annotations support.
+     */
+    private void checkReturnStatement(ReturnStatement statement) {
+        List<Condition> values = statement.conditions;
+        if (values == null || values.isEmpty()) return;
+
+        if (values.size() > 1) {
+            values.forEach(this::checkExpression);
+            return;
+        }
+
+        Condition value = values.get(0);
+        PythonType actual = checkExpression(value);
+
+        PythonType expected = returnTypeStack.peek();
+        if (expected == null || !actual.isKnown()) return;
+
+        if (!isAssignable(actual, expected)) {
+            error(CompilerError.Kind.TYPE_MISMATCH,
+                    "Function returns '" + actual.display()
+                            + "' but its return annotation expects '" + expected.display() + "'",
+                    value.getLine());
+        }
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -98,11 +193,8 @@ public final class TypeCheckerRule implements ISemanticRule {
     private PythonType checkExpression(Condition expression) {
         if (expression == null) return PythonType.ANY;
 
-        if (expression instanceof CompoundCondition compound) {
-            checkExpression(compound.first);
-            checkExpression(compound.second);
-            return PythonType.BOOL;
-        }
+        if (expression instanceof CompoundCondition compound)
+            return checkLogical(compound);
         if (expression instanceof RelationalComparison comparison)
             return checkComparison(comparison);
         if (expression instanceof BinaryExpression binary)
@@ -177,6 +269,11 @@ public final class TypeCheckerRule implements ISemanticRule {
             case LSHIFT, RSHIFT -> isIntegral(left) && isIntegral(right);
             case AND, OR, XOR -> (isIntegral(left) && isIntegral(right))
                     || (left == PythonType.SET && right == PythonType.SET);
+            // `@` (matrix multiplication) has no meaning for any of this
+            // grammar's known types — only custom __matmul__ implementations
+            // (e.g. numpy arrays) support it, and those type as ANY, never
+            // reaching this branch.
+            case AT -> false;
             default -> true;
         };
     }
@@ -245,6 +342,23 @@ public final class TypeCheckerRule implements ISemanticRule {
         return PythonType.ANY;
     }
 
+    /**
+     * {@code not x} always yields a real {@code bool}. {@code a and b} / {@code a or b}
+     * do not: Python's {@code and}/{@code or} short-circuit and return
+     * <em>one of the operand values itself</em>, not a boolean —
+     * {@code "" or "fallback"} evaluates to the string {@code "fallback"}.
+     * Which operand survives depends on runtime truthiness, so the only
+     * provable result type is "the common type of both operands, or ANY".
+     */
+    private PythonType checkLogical(CompoundCondition compound) {
+        PythonType first = checkExpression(compound.first);
+        if (compound.operation == Operation.NOT) return PythonType.BOOL;
+
+        PythonType second = checkExpression(compound.second);
+        if (!first.isKnown() || !second.isKnown()) return PythonType.ANY;
+        return first == second ? first : PythonType.ANY;
+    }
+
     private PythonType checkComparison(RelationalComparison comparison) {
         PythonType left = checkExpression(comparison.left);
         PythonType right = checkExpression(comparison.right);
@@ -266,10 +380,20 @@ public final class TypeCheckerRule implements ISemanticRule {
             case IN, NOTIN -> {
                 boolean container = right == PythonType.LIST || right == PythonType.DICT
                         || right == PythonType.SET || right == PythonType.STRING;
-                if (!container)
+                if (!container) {
                     error(CompilerError.Kind.TYPE_ERROR,
                             "'" + right.display() + "' is not iterable, so 'in' cannot be used on it",
                             comparison.getLine());
+                } else if (right == PythonType.STRING && left != PythonType.STRING) {
+                    // `1 in "abc"` — CPython requires the left operand of a
+                    // string containment test to also be a string. LIST/DICT/SET
+                    // have no such restriction: membership there is a plain
+                    // equality scan, valid for any left-hand type.
+                    error(CompilerError.Kind.TYPE_ERROR,
+                            "'in <string>' requires string as left operand, not '"
+                                    + left.display() + "'",
+                            comparison.getLine());
+                }
             }
             default -> { /* ==, !=, is, is not are valid for any pair of types */ }
         }
@@ -304,7 +428,7 @@ public final class TypeCheckerRule implements ISemanticRule {
                 }
 
                 if (i == 0 && node.id != null) {
-                    checkAnnotatedCall(node.id.name, call);
+                    checkAnnotatedCall(resolution.getBinding(node.id), node.id.name, call);
                     current = PythonBuiltins.contains(node.id.name)
                             ? PythonBuiltins.callResult(node.id.name)
                             : PythonType.ANY;
@@ -365,8 +489,23 @@ public final class TypeCheckerRule implements ISemanticRule {
     // TYPE_MISMATCH — annotated parameters only
     // ─────────────────────────────────────────────────────────────
 
-    private void checkAnnotatedCall(String functionName, CallArguments call) {
-        FunctionDef function = resolution.getFunction(functionName);
+    /**
+     * Looked up by the callee's resolved {@link Binding}, not by its bare
+     * name: two functions can share a name in different scopes (a nested
+     * {@code def} shadowing a module-level one), and a name-keyed lookup let
+     * one function's parameter annotations wrongly get checked against a
+     * call that actually targets the other, differently-scoped function.
+     * {@code calleeBinding} is exactly the binding {@link #baseType} already
+     * resolved for this call, so scoping is identical to what actually runs.
+     */
+    private void checkAnnotatedCall(Binding calleeBinding, String functionName, CallArguments call) {
+        if (calleeBinding == null
+                || calleeBinding.getKind() != BindingKind.FUNCTION
+                || calleeBinding.isRebound()) {
+            return;                    // not a function, or which one is live here isn't provable
+        }
+
+        FunctionDef function = resolution.getFunction(calleeBinding);
         if (function == null || function.parameters == null || call.args == null) return;
 
         List<Parameter> parameters = function.parameters;
@@ -426,6 +565,12 @@ public final class TypeCheckerRule implements ISemanticRule {
     private PythonType typeOf(Binding binding) {
         if (binding.getAnnotatedType() != null) return binding.getAnnotatedType();
 
+        // A name declared as both a function and a plain variable in the
+        // same scope — which one is live at a given read depends on
+        // execution order, which is not modeled. ANY rather than a
+        // confidently wrong guess in either direction.
+        if (binding.isRebound()) return PythonType.ANY;
+
         return switch (binding.getKind()) {
             case FUNCTION -> PythonType.CALLABLE;
             case PARAMETER, IMPORT, LOOP_VARIABLE -> PythonType.ANY;
@@ -457,7 +602,13 @@ public final class TypeCheckerRule implements ISemanticRule {
         if (expression == null) return PythonType.ANY;
 
         if (expression instanceof ParenAtom paren) return typeOfWithoutChecking(paren.inner);
-        if (expression instanceof CompoundCondition) return PythonType.BOOL;
+        if (expression instanceof CompoundCondition compound) {
+            if (compound.operation == Operation.NOT) return PythonType.BOOL;
+            PythonType first = typeOfWithoutChecking(compound.first);
+            PythonType second = typeOfWithoutChecking(compound.second);
+            if (!first.isKnown() || !second.isKnown()) return PythonType.ANY;
+            return first == second ? first : PythonType.ANY;
+        }
         if (expression instanceof RelationalComparison) return PythonType.BOOL;
         if (expression instanceof python.models.atom_statement.List) return PythonType.LIST;
         if (expression instanceof Set) return PythonType.SET;
