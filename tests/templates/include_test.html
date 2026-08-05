@@ -1,0 +1,11 @@
+<section>
+  {% set status = "outside" %}
+
+  <h1>Include integration test</h1>
+
+  {% include "partials/profile.html" %}
+
+  {% include "partials/scope_test.html" %}
+
+  <p id="outside-scope">{{ status }}</p>
+</section>

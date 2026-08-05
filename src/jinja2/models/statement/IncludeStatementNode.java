@@ -1,25 +1,39 @@
 package jinja2.models.statement;
 
 import jinja2.models.TemplateNode;
+import jinja2.models.expression.ExpressionNode;
 
 import java.util.List;
+import java.util.Objects;
 
 public class IncludeStatementNode extends StatementNode {
 
-    private final String path;
+    private final ExpressionNode templateExpression;
 
-    public IncludeStatementNode(String path, int lineNumber) {
+    public IncludeStatementNode(
+            ExpressionNode templateExpression,
+            int lineNumber
+    ) {
         super(lineNumber);
-        this.path = path;
+
+        this.templateExpression =
+                Objects.requireNonNull(templateExpression);
     }
 
-    public String getPath() { return path; }
+    public ExpressionNode getTemplateExpression() {
+        return templateExpression;
+    }
 
     @Override
-    public List<? extends TemplateNode> getChildren() { return List.of(); }
+    public List<? extends TemplateNode> getChildren() {
+        return List.of(templateExpression);
+    }
 
     @Override
     public String describe() {
-        return getNodeName() + " \"" + path + "\" (line " + getLineNumber() + ")";
+        return getNodeName()
+                + " (line "
+                + getLineNumber()
+                + ")";
     }
 }

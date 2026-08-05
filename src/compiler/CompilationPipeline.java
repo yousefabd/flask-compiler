@@ -9,6 +9,7 @@ import errors.CompilerException;
 import errors.CompilerStage;
 import errors.ErrorReporter;
 import jinja2.TemplateFrontend;
+import jinja2.dependency.TemplateDependencyFinder;
 import jinja2.filters.JinjaFilterRegistry;
 import jinja2.functions.JinjaFunctionRegistry;
 import jinja2.models.file.TemplateFile;
@@ -193,7 +194,11 @@ public final class CompilationPipeline {
         Map<String, jinja2.symbol_table.SymbolTable>
                 symbolTables =
                 new LinkedHashMap<>();
-
+        Map<String, Set<String>> contextByTemplate =
+                buildTemplateContexts(
+                        templates,
+                        callsByTemplate
+                );
         for (Map.Entry<String, TemplateFile> entry
                 : templates.entrySet()) {
 
@@ -202,12 +207,8 @@ public final class CompilationPipeline {
 
             TemplateFile template =
                     entry.getValue();
-
             Set<String> contextVariables =
-                    collectContextVariables(
-                            templateName,
-                            callsByTemplate
-                    );
+                    contextByTemplate.get(templateName);
 
             System.out.printf(
                     "Analyzing template: %s with context=%s%n",
@@ -235,7 +236,60 @@ public final class CompilationPipeline {
 
         return symbolTables;
     }
+    private Map<String, Set<String>> buildTemplateContexts(
+            Map<String, TemplateFile> templates,
+            Map<String, List<TemplateCall>> callsByTemplate
+    ) {
+        Map<String, Set<String>> contextByTemplate =
+                new LinkedHashMap<>();
 
+        for (String templateName : templates.keySet()) {
+            contextByTemplate.put(
+                    templateName,
+                    collectContextVariables(
+                            templateName,
+                            callsByTemplate
+                    )
+            );
+        }
+
+        boolean contextChanged;
+
+        do {
+            contextChanged = false;
+
+            for (Map.Entry<String, TemplateFile> entry
+                    : templates.entrySet()) {
+
+                Set<String> parentContext =
+                        contextByTemplate.get(
+                                entry.getKey()
+                        );
+
+                for (String includedTemplate :
+                        TemplateDependencyFinder
+                                .findStaticIncludes(
+                                        entry.getValue()
+                                )) {
+
+                    Set<String> includedContext =
+                            contextByTemplate.get(
+                                    includedTemplate
+                            );
+
+                    if (includedContext != null
+                            && includedContext.addAll(
+                            parentContext
+                    )) {
+
+                        contextChanged = true;
+                    }
+                }
+            }
+        } while (contextChanged);
+
+        return contextByTemplate;
+    }
     private Set<String> collectContextVariables(
             String templateName,
             Map<String, List<TemplateCall>> callsByTemplate
@@ -341,7 +395,8 @@ public final class CompilationPipeline {
                 RenderContext.root(renderRequest.context(),renderRequest.environment());
 
         return templateRenderer.render(
-                template,
+                call.templateName(),
+                templates,
                 renderContext
         );
     }

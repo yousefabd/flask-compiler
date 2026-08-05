@@ -57,14 +57,15 @@ public class SymbolTableBuilder {
             visitMacroStatement(ms);
         else if (node instanceof BlockStatementNode bs)
             visitBlockStatement(bs);
+        else if (node instanceof IncludeStatementNode include)
+            visitExpression(include.getTemplateExpression());
         else if (node instanceof OutputNode out)
             visitExpression(out.getExpression());
         else if (node instanceof HTMLNormalElementNode el)
             visitNormalElement(el);
         else if (node instanceof HTMLVoidElementNode el)
             visitVoidElement(el);
-        // HtmlTextNode, ExtendsStatementNode, IncludeStatementNode
-        // — nothing to define or resolve
+        // HtmlTextNode and ExtendsStatementNode have no expressions to resolve.
     }
 
     // ─────────────────────────────────────────────────────────────

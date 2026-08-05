@@ -195,3 +195,12 @@ def macro_test():
             "second"
         ]
     )
+@app.route("/include-test")
+def include_test():
+    return render_template(
+        "include_test.html",
+        user={
+            "name": "Yousef"
+        },
+        badge_text="Compiler student"
+    )

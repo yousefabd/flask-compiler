@@ -13,7 +13,7 @@ public class Main {
          */
         String functionToRender =
                 args.length == 0
-                        ? "macro_test"
+                        ? "include_test"
                         : args[0];
 
         TemplateRenderRequestProvider renderRequestProvider =

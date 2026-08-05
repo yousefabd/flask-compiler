@@ -12,25 +12,31 @@ import jinja2.models.content.html.HTMLNormalElementNode;
 import jinja2.models.content.html.HTMLVoidElementNode;
 import jinja2.models.expression.IdentifierNode;
 import jinja2.models.file.TemplateFile;
-import jinja2.models.statement.ForStatementNode;
-import jinja2.models.statement.IfBranchNode;
-import jinja2.models.statement.IfStatementNode;
-import jinja2.models.statement.MacroStatementNode;
-import jinja2.models.statement.ParameterNode;
-import jinja2.models.statement.SetStatementNode;
+import jinja2.models.statement.*;
 
 import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public final class TemplateRenderer {
 
     private final ExpressionEvaluator expressionEvaluator;
+    private static final class RenderState {
 
+        private final Map<String, TemplateFile> templates;
+        private final Deque<String> activeTemplates;
+
+        private RenderState(
+                Map<String, TemplateFile> templates
+        ) {
+            this.templates =
+                    Map.copyOf(
+                            Objects.requireNonNull(templates)
+                    );
+
+            this.activeTemplates =
+                    new ArrayDeque<>();
+        }
+    }
     public TemplateRenderer(
             ExpressionEvaluator expressionEvaluator
     ) {
@@ -38,35 +44,92 @@ public final class TemplateRenderer {
     }
 
     public String render(
-            TemplateFile template,
+            String templateName,
+            Map<String, TemplateFile> templates,
             RenderContext context
     ) {
-        StringBuilder output = new StringBuilder();
+        Objects.requireNonNull(templateName);
+        Objects.requireNonNull(context);
 
-        renderContents(
-                template.getContentChildren(),
+        RenderState state =
+                new RenderState(templates);
+
+        StringBuilder output =
+                new StringBuilder();
+
+        renderTemplate(
+                templateName,
                 context,
-                output
+                output,
+                state
         );
 
         return output.toString();
     }
+    private void renderTemplate(
+            String templateName,
+            RenderContext context,
+            StringBuilder output,
+            RenderState state
+    ) {
+        TemplateFile template =
+                state.templates.get(templateName);
 
+        if (template == null) {
+            throw new IllegalStateException(
+                    "Template '"
+                            + templateName
+                            + "' was not parsed"
+            );
+        }
+
+        if (state.activeTemplates.contains(templateName)) {
+            throw new IllegalStateException(
+                    "Circular template include detected: "
+                            + String.join(
+                            " -> ",
+                            state.activeTemplates
+                    )
+                            + " -> "
+                            + templateName
+            );
+        }
+
+        state.activeTemplates.addLast(templateName);
+
+        try {
+            renderContents(
+                    template.getContentChildren(),
+                    context,
+                    output,
+                    state
+            );
+        } finally {
+            state.activeTemplates.removeLast();
+        }
+    }
     private void renderContents(
             List<ContentNode> nodes,
             RenderContext context,
-            StringBuilder output
+            StringBuilder output,
+            RenderState state
     ) {
         for (ContentNode node : nodes) {
-            renderContent(node, context, output);
+            renderContent(
+                    node,
+                    context,
+                    output,
+                    state
+            );
         }
     }
 
     private void renderContent(
             ContentNode node,
             RenderContext context,
-            StringBuilder output
-    ) {
+            StringBuilder output,
+            RenderState state
+    ){
         if (node instanceof HtmlTextNode textNode) {
             output.append(textNode.getText());
             return;
@@ -90,7 +153,8 @@ public final class TemplateRenderer {
             renderNormalElement(
                     normalElement,
                     context,
-                    output
+                    output,
+                    state
             );
 
             return;
@@ -100,7 +164,8 @@ public final class TemplateRenderer {
             renderVoidElement(
                     voidElement,
                     context,
-                    output
+                    output,
+                    state
             );
 
             return;
@@ -109,7 +174,8 @@ public final class TemplateRenderer {
             renderForStatement(
                     forStatement,
                     context,
-                    output
+                    output,
+                    state
             );
 
             return;
@@ -118,7 +184,8 @@ public final class TemplateRenderer {
             renderIfStatement(
                     ifStatement,
                     context,
-                    output
+                    output,
+                    state
             );
 
             return;
@@ -126,7 +193,8 @@ public final class TemplateRenderer {
         if (node instanceof SetStatementNode setStatement) {
             renderSetStatement(
                     setStatement,
-                    context
+                    context,
+                    state
             );
 
             return;
@@ -134,7 +202,18 @@ public final class TemplateRenderer {
         if (node instanceof MacroStatementNode macroStatement) {
             registerMacro(
                     macroStatement,
-                    context
+                    context,
+                    state
+            );
+
+            return;
+        }
+        if (node instanceof IncludeStatementNode includeStatement) {
+            renderIncludeStatement(
+                    includeStatement,
+                    context,
+                    output,
+                    state
             );
 
             return;
@@ -150,7 +229,8 @@ public final class TemplateRenderer {
     private void renderNormalElement(
             HTMLNormalElementNode element,
             RenderContext context,
-            StringBuilder output
+            StringBuilder output,
+            RenderState state
     ) {
         output
                 .append('<')
@@ -159,7 +239,8 @@ public final class TemplateRenderer {
         renderAttributes(
                 element.getAttributes(),
                 context,
-                output
+                output,
+                state
         );
 
         output.append('>');
@@ -167,7 +248,8 @@ public final class TemplateRenderer {
         renderContents(
                 element.getChildren(),
                 context,
-                output
+                output,
+                state
         );
 
         output
@@ -179,7 +261,8 @@ public final class TemplateRenderer {
     private void renderVoidElement(
             HTMLVoidElementNode element,
             RenderContext context,
-            StringBuilder output
+            StringBuilder output,
+            RenderState state
     ) {
         output
                 .append('<')
@@ -188,7 +271,8 @@ public final class TemplateRenderer {
         renderAttributes(
                 element.getAttributes(),
                 context,
-                output
+                output,
+                state
         );
 
         output.append("/>");
@@ -197,7 +281,8 @@ public final class TemplateRenderer {
     private void renderAttributes(
             List<HtmlAttributeNode> attributes,
             RenderContext context,
-            StringBuilder output
+            StringBuilder output,
+            RenderState state
     ) {
         for (HtmlAttributeNode attribute : attributes) {
             output
@@ -220,7 +305,8 @@ public final class TemplateRenderer {
                 renderAttributeValuePart(
                         part,
                         context,
-                        output
+                        output,
+                        state
                 );
             }
 
@@ -231,7 +317,8 @@ public final class TemplateRenderer {
     private void renderAttributeValuePart(
             AttributeValuePartNode part,
             RenderContext context,
-            StringBuilder output
+            StringBuilder output,
+            RenderState state
     ) {
         if (part instanceof AttributeTextNode textPart) {
             output.append(textPart.getText());
@@ -259,7 +346,8 @@ public final class TemplateRenderer {
     private void renderForStatement(
             ForStatementNode forStatement,
             RenderContext context,
-            StringBuilder output
+            StringBuilder output,
+            RenderState state
     ) {
         Object iterableValue =
                 expressionEvaluator.evaluate(
@@ -291,7 +379,8 @@ public final class TemplateRenderer {
             renderContents(
                     forStatement.getBody(),
                     iterationContext,
-                    output
+                    output,
+                    state
             );
         }
     }
@@ -381,7 +470,8 @@ public final class TemplateRenderer {
     private void renderIfStatement(
             IfStatementNode ifStatement,
             RenderContext context,
-            StringBuilder output
+            StringBuilder output,
+            RenderState state
     ) {
         for (IfBranchNode branch :
                 ifStatement.getBranches()) {
@@ -401,7 +491,8 @@ public final class TemplateRenderer {
             renderContents(
                     branch.getBody(),
                     context,
-                    output
+                    output,
+                    state
             );
 
             /*
@@ -413,21 +504,24 @@ public final class TemplateRenderer {
     //region set statement
     private void renderSetStatement(
             SetStatementNode statement,
-            RenderContext context
+            RenderContext context,
+            RenderState state
     ) {
         if (statement.isBlock()) {
             renderBlockSet(
                     statement,
-                    context
+                    context,
+                    state
             );
 
             return;
         }
 
-        Object value = expressionEvaluator.evaluate(
-                statement.getValue(),
-                context
-        );
+        Object value =
+                expressionEvaluator.evaluate(
+                        statement.getValue(),
+                        context
+                );
 
         bindTargets(
                 statement.getTargets(),
@@ -438,7 +532,8 @@ public final class TemplateRenderer {
     }
     private void renderBlockSet(
             SetStatementNode statement,
-            RenderContext context
+            RenderContext context,
+            RenderState state
     ) {
         if (statement.getTargets().size() != 1) {
             throw new IllegalStateException(
@@ -453,7 +548,8 @@ public final class TemplateRenderer {
         renderContents(
                 statement.getBody(),
                 context,
-                capturedOutput
+                capturedOutput,
+                state
         );
 
         context.setLocal(
@@ -505,20 +601,17 @@ public final class TemplateRenderer {
     //region macro statement
     private void registerMacro(
             MacroStatementNode statement,
-            RenderContext definitionContext
+            RenderContext definitionContext,
+            RenderState state
     ) {
         TemplateCallable macro = arguments ->
                 invokeMacro(
                         statement,
                         arguments,
-                        definitionContext
+                        definitionContext,
+                        state
                 );
 
-        /*
-         * Store the callable before it can be invoked. The callable captures
-         * this definition context, so the macro can access surrounding values
-         * and can recursively resolve its own name.
-         */
         definitionContext.setLocal(
                 statement.getMacroName(),
                 macro
@@ -528,7 +621,8 @@ public final class TemplateRenderer {
     private String invokeMacro(
             MacroStatementNode statement,
             JinjaCallArguments arguments,
-            RenderContext definitionContext
+            RenderContext definitionContext,
+            RenderState state
     ) {
         RenderContext macroContext =
                 definitionContext.child();
@@ -546,7 +640,8 @@ public final class TemplateRenderer {
         renderContents(
                 statement.getBody(),
                 macroContext,
-                macroOutput
+                macroOutput,
+                state
         );
 
         return macroOutput.toString();
@@ -734,6 +829,44 @@ public final class TemplateRenderer {
                         + item.getClass().getSimpleName()
                         + " at line "
                         + lineNumber
+        );
+    }
+    private void renderIncludeStatement(
+            IncludeStatementNode statement,
+            RenderContext context,
+            StringBuilder output,
+            RenderState state
+    ) {
+        Object templateNameValue =
+                expressionEvaluator.evaluate(
+                        statement.getTemplateExpression(),
+                        context
+                );
+
+        if (!(templateNameValue instanceof String templateName)
+                || templateName.isBlank()) {
+
+            throw new IllegalStateException(
+                    "Include expression must resolve to a "
+                            + "non-empty template name at line "
+                            + statement.getLineNumber()
+            );
+        }
+
+        if (!state.templates.containsKey(templateName)) {
+            throw new IllegalStateException(
+                    "Included template '"
+                            + templateName
+                            + "' was not parsed at line "
+                            + statement.getLineNumber()
+            );
+        }
+
+        renderTemplate(
+                templateName,
+                context.child(),
+                output,
+                state
         );
     }
 }

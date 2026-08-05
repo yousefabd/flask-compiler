@@ -100,6 +100,9 @@ public class TypeCheckerRule implements ISemanticRule {
         else if (node instanceof BlockStatementNode bs) {
             for (ContentNode child : bs.getBody()) walkContent(child, ctx);
         }
+        else if (node instanceof IncludeStatementNode include) {
+            checkExpr(include.getTemplateExpression(), ctx);
+        }
         else if (node instanceof OutputNode out) {
             checkExpr(out.getExpression(), ctx);
         }

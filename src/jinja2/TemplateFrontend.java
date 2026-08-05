@@ -5,6 +5,7 @@ import antlr.html.HTMLParser;
 import errors.CompilerProblem;
 import errors.ErrorReporter;
 import errors.SyntaxErrorListener;
+import jinja2.dependency.TemplateDependencyFinder;
 import jinja2.models.file.TemplateFile;
 import jinja2.symbol_table.*;
 import jinja2.symbol_table.semantic_rules.ISemanticRule;
@@ -37,7 +38,7 @@ public final class TemplateFrontend {
 
     private final Path templatesDirectory;
     private final ErrorReporter reporter;
-    private JinjaTestRegistry testRegistry;
+    private final JinjaTestRegistry testRegistry;
 
     public TemplateFrontend(
             Path templatesDirectory,
@@ -60,7 +61,19 @@ public final class TemplateFrontend {
         Map<String, TemplateFile> templates =
                 new LinkedHashMap<>();
 
-        for (String templateName : templateNames) {
+        Deque<String> pendingTemplates =
+                new ArrayDeque<>(
+                        new LinkedHashSet<>(templateNames)
+                );
+
+        while (!pendingTemplates.isEmpty()) {
+            String templateName =
+                    pendingTemplates.removeFirst();
+
+            if (templates.containsKey(templateName)) {
+                continue;
+            }
+
             Path templatePath =
                     templatesDirectory.resolve(templateName).normalize();
 
@@ -72,6 +85,15 @@ public final class TemplateFrontend {
 
             if (template != null) {
                 templates.put(templateName, template);
+
+                for (String includedTemplate :
+                        TemplateDependencyFinder
+                                .findStaticIncludes(template)) {
+
+                    if (!templates.containsKey(includedTemplate)) {
+                        pendingTemplates.addLast(includedTemplate);
+                    }
+                }
             }
         }
 

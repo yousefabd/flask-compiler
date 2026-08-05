@@ -415,11 +415,13 @@ public class AntlrToTemplateAstVisitor extends HTMLParserBaseVisitor<TemplateNod
 
         HTMLParser.Include_stmtContext includeCtx = ctx.include_stmt();
 
-        // Grammar: OPEN_TAG INCLUDE expr CLOSE_TAG
-        // The path is typically a string literal; strip its quotes if present.
-        String path = stripQuotes(includeCtx.expr().getText());
+        ExpressionNode templateExpression =
+                (ExpressionNode) visit(includeCtx.expr());
 
-        return new IncludeStatementNode(path, includeCtx.getStart().getLine());
+        return new IncludeStatementNode(
+                templateExpression,
+                includeCtx.getStart().getLine()
+        );
     }
 
     // =====================================================
