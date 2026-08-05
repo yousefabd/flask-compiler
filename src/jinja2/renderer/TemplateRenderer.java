@@ -1,5 +1,6 @@
 package jinja2.renderer;
 
+import jinja2.functions.JinjaCallArguments;
 import jinja2.models.attribute.HtmlAttributeNode;
 import jinja2.models.attribute.valuepart.AttributeExpressionNode;
 import jinja2.models.attribute.valuepart.AttributeTextNode;
@@ -14,13 +15,17 @@ import jinja2.models.file.TemplateFile;
 import jinja2.models.statement.ForStatementNode;
 import jinja2.models.statement.IfBranchNode;
 import jinja2.models.statement.IfStatementNode;
+import jinja2.models.statement.MacroStatementNode;
+import jinja2.models.statement.ParameterNode;
 import jinja2.models.statement.SetStatementNode;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public final class TemplateRenderer {
 
@@ -121,6 +126,14 @@ public final class TemplateRenderer {
         if (node instanceof SetStatementNode setStatement) {
             renderSetStatement(
                     setStatement,
+                    context
+            );
+
+            return;
+        }
+        if (node instanceof MacroStatementNode macroStatement) {
+            registerMacro(
+                    macroStatement,
                     context
             );
 
@@ -484,6 +497,173 @@ public final class TemplateRenderer {
             context.setLocal(
                     targets.get(index).getName(),
                     unpackedValues.get(index)
+            );
+        }
+    }
+    //endregion
+
+    //region macro statement
+    private void registerMacro(
+            MacroStatementNode statement,
+            RenderContext definitionContext
+    ) {
+        TemplateCallable macro = arguments ->
+                invokeMacro(
+                        statement,
+                        arguments,
+                        definitionContext
+                );
+
+        /*
+         * Store the callable before it can be invoked. The callable captures
+         * this definition context, so the macro can access surrounding values
+         * and can recursively resolve its own name.
+         */
+        definitionContext.setLocal(
+                statement.getMacroName(),
+                macro
+        );
+    }
+
+    private String invokeMacro(
+            MacroStatementNode statement,
+            JinjaCallArguments arguments,
+            RenderContext definitionContext
+    ) {
+        RenderContext macroContext =
+                definitionContext.child();
+
+        bindMacroArguments(
+                statement,
+                arguments,
+                definitionContext,
+                macroContext
+        );
+
+        StringBuilder macroOutput =
+                new StringBuilder();
+
+        renderContents(
+                statement.getBody(),
+                macroContext,
+                macroOutput
+        );
+
+        return macroOutput.toString();
+    }
+
+    private void bindMacroArguments(
+            MacroStatementNode statement,
+            JinjaCallArguments arguments,
+            RenderContext definitionContext,
+            RenderContext macroContext
+    ) {
+        List<ParameterNode> parameters =
+                statement.getParameters();
+
+        if (arguments.positional().size() > parameters.size()) {
+            throw new IllegalStateException(
+                    "Macro '"
+                            + statement.getMacroName()
+                            + "' received too many positional arguments at line "
+                            + statement.getLineNumber()
+            );
+        }
+
+        Map<String, ParameterNode> parametersByName =
+                new LinkedHashMap<>();
+
+        for (ParameterNode parameter : parameters) {
+            parametersByName.put(
+                    parameter.getName(),
+                    parameter
+            );
+        }
+
+        Set<String> assignedParameters =
+                new HashSet<>();
+
+        for (int index = 0;
+             index < arguments.positional().size();
+             index++) {
+
+            ParameterNode parameter =
+                    parameters.get(index);
+
+            macroContext.setLocal(
+                    parameter.getName(),
+                    arguments.positional().get(index)
+            );
+
+            assignedParameters.add(
+                    parameter.getName()
+            );
+        }
+
+        for (Map.Entry<String, Object> keywordArgument
+                : arguments.keyword().entrySet()) {
+
+            String parameterName =
+                    keywordArgument.getKey();
+
+            ParameterNode parameter =
+                    parametersByName.get(parameterName);
+
+            if (parameter == null) {
+                throw new IllegalStateException(
+                        "Macro '"
+                                + statement.getMacroName()
+                                + "' received an unknown keyword argument '"
+                                + parameterName
+                                + "' at line "
+                                + statement.getLineNumber()
+                );
+            }
+
+            if (!assignedParameters.add(parameterName)) {
+                throw new IllegalStateException(
+                        "Macro '"
+                                + statement.getMacroName()
+                                + "' received multiple values for argument '"
+                                + parameterName
+                                + "' at line "
+                                + statement.getLineNumber()
+                );
+            }
+
+            macroContext.setLocal(
+                    parameter.getName(),
+                    keywordArgument.getValue()
+            );
+        }
+
+        for (ParameterNode parameter : parameters) {
+            if (assignedParameters.contains(
+                    parameter.getName()
+            )) {
+                continue;
+            }
+
+            if (!parameter.hasDefault()) {
+                throw new IllegalStateException(
+                        "Macro '"
+                                + statement.getMacroName()
+                                + "' is missing required argument '"
+                                + parameter.getName()
+                                + "' at line "
+                                + statement.getLineNumber()
+                );
+            }
+
+            Object defaultValue =
+                    expressionEvaluator.evaluate(
+                            parameter.getDefaultValue(),
+                            definitionContext
+                    );
+
+            macroContext.setLocal(
+                    parameter.getName(),
+                    defaultValue
             );
         }
     }

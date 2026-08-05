@@ -180,3 +180,18 @@ def url_test():
             "id": 2
         }
     )
+
+@app.route("/macro-test")
+def macro_test():
+    return render_template(
+        "macro_test.html",
+        heading="Macro integration test",
+        prefix="Hello",
+        user={
+            "name": "Yousef"
+        },
+        labels=[
+            "first",
+            "second"
+        ]
+    )

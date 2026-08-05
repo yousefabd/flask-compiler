@@ -1235,13 +1235,51 @@ public final class ExpressionEvaluator {
                 instanceof IdentifierNode identifier)) {
 
             throw new UnsupportedOperationException(
-                    "Method and macro calls are not supported yet at line "
+                    "Method calls are not supported yet at line "
                             + expression.getLineNumber()
             );
         }
 
         String functionName =
                 identifier.getName();
+
+        JinjaCallArguments arguments =
+                evaluateCallArguments(
+                        expression.getArguments(),
+                        context
+                );
+
+        /*
+         * A template value shadows a built-in with the same name. Macros are
+         * stored as TemplateCallable values in the current render scope.
+         */
+        if (context.contains(functionName)) {
+            Object value =
+                    context.resolve(functionName);
+
+            if (!(value instanceof TemplateCallable callable)) {
+                throw new IllegalStateException(
+                        "Value '"
+                                + functionName
+                                + "' is not callable at line "
+                                + expression.getLineNumber()
+                );
+            }
+
+            try {
+                return callable.invoke(arguments);
+            } catch (RuntimeException exception) {
+                throw new IllegalStateException(
+                        "Callable '"
+                                + functionName
+                                + "' failed at line "
+                                + expression.getLineNumber()
+                                + ": "
+                                + exception.getMessage(),
+                        exception
+                );
+            }
+        }
 
         JinjaFunctionDefinition definition =
                 functionRegistry
@@ -1254,12 +1292,6 @@ public final class ExpressionEvaluator {
                                                 + expression.getLineNumber()
                                 )
                         );
-
-        JinjaCallArguments arguments =
-                evaluateCallArguments(
-                        expression.getArguments(),
-                        context
-                );
 
         if (!definition.acceptsArgumentCount(
                 arguments.count()
