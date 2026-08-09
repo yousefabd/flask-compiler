@@ -2,10 +2,7 @@ package python.runtime;
 
 import python.models.atom_statement.*;
 import python.models.expr_statement.*;
-import python.models.trailer.Arguments;
-import python.models.trailer.CallArguments;
-import python.models.trailer.SubscriptArguments;
-import python.models.trailer.Trailer;
+import python.models.trailer.*;
 import utils.CompilerUtils;
 
 import java.util.ArrayList;
@@ -204,30 +201,10 @@ public final class PythonExpressionEvaluator {
         Object currentValue =
                 target;
 
-        /*
-         * Handles:
-         *
-         *     request.method
-         *     request.form["name"]
-         */
         if (trailer.isDotIdTrailer()) {
             if (trailer.id == null) {
                 throw new IllegalStateException(
                         "Malformed Python attribute trailer"
-                                + " at line "
-                                + trailer.getLine()
-                );
-            }
-
-            /*
-             * products.append(...) will be handled when calls
-             * are implemented.
-             */
-            if (trailer.arguments
-                    instanceof CallArguments) {
-
-                throw new UnsupportedOperationException(
-                        "Python method calls are not supported yet"
                                 + " at line "
                                 + trailer.getLine()
                 );
@@ -268,11 +245,13 @@ public final class PythonExpressionEvaluator {
             );
         }
 
-        if (arguments instanceof CallArguments) {
-            throw new UnsupportedOperationException(
-                    "Python calls are not supported yet"
-                            + " at line "
-                            + arguments.getLine()
+        if (arguments
+                instanceof CallArguments callArguments) {
+
+            return invokeCallable(
+                    target,
+                    callArguments,
+                    environment
             );
         }
 
@@ -612,6 +591,124 @@ public final class PythonExpressionEvaluator {
                         + describeType(left)
                         + " and "
                         + describeType(right)
+                        + " at line "
+                        + line
+        );
+    }
+    private Object invokeCallable(
+            Object target,
+            CallArguments callArguments,
+            PythonEnvironment environment
+    ) {
+        if (!(target instanceof PythonCallable callable)) {
+            throw new UnsupportedOperationException(
+                    "Python value of type "
+                            + describeType(target)
+                            + " is not callable"
+                            + " at line "
+                            + callArguments.getLine()
+            );
+        }
+
+        PythonCallArguments runtimeArguments =
+                evaluateCallArguments(
+                        callArguments,
+                        environment
+                );
+
+        return callable.call(runtimeArguments);
+    }
+    private PythonCallArguments evaluateCallArguments(
+            CallArguments callArguments,
+            PythonEnvironment environment
+    ) {
+        java.util.List<Object> positional =
+                new ArrayList<>();
+
+        Map<String, Object> keywords =
+                new LinkedHashMap<>();
+
+        boolean encounteredKeyword = false;
+
+        if (callArguments.args != null) {
+            for (Argument argument
+                    : callArguments.args) {
+
+                if (argument.isAssigned()) {
+                    encounteredKeyword = true;
+
+                    String keywordName =
+                            extractKeywordName(
+                                    argument.arg,
+                                    argument.getLine()
+                            );
+
+                    if (keywords.containsKey(keywordName)) {
+                        throw new IllegalArgumentException(
+                                "Duplicate keyword argument '"
+                                        + keywordName
+                                        + "' at line "
+                                        + argument.getLine()
+                        );
+                    }
+
+                    Object value =
+                            evaluate(
+                                    argument.assign,
+                                    environment
+                            );
+
+                    keywords.put(
+                            keywordName,
+                            value
+                    );
+
+                    continue;
+                }
+
+                if (encounteredKeyword) {
+                    throw new IllegalArgumentException(
+                            "Positional argument cannot follow"
+                                    + " a keyword argument"
+                                    + " at line "
+                                    + argument.getLine()
+                    );
+                }
+
+                positional.add(
+                        evaluate(
+                                argument.arg,
+                                environment
+                        )
+                );
+            }
+        }
+
+        return new PythonCallArguments(
+                positional,
+                keywords,
+                callArguments.getLine()
+        );
+    }
+    private String extractKeywordName(
+            Condition node,
+            int line
+    ) {
+        if (node instanceof IDTrailer identifier
+                && (identifier.trailers == null
+                || identifier.trailers.isEmpty())) {
+
+            return identifier.id.name;
+        }
+
+        // Included because ID is also an expression in this AST hierarchy.
+        if (node instanceof ID identifier) {
+            return identifier.name;
+        }
+
+        throw new IllegalArgumentException(
+                "Keyword argument name must be"
+                        + " a plain identifier"
                         + " at line "
                         + line
         );

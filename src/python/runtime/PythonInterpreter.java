@@ -2,17 +2,20 @@ package python.runtime;
 
 import python.models.Import_statement.ImportStatement;
 import python.models.atom_statement.ID;
+import python.models.compound_statement.Body;
+import python.models.compound_statement.DecoratorStatement;
 import python.models.expr_statement.Condition;
 import python.models.expr_statement.ExpressionStatement;
 import python.models.expr_statement.IDTrailer;
+import python.models.funcdef.FunctionDef;
+import python.models.funcdef.Parameter;
 import python.models.root.Program;
 import python.models.root.SimpleStatement;
 import python.models.root.Statement;
+import python.models.small_statement.ReturnStatement;
 import python.models.small_statement.SmallStatement;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public final class PythonInterpreter {
 
@@ -55,6 +58,12 @@ public final class PythonInterpreter {
                             environment
                     );
 
+            case DecoratorStatement decoratorStatement ->
+                    registerFunction(
+                            decoratorStatement,
+                            environment
+                    );
+
             default ->
                     throw new UnsupportedOperationException(
                             "Python statement is not supported yet: "
@@ -91,6 +100,11 @@ public final class PythonInterpreter {
                     );
             case ImportStatement ignored -> {
             }
+            case ReturnStatement returnStatement ->
+                    executeReturnStatement(
+                            returnStatement,
+                            environment
+                    );
 
             default ->
                     throw new UnsupportedOperationException(
@@ -206,5 +220,226 @@ public final class PythonInterpreter {
                         + " at line "
                         + target.getLine()
         );
+    }
+    private void registerFunction(
+            DecoratorStatement statement,
+            PythonEnvironment environment
+    ) {
+        FunctionDef definition =
+                statement.function;
+
+        if (definition == null) {
+            throw new IllegalStateException(
+                    "Function statement has no definition"
+                            + " at line "
+                            + statement.getLine()
+            );
+        }
+
+        PythonFunction function =
+                new PythonFunction(
+                        definition,
+                        environment,
+                        this
+                );
+
+        environment.assign(
+                function.name(),
+                function
+        );
+    }
+    private void executeBody(
+            Body body,
+            PythonEnvironment environment
+    ) {
+        if (body == null || body.statements == null) {
+            return;
+        }
+
+        for (var statement : body.statements) {
+            executeStatement(
+                    statement,
+                    environment
+            );
+        }
+    }
+
+    private void executeReturnStatement(
+            ReturnStatement statement,
+            PythonEnvironment environment
+    ) {
+        if (statement.conditions == null
+                || statement.conditions.isEmpty()) {
+
+            throw new PythonReturnSignal(null);
+        }
+
+        if (statement.conditions.size() != 1) {
+            throw new UnsupportedOperationException(
+                    "Returning multiple values is not supported yet"
+                            + " at line "
+                            + statement.getLine()
+            );
+        }
+
+        Object value =
+                expressionEvaluator.evaluate(
+                        statement.conditions.getFirst(),
+                        environment
+                );
+
+        throw new PythonReturnSignal(value);
+    }
+
+    Object invokeFunction(
+            PythonFunction function,
+            PythonCallArguments arguments
+    ) {
+        PythonEnvironment frame =
+                function.definingEnvironment()
+                        .createFunctionFrame();
+
+        bindArguments(
+                function,
+                arguments,
+                frame
+        );
+
+        try {
+            executeBody(
+                    function.definition().body,
+                    frame
+            );
+        } catch (PythonReturnSignal signal) {
+            return signal.value();
+        }
+
+        // A Python function without an explicit return returns None.
+        return null;
+    }
+
+    private void bindArguments(
+            PythonFunction function,
+            PythonCallArguments arguments,
+            PythonEnvironment frame
+    ) {
+        FunctionDef definition =
+                function.definition();
+
+        List<Parameter> parameters =
+                definition.parameters == null
+                        ? List.of()
+                        : definition.parameters;
+
+        List<Object> positional =
+                arguments.positional();
+
+        Map<String, Object> keywords =
+                arguments.keywords();
+
+        if (positional.size() > parameters.size()) {
+            throw new IllegalArgumentException(
+                    "Function '"
+                            + function.name()
+                            + "' received too many positional arguments"
+                            + " at line "
+                            + arguments.sourceLine()
+            );
+        }
+
+        Set<String> boundNames =
+                new LinkedHashSet<>();
+
+        for (int index = 0;
+             index < positional.size();
+             index++) {
+
+            String parameterName =
+                    parameters.get(index).id.name;
+
+            frame.defineLocal(
+                    parameterName,
+                    positional.get(index)
+            );
+
+            boundNames.add(parameterName);
+        }
+
+        for (Map.Entry<String, Object> keyword
+                : keywords.entrySet()) {
+
+            Parameter parameter =
+                    findParameter(
+                            parameters,
+                            keyword.getKey()
+                    );
+
+            if (parameter == null) {
+                throw new IllegalArgumentException(
+                        "Function '"
+                                + function.name()
+                                + "' has no parameter named '"
+                                + keyword.getKey()
+                                + "'"
+                );
+            }
+
+            String parameterName =
+                    parameter.id.name;
+
+            if (!boundNames.add(parameterName)) {
+                throw new IllegalArgumentException(
+                        "Function '"
+                                + function.name()
+                                + "' received multiple values for '"
+                                + parameterName
+                                + "'"
+                );
+            }
+
+            frame.defineLocal(
+                    parameterName,
+                    keyword.getValue()
+            );
+        }
+
+        for (Parameter parameter : parameters) {
+            String parameterName =
+                    parameter.id.name;
+
+            if (boundNames.contains(parameterName)) {
+                continue;
+            }
+
+            if (parameter.hasDefaultValue()) {
+                throw new UnsupportedOperationException(
+                        "Default parameter values are not supported yet"
+                                + " for function '"
+                                + function.name()
+                                + "'"
+                );
+            }
+
+            throw new IllegalArgumentException(
+                    "Function '"
+                            + function.name()
+                            + "' is missing argument '"
+                            + parameterName
+                            + "'"
+            );
+        }
+    }
+
+    private Parameter findParameter(
+            List<Parameter> parameters,
+            String name
+    ) {
+        for (Parameter parameter : parameters) {
+            if (parameter.id.name.equals(name)) {
+                return parameter;
+            }
+        }
+
+        return null;
     }
 }
