@@ -1,4 +1,6 @@
-package python.runtime;
+package python.runtime.unit_tests;
+
+import python.runtime.PythonEnvironment;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,10 +1,7 @@
 package python.runtime;
 
 import python.models.atom_statement.*;
-import python.models.expr_statement.BinaryExpression;
-import python.models.expr_statement.Condition;
-import python.models.expr_statement.Expression;
-import python.models.expr_statement.IDTrailer;
+import python.models.expr_statement.*;
 import python.models.trailer.Arguments;
 import python.models.trailer.CallArguments;
 import python.models.trailer.SubscriptArguments;
@@ -92,6 +89,17 @@ public final class PythonExpressionEvaluator {
                                     environment
                             ),
                             binaryExpression.getLine()
+                    );
+            case RelationalComparison comparison ->
+                    evaluateComparison(
+                            comparison,
+                            environment
+                    );
+
+            case CompoundCondition condition ->
+                    evaluateCompoundCondition(
+                            condition,
+                            environment
                     );
 
             default ->
@@ -416,5 +424,196 @@ public final class PythonExpressionEvaluator {
         return value == null
                 ? "None"
                 : value.getClass().getSimpleName();
+    }
+    private Object evaluateComparison(
+            RelationalComparison comparison,
+            PythonEnvironment environment
+    ) {
+        Object left =
+                evaluate(
+                        comparison.left,
+                        environment
+                );
+
+        Object right =
+                evaluate(
+                        comparison.right,
+                        environment
+                );
+
+        return switch (comparison.operation) {
+            case EQUALS ->
+                    valuesEqual(left, right);
+
+            case NOT_EQ ->
+                    !valuesEqual(left, right);
+
+            case LESS_THAN ->
+                    compareOrdered(
+                            left,
+                            right,
+                            comparison.getLine()
+                    ) < 0;
+
+            case GREATER_THAN ->
+                    compareOrdered(
+                            left,
+                            right,
+                            comparison.getLine()
+                    ) > 0;
+
+            case LT_EQ ->
+                    compareOrdered(
+                            left,
+                            right,
+                            comparison.getLine()
+                    ) <= 0;
+
+            case GT_EQ ->
+                    compareOrdered(
+                            left,
+                            right,
+                            comparison.getLine()
+                    ) >= 0;
+
+            default ->
+                    throw new UnsupportedOperationException(
+                            "Python comparison "
+                                    + comparison.operation
+                                    + " is not supported yet"
+                                    + " at line "
+                                    + comparison.getLine()
+                    );
+        };
+    }
+
+    private Object evaluateCompoundCondition(
+            CompoundCondition condition,
+            PythonEnvironment environment
+    ) {
+        return switch (condition.operation) {
+            case NOT -> {
+                Object value =
+                        evaluate(
+                                condition.first,
+                                environment
+                        );
+
+                yield !PythonTruthiness.isTruthy(value);
+            }
+
+            /*
+             * Python and/or return an operand rather than always
+             * returning a Boolean.
+             */
+            case AND -> {
+                Object left =
+                        evaluate(
+                                condition.first,
+                                environment
+                        );
+
+                if (!PythonTruthiness.isTruthy(left)) {
+                    yield left;
+                }
+
+                yield evaluateRequiredSecond(
+                        condition,
+                        environment
+                );
+            }
+
+            case OR -> {
+                Object left =
+                        evaluate(
+                                condition.first,
+                                environment
+                        );
+
+                if (PythonTruthiness.isTruthy(left)) {
+                    yield left;
+                }
+
+                yield evaluateRequiredSecond(
+                        condition,
+                        environment
+                );
+            }
+
+            default ->
+                    throw new UnsupportedOperationException(
+                            "Python logical operation "
+                                    + condition.operation
+                                    + " is not supported yet"
+                                    + " at line "
+                                    + condition.getLine()
+                    );
+        };
+    }
+
+    private Object evaluateRequiredSecond(
+            CompoundCondition condition,
+            PythonEnvironment environment
+    ) {
+        if (condition.second == null) {
+            throw new IllegalStateException(
+                    "Python logical expression has no second operand"
+                            + " at line "
+                            + condition.getLine()
+            );
+        }
+
+        return evaluate(
+                condition.second,
+                environment
+        );
+    }
+
+    private boolean valuesEqual(
+            Object left,
+            Object right
+    ) {
+        if (left instanceof Number leftNumber
+                && right instanceof Number rightNumber) {
+
+            return Double.compare(
+                    leftNumber.doubleValue(),
+                    rightNumber.doubleValue()
+            ) == 0;
+        }
+
+        return Objects.equals(left, right);
+    }
+
+    private int compareOrdered(
+            Object left,
+            Object right,
+            int line
+    ) {
+        if (left instanceof Number leftNumber
+                && right instanceof Number rightNumber) {
+
+            return Double.compare(
+                    leftNumber.doubleValue(),
+                    rightNumber.doubleValue()
+            );
+        }
+
+        if (left instanceof String leftString
+                && right instanceof String rightString) {
+
+            return leftString.compareTo(
+                    rightString
+            );
+        }
+
+        throw new UnsupportedOperationException(
+                "Python ordered comparison is not supported between "
+                        + describeType(left)
+                        + " and "
+                        + describeType(right)
+                        + " at line "
+                        + line
+        );
     }
 }

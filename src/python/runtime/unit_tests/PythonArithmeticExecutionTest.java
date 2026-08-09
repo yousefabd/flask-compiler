@@ -1,8 +1,11 @@
-package python.runtime;
+package python.runtime.unit_tests;
 
 import errors.ErrorReporter;
 import python.PythonFrontend;
 import python.models.root.Program;
+import python.runtime.PythonEnvironment;
+import python.runtime.PythonExpressionEvaluator;
+import python.runtime.PythonInterpreter;
 
 import java.nio.file.Path;
 
