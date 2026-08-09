@@ -1,4 +1,4 @@
-// Generated from grammars/python/PythonParser.g4 by ANTLR 4.13.2
+// Generated from C:/Users/Yousef.Abdulmonaem/Documents/GitHub/flask-compiler/grammars/python/PythonParser.g4 by ANTLR 4.13.2
 
     package antlr.python;
 
@@ -57,7 +57,7 @@ public class PythonParser extends Parser {
 		return new String[] {
 			null, null, null, "'global'", "'def'", "'return'", "'import'", "'if'", 
 			"'elif'", "'else'", "'while'", "'for'", "'try'", "'finally'", "'or'", 
-			"'not'", "'and'", "'true'", "'pass'", "'false'", "'continue'", "'break'", 
+			"'not'", "'and'", "'True'", "'pass'", "'False'", "'continue'", "'break'", 
 			"'in'", "'is'", "'from'", "'None'", "'->'", "'**='", "'+='", "'-='", 
 			"'*='", "'/='", "'%='", "'&='", "'|='", "'^='", "'<<='", "'>>='", "'//='", 
 			"'.'", "'*'", "','", "':'", "';'", "'='", "'|'", "'^'", "'&'", "'<<'", 

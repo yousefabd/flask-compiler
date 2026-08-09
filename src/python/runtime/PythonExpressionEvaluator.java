@@ -1,6 +1,7 @@
 package python.runtime;
 
 import python.models.atom_statement.*;
+import python.models.expr_statement.Condition;
 import python.models.expr_statement.Expression;
 import python.models.expr_statement.IDTrailer;
 import utils.CompilerUtils;
@@ -13,7 +14,7 @@ import java.util.Objects;
 public final class PythonExpressionEvaluator {
 
     public Object evaluate(
-            Expression expression,
+            Condition expression,
             PythonEnvironment environment
     ) {
         Objects.requireNonNull(expression);
