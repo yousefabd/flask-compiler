@@ -4,6 +4,8 @@ import python.models.Import_statement.ImportStatement;
 import python.models.atom_statement.ID;
 import python.models.compound_statement.Body;
 import python.models.compound_statement.DecoratorStatement;
+import python.models.compound_statement.ForStatement;
+import python.models.compound_statement.IfStatement;
 import python.models.expr_statement.Condition;
 import python.models.expr_statement.ExpressionStatement;
 import python.models.expr_statement.IDTrailer;
@@ -12,9 +14,11 @@ import python.models.funcdef.Parameter;
 import python.models.root.Program;
 import python.models.root.SimpleStatement;
 import python.models.root.Statement;
+import python.models.small_statement.GlobalStatement;
 import python.models.small_statement.ReturnStatement;
 import python.models.small_statement.SmallStatement;
 
+import java.lang.reflect.Array;
 import java.util.*;
 
 public final class PythonInterpreter {
@@ -63,6 +67,16 @@ public final class PythonInterpreter {
                             decoratorStatement,
                             environment
                     );
+            case IfStatement ifStatement ->
+                    executeIfStatement(
+                            ifStatement,
+                            environment
+                    );
+            case ForStatement forStatement ->
+                    executeForStatement(
+                            forStatement,
+                            environment
+                    );
 
             default ->
                     throw new UnsupportedOperationException(
@@ -103,6 +117,11 @@ public final class PythonInterpreter {
             case ReturnStatement returnStatement ->
                     executeReturnStatement(
                             returnStatement,
+                            environment
+                    );
+            case GlobalStatement globalStatement ->
+                    executeGlobalStatement(
+                            globalStatement,
                             environment
                     );
 
@@ -441,5 +460,267 @@ public final class PythonInterpreter {
         }
 
         return null;
+    }
+    private void executeIfStatement(
+            IfStatement statement,
+            PythonEnvironment environment
+    ) {
+        if (statement.conditions == null
+                || statement.bodies == null
+                || statement.conditions.size()
+                != statement.bodies.size()) {
+
+            throw new IllegalStateException(
+                    "Malformed Python if statement"
+                            + " at line "
+                            + statement.getLine()
+            );
+        }
+
+        for (int index = 0;
+             index < statement.conditions.size();
+             index++) {
+
+            Object conditionValue =
+                    expressionEvaluator.evaluate(
+                            statement.conditions.get(index),
+                            environment
+                    );
+
+            if (PythonTruthiness.isTruthy(
+                    conditionValue
+            )) {
+                executeBody(
+                        statement.bodies.get(index),
+                        environment
+                );
+
+                // Only the first true branch executes.
+                return;
+            }
+        }
+
+        if (statement.last != null) {
+            executeBody(
+                    statement.last,
+                    environment
+            );
+        }
+    }
+    private void executeForStatement(
+            ForStatement statement,
+            PythonEnvironment environment
+    ) {
+        if (statement.iterators == null
+                || statement.iterators.isEmpty()) {
+
+            throw new IllegalStateException(
+                    "Python for statement has no loop variable"
+                            + " at line "
+                            + statement.getLine()
+            );
+        }
+
+        if (statement.iterable == null
+                || statement.body == null) {
+
+            throw new IllegalStateException(
+                    "Malformed Python for statement"
+                            + " at line "
+                            + statement.getLine()
+            );
+        }
+
+        Object iterableValue =
+                expressionEvaluator.evaluate(
+                        statement.iterable,
+                        environment
+                );
+
+        List<Object> iterationValues =
+                materializeIterationValues(
+                        iterableValue,
+                        statement.getLine()
+                );
+
+        for (Object iterationValue
+                : iterationValues) {
+
+            assignLoopVariables(
+                    statement.iterators,
+                    iterationValue,
+                    environment,
+                    statement.getLine()
+            );
+
+            executeBody(
+                    statement.body,
+                    environment
+            );
+        }
+
+        /*
+         * Until break is implemented, a normally completed
+         * for loop always executes its else body.
+         *
+         * A return automatically skips this because
+         * PythonReturnSignal escapes the method.
+         */
+        if (statement.last != null) {
+            executeBody(
+                    statement.last,
+                    environment
+            );
+        }
+    }
+    private List<Object> materializeIterationValues(
+            Object value,
+            int line
+    ) {
+        List<Object> result =
+                new ArrayList<>();
+
+        if (value instanceof Map<?, ?> map) {
+            // Python dictionary iteration produces keys.
+            result.addAll(map.keySet());
+            return result;
+        }
+
+        if (value instanceof String string) {
+            string.codePoints()
+                    .mapToObj(codePoint ->
+                            new String(
+                                    Character.toChars(codePoint)
+                            )
+                    )
+                    .forEach(result::add);
+
+            return result;
+        }
+
+        if (value instanceof Iterable<?> iterable) {
+            for (Object element : iterable) {
+                result.add(element);
+            }
+
+            return result;
+        }
+
+        if (value != null
+                && value.getClass().isArray()) {
+
+            int length =
+                    Array.getLength(value);
+
+            for (int index = 0;
+                 index < length;
+                 index++) {
+
+                result.add(
+                        Array.get(value, index)
+                );
+            }
+
+            return result;
+        }
+
+        throw new UnsupportedOperationException(
+                "Python value of type "
+                        + runtimeTypeName(value)
+                        + " is not iterable"
+                        + " at line "
+                        + line
+        );
+    }
+    private void assignLoopVariables(
+            List<ID> iterators,
+            Object iterationValue,
+            PythonEnvironment environment,
+            int line
+    ) {
+        if (iterators.size() == 1) {
+            environment.assign(
+                    iterators.getFirst().name,
+                    iterationValue
+            );
+
+            return;
+        }
+
+        List<Object> unpackedValues =
+                unpackIterationValue(
+                        iterationValue,
+                        line
+                );
+
+        if (unpackedValues.size()
+                != iterators.size()) {
+
+            throw new IllegalArgumentException(
+                    "Cannot unpack "
+                            + unpackedValues.size()
+                            + " value(s) into "
+                            + iterators.size()
+                            + " loop variable(s)"
+                            + " at line "
+                            + line
+            );
+        }
+
+        for (int index = 0;
+             index < iterators.size();
+             index++) {
+
+            environment.assign(
+                    iterators.get(index).name,
+                    unpackedValues.get(index)
+            );
+        }
+    }
+
+    private List<Object> unpackIterationValue(
+            Object value,
+            int line
+    ) {
+        if (value instanceof Map.Entry<?, ?> entry) {
+            List<Object> pair =
+                    new ArrayList<>();
+
+            pair.add(entry.getKey());
+            pair.add(entry.getValue());
+
+            return pair;
+        }
+
+        return materializeIterationValues(
+                value,
+                line
+        );
+    }
+
+    private String runtimeTypeName(Object value) {
+        return value == null
+                ? "None"
+                : value.getClass().getSimpleName();
+    }
+    private void executeGlobalStatement(
+            GlobalStatement statement,
+            PythonEnvironment environment
+    ) {
+        if (statement.names == null
+                || statement.names.isEmpty()) {
+
+            throw new IllegalStateException(
+                    "Python global statement has no names"
+                            + " at line "
+                            + statement.getLine()
+            );
+        }
+
+        for (var name : statement.names) {
+            environment.declareGlobal(
+                    name.name
+            );
+        }
     }
 }
