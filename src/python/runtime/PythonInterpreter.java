@@ -1,5 +1,6 @@
 package python.runtime;
 
+import python.models.Import_statement.ImportStatement;
 import python.models.atom_statement.ID;
 import python.models.expr_statement.Condition;
 import python.models.expr_statement.ExpressionStatement;
@@ -88,6 +89,8 @@ public final class PythonInterpreter {
                             expressionStatement,
                             environment
                     );
+            case ImportStatement ignored -> {
+            }
 
             default ->
                     throw new UnsupportedOperationException(
