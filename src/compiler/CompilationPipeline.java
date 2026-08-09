@@ -38,7 +38,7 @@ public final class CompilationPipeline {
 
         this.renderRequestProvider =
                 Objects.requireNonNull(renderRequestProvider);
-        
+
         JinjaTestRegistry testRegistry =
                 new JinjaTestRegistry();
 
