@@ -85,6 +85,21 @@ public class PythonFlaskBindingExecutionTest {
                 ),
                 "__name__ binding failed"
         );
+        require(
+                "compiler-secret".equals(
+                        application.secretKey()
+                ),
+                "Flask secret_key assignment failed"
+        );
+
+        require(
+                "compiler-secret".equals(
+                        module.resolve(
+                                "captured_secret_key"
+                        )
+                ),
+                "Flask attribute reading failed"
+        );
 
         System.out.println(
                 "Flask constructor execution passed."
@@ -101,6 +116,8 @@ public class PythonFlaskBindingExecutionTest {
                         "captured_module_name"
                 )
         );
+        System.out.println("Secret key:");
+        System.out.println(module.resolve("captured_secret_key"));
 
     }
 

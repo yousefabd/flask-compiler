@@ -290,7 +290,14 @@ public final class PythonExpressionEvaluator {
 
             return createListAppendCallable(list);
         }
+        if (target
+                instanceof PythonAttributeContainer container) {
 
+            return container.getAttribute(
+                    attributeName,
+                    line
+            );
+        }
         throw new UnsupportedOperationException(
                 "Python attribute access is not supported on "
                         + describeType(target)

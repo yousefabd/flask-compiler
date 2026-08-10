@@ -17,6 +17,7 @@ import python.models.root.Statement;
 import python.models.small_statement.GlobalStatement;
 import python.models.small_statement.ReturnStatement;
 import python.models.small_statement.SmallStatement;
+import python.models.trailer.Trailer;
 
 import java.lang.reflect.Array;
 import java.util.*;
@@ -241,13 +242,22 @@ public final class PythonInterpreter {
             return;
         }
 
-        if (target instanceof IDTrailer identifierTrailer
-                && (identifierTrailer.trailers == null
-                || identifierTrailer.trailers.isEmpty())) {
+        if (target instanceof IDTrailer identifier) {
+            if (identifier.trailers == null
+                    || identifier.trailers.isEmpty()) {
 
-            environment.assign(
-                    identifierTrailer.id.name,
-                    value
+                environment.assign(
+                        identifier.id.name,
+                        value
+                );
+
+                return;
+            }
+
+            assignAttributeTarget(
+                    identifier,
+                    value,
+                    environment
             );
 
             return;
@@ -742,5 +752,61 @@ public final class PythonInterpreter {
                     name.name
             );
         }
+    }
+    private void assignAttributeTarget(
+            IDTrailer target,
+            Object value,
+            PythonEnvironment environment
+    ) {
+        /*
+         * This step supports app.secret_key.
+         * Nested and indexed assignment will be added only
+         * if the application requires them.
+         */
+        if (target.trailers.size() != 1) {
+            throw new UnsupportedOperationException(
+                    "Nested Python assignment targets"
+                            + " are not supported yet"
+                            + " at line "
+                            + target.getLine()
+            );
+        }
+
+        Trailer trailer =
+                target.trailers.getFirst();
+
+        if (!trailer.isDotIdTrailer()
+                || trailer.id == null
+                || trailer.arguments != null) {
+
+            throw new UnsupportedOperationException(
+                    "Python assignment trailer is not"
+                            + " a plain attribute"
+                            + " at line "
+                            + trailer.getLine()
+            );
+        }
+
+        Object owner =
+                environment.resolve(
+                        target.id.name
+                );
+
+        if (!(owner
+                instanceof PythonAttributeContainer container)) {
+
+            throw new UnsupportedOperationException(
+                    "Python value does not support"
+                            + " attribute assignment"
+                            + " at line "
+                            + target.getLine()
+            );
+        }
+
+        container.setAttribute(
+                trailer.id.name,
+                value,
+                trailer.getLine()
+        );
     }
 }
