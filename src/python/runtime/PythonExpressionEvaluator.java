@@ -263,7 +263,7 @@ public final class PythonExpressionEvaluator {
         );
     }
 
-    private Object resolveAttribute(
+    Object resolveAttribute(
             Object target,
             String attributeName,
             int line
@@ -630,7 +630,7 @@ public final class PythonExpressionEvaluator {
 
         return callable.call(runtimeArguments);
     }
-    private PythonCallArguments evaluateCallArguments(
+    PythonCallArguments evaluateCallArguments(
             CallArguments callArguments,
             PythonEnvironment environment
     ) {

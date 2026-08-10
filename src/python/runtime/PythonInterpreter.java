@@ -18,6 +18,12 @@ import python.models.small_statement.GlobalStatement;
 import python.models.small_statement.ReturnStatement;
 import python.models.small_statement.SmallStatement;
 import python.models.trailer.Trailer;
+import python.models.compound_statement.Decorator;
+import python.models.trailer.CallArguments;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import java.lang.reflect.Array;
 import java.util.*;
@@ -292,9 +298,32 @@ public final class PythonInterpreter {
                         this
                 );
 
+        Object decoratedValue =
+                function;
+
+        List<Decorator> decorators =
+                statement.decorators == null
+                        ? List.of()
+                        : statement.decorators;
+
+        /*
+         * Python applies multiple decorators from bottom to top.
+         */
+        for (int index = decorators.size() - 1;
+             index >= 0;
+             index--) {
+
+            decoratedValue =
+                    applyDecorator(
+                            decorators.get(index),
+                            decoratedValue,
+                            environment
+                    );
+        }
+
         environment.assign(
                 function.name(),
-                function
+                decoratedValue
         );
     }
     private void executeBody(
@@ -808,5 +837,104 @@ public final class PythonInterpreter {
                 value,
                 trailer.getLine()
         );
+    }
+    private Object applyDecorator(
+            Decorator decorator,
+            Object decoratedValue,
+            PythonEnvironment environment
+    ) {
+        Object decoratorFactory =
+                resolveDecoratorTarget(
+                        decorator,
+                        environment
+                );
+
+        if (!(decoratorFactory
+                instanceof PythonCallable factory)) {
+
+            throw new UnsupportedOperationException(
+                    "Python decorator target is not callable"
+                            + " at line "
+                            + decorator.getLine()
+            );
+        }
+
+        ArrayList<python.models.trailer.Argument>
+                syntaxArguments =
+                decorator.arguments == null
+                        ? new ArrayList<>()
+                        : new ArrayList<>(
+                        decorator.arguments
+                );
+
+        PythonCallArguments factoryArguments =
+                expressionEvaluator
+                        .evaluateCallArguments(
+                                new CallArguments(
+                                        syntaxArguments,
+                                        decorator.getLine()
+                                ),
+                                environment
+                        );
+
+        Object decoratorValue =
+                factory.call(factoryArguments);
+
+        if (!(decoratorValue
+                instanceof PythonCallable callableDecorator)) {
+
+            throw new UnsupportedOperationException(
+                    "Python decorator factory did not"
+                            + " return a callable"
+                            + " at line "
+                            + decorator.getLine()
+            );
+        }
+
+        return callableDecorator.call(
+                new PythonCallArguments(
+                        List.of(decoratedValue),
+                        Map.of(),
+                        decorator.getLine()
+                )
+        );
+    }
+
+    private Object resolveDecoratorTarget(
+            Decorator decorator,
+            PythonEnvironment environment
+    ) {
+        if (decorator.dottedName == null
+                || decorator.dottedName.isEmpty()) {
+
+            throw new IllegalStateException(
+                    "Python decorator has no target"
+                            + " at line "
+                            + decorator.getLine()
+            );
+        }
+
+        Object currentValue =
+                environment.resolve(
+                        decorator.dottedName
+                                .getFirst()
+                                .name
+                );
+
+        for (int index = 1;
+             index < decorator.dottedName.size();
+             index++) {
+
+            currentValue =
+                    expressionEvaluator.resolveAttribute(
+                            currentValue,
+                            decorator.dottedName
+                                    .get(index)
+                                    .name,
+                            decorator.getLine()
+                    );
+        }
+
+        return currentValue;
     }
 }

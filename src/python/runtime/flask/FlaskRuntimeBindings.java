@@ -18,6 +18,8 @@ public final class FlaskRuntimeBindings {
     private final PythonCallable flaskConstructor;
 
     private final PythonCallable renderTemplateFunction;
+    private FlaskApplication currentApplication;
+
     public FlaskRuntimeBindings() {
         this(RenderEnvironment::empty);
     }
@@ -85,7 +87,13 @@ public final class FlaskRuntimeBindings {
             );
         }
 
-        return new FlaskApplication(name);
+        FlaskApplication application =
+                new FlaskApplication(name);
+
+        currentApplication =
+                application;
+
+        return application;
     }
     private Object renderTemplate(
             PythonCallArguments arguments
@@ -100,7 +108,7 @@ public final class FlaskRuntimeBindings {
         }
 
         Object templateValue =
-                arguments.positional().get(0);
+                arguments.positional().getFirst();
 
         if (!(templateValue instanceof String templateName)
                 || templateName.isBlank()) {
@@ -113,10 +121,28 @@ public final class FlaskRuntimeBindings {
             );
         }
 
-        RenderEnvironment renderEnvironment =
+        RenderEnvironment suppliedEnvironment =
                 Objects.requireNonNull(
                         renderEnvironmentSupplier.get(),
                         "Render environment supplier returned null"
+                );
+
+        java.util.List<jinja2.runtime.RouteDefinition>
+                combinedRoutes =
+                new java.util.ArrayList<>(
+                        suppliedEnvironment.routes()
+                );
+
+        if (currentApplication != null) {
+            combinedRoutes.addAll(
+                    currentApplication.renderRoutes()
+            );
+        }
+
+        RenderEnvironment renderEnvironment =
+                new RenderEnvironment(
+                        suppliedEnvironment.flashedMessages(),
+                        combinedRoutes
                 );
 
         return new TemplateRenderRequest(

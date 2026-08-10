@@ -5,6 +5,8 @@ import errors.ErrorReporter;
 import python.PythonFrontend;
 import python.models.root.Program;
 import python.runtime.*;
+import python.runtime.flask.FlaskApplication;
+import python.runtime.flask.FlaskRoute;
 import python.runtime.flask.FlaskRuntimeBindings;
 
 import java.nio.file.Path;
@@ -134,11 +136,75 @@ public final class PythonRenderTemplateExecutionTest {
                         + " the live products value"
         );
 
-        require(
+        jinja2.runtime.RouteDefinition productDetails =
                 renderRequest.environment()
                         .routes()
-                        .isEmpty(),
-                "Routes should still be empty"
+                        .stream()
+                        .filter(route ->
+                                route.endpoint()
+                                        .equals("product_details")
+                        )
+                        .findFirst()
+                        .orElseThrow(() ->
+                                new AssertionError(
+                                        "product_details route is missing"
+                                )
+                        );
+
+        require(
+                "/product/<int:product_id>".equals(
+                        productDetails.rule()
+                ),
+                "Dynamic product route has the wrong rule"
+        );
+
+        require(
+                productDetails.arguments()
+                        .equals(List.of("product_id")),
+                "Dynamic route arguments were not extracted"
+        );
+
+        FlaskApplication application =
+                (FlaskApplication) module.resolve("app");
+
+        FlaskRoute addRoute =
+                application.routes()
+                        .stream()
+                        .filter(route ->
+                                route.endpoint()
+                                        .equals("add_product")
+                        )
+                        .findFirst()
+                        .orElseThrow(() ->
+                                new AssertionError(
+                                        "add_product route is missing"
+                                )
+                        );
+
+        require(
+                addRoute.methods().contains("GET")
+                        && addRoute.methods().contains("POST"),
+                "add_product HTTP methods were not captured"
+        );
+
+        System.out.println(
+                "Routes captured: "
+                        + application.routes().size()
+        );
+
+        System.out.println(
+                "Product route: "
+                        + productDetails.rule()
+        );
+
+        System.out.println(
+                "Product arguments: "
+                        + productDetails.arguments()
+        );
+
+        System.out.println(
+                "Add methods: "
+                        + addRoute.methods()
         );
 
         require(
