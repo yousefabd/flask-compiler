@@ -285,6 +285,11 @@ public final class PythonExpressionEvaluator {
                             + line
             );
         }
+        if (target instanceof java.util.List<?> list
+                && attributeName.equals("append")) {
+
+            return createListAppendCallable(list);
+        }
 
         throw new UnsupportedOperationException(
                 "Python attribute access is not supported on "
@@ -711,6 +716,46 @@ public final class PythonExpressionEvaluator {
                         + " a plain identifier"
                         + " at line "
                         + line
+        );
+    }
+    private PythonCallable createListAppendCallable(
+            java.util.List<?> list
+    ) {
+        return new PythonNativeFunction(
+                "list.append",
+                arguments -> {
+                    if (!arguments.keywords().isEmpty()
+                            || arguments.positional().size()
+                            != 1) {
+
+                        throw new IllegalArgumentException(
+                                "list.append() expects exactly"
+                                        + " one positional argument"
+                                        + " at line "
+                                        + arguments.sourceLine()
+                        );
+                    }
+
+                    @SuppressWarnings("unchecked")
+                    java.util.List<Object> mutableList =
+                            (java.util.List<Object>) list;
+
+                    try {
+                        mutableList.add(
+                                arguments.positional().getFirst()
+                        );
+                    } catch (UnsupportedOperationException exception) {
+                        throw new UnsupportedOperationException(
+                                "Cannot append to an immutable Python list"
+                                        + " at line "
+                                        + arguments.sourceLine(),
+                                exception
+                        );
+                    }
+
+                    // Python list.append() returns None.
+                    return null;
+                }
         );
     }
 }

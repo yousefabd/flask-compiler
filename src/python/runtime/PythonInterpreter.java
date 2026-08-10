@@ -24,12 +24,30 @@ import java.util.*;
 public final class PythonInterpreter {
 
     private final PythonExpressionEvaluator expressionEvaluator;
+    private final PythonBuiltinRegistry builtinRegistry;
 
     public PythonInterpreter(
             PythonExpressionEvaluator expressionEvaluator
     ) {
+        this(
+                expressionEvaluator,
+                new PythonBuiltinRegistry()
+        );
+    }
+
+    public PythonInterpreter(
+            PythonExpressionEvaluator expressionEvaluator,
+            PythonBuiltinRegistry builtinRegistry
+    ) {
         this.expressionEvaluator =
-                Objects.requireNonNull(expressionEvaluator);
+                Objects.requireNonNull(
+                        expressionEvaluator
+                );
+
+        this.builtinRegistry =
+                Objects.requireNonNull(
+                        builtinRegistry
+                );
     }
 
     /**
@@ -42,6 +60,8 @@ public final class PythonInterpreter {
     ) {
         Objects.requireNonNull(program);
         Objects.requireNonNull(moduleEnvironment);
+
+        builtinRegistry.installInto(moduleEnvironment);
 
         for (Statement statement : program.statements) {
             executeStatement(
