@@ -1,9 +1,7 @@
 package compiler;
 
 import compiler.generation.TemplateRenderRequest;
-import compiler.generation.TemplateRenderRequestProvider;
 import compiler.preparation.*;
-import compiler.template.TemplateCall;
 import errors.CodeGenError;
 import errors.CompilerException;
 import errors.CompilerStage;
@@ -15,29 +13,20 @@ import jinja2.renderer.ExpressionEvaluator;
 import jinja2.renderer.RenderContext;
 import jinja2.renderer.TemplateRenderer;
 import jinja2.tests.JinjaTestRegistry;
+import python.runtime.PythonApplicationRuntime;
 import utils.CompilerSettings;
-
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 public final class CompilationPipeline {
 
     private final ErrorReporter reporter;
     private final PythonBackendPreparer backendPreparer;
     private final TemplateProjectPreparer templatePreparer;
-    private final TemplateRenderRequestProvider renderRequestProvider;
     private final TemplateRenderer templateRenderer;
 
-    public CompilationPipeline(
-            TemplateRenderRequestProvider renderRequestProvider
-    ) {
+    public CompilationPipeline() {
         this.reporter =
                 new ErrorReporter();
-
-        this.renderRequestProvider =
-                Objects.requireNonNull(renderRequestProvider);
 
         JinjaTestRegistry testRegistry =
                 new JinjaTestRegistry();
@@ -111,26 +100,29 @@ public final class CompilationPipeline {
         }
 
         try {
-            TemplateCall callToRender =
-                    requireSingleCallFromFunction(
-                            application.backend()
-                                    .templateCalls(),
+            PythonApplicationRuntime runtime =
+                    new PythonApplicationRuntime(
+                            CompilerSettings.appSource,
+                            application.backend().program()
+                    );
+
+            TemplateRenderRequest renderRequest =
+                    runtime.invokeRenderFunction(
                             ownerFunctionName
                     );
 
             String renderedHtml =
-                    renderTemplateCall(
-                            callToRender,
-                            application.frontend()
-                                    .templates()
+                    renderTemplateRequest(
+                            renderRequest,
+                            application.frontend().templates()
                     );
 
             System.out.println();
 
             System.out.printf(
                     "Rendered %s from function %s:%n",
-                    callToRender.templateName(),
-                    callToRender.ownerFunctionName()
+                    renderRequest.templateName(),
+                    ownerFunctionName
             );
 
             System.out.println(renderedHtml);
@@ -148,91 +140,36 @@ public final class CompilationPipeline {
 
         finishCompilation();
     }
-    private TemplateCall requireSingleCallFromFunction(
-            List<TemplateCall> templateCalls,
-            String ownerFunctionName
-    ) {
-        List<TemplateCall> matches = getTemplateCalls(templateCalls, ownerFunctionName);
 
-        /*
-         * If one function contains multiple render_template calls,
-         * runtime inputs are needed to determine which call is reached.
-         * Do not silently select the first one.
-         */
-        if (matches.size() > 1) {
-            throw new CodeGenError(
-                    CompilerSettings.appSource.toString(),
-                    matches.getFirst().line(),
-                    "Function '"
-                            + ownerFunctionName
-                            + "' contains "
-                            + matches.size()
-                            + " render_template calls. "
-                            + "A runtime scenario is required to choose one"
-            );
-        }
-
-        return matches.getFirst();
-    }
-
-    private static List<TemplateCall> getTemplateCalls(List<TemplateCall> templateCalls, String ownerFunctionName) {
-        List<TemplateCall> matches =
-                new ArrayList<>();
-
-        for (TemplateCall call : templateCalls) {
-            if (call.ownerFunctionName()
-                    .equals(ownerFunctionName)) {
-
-                matches.add(call);
-            }
-        }
-
-        if (matches.isEmpty()) {
-            throw new CodeGenError(
-                    CompilerSettings.appSource.toString(),
-                    -1,
-                    "Function '"
-                            + ownerFunctionName
-                            + "' does not contain a render_template call"
-            );
-        }
-        return matches;
-    }
-
-    private String renderTemplateCall(
-            TemplateCall call,
+    private String renderTemplateRequest(
+            TemplateRenderRequest renderRequest,
             Map<String, TemplateFile> templates
     ) {
-
-        /*
-         * This is the important replacement:
-         *
-         * Before:
-         * Map.of("name", "Yousef")
-         *
-         * Now:
-         * actual values produced by executing Python.
-         */
-        TemplateRenderRequest renderRequest =
-                renderRequestProvider.provide(call);
         TemplateFile template =
-                templates.get(call.templateName());
+                templates.get(
+                        renderRequest.templateName()
+                );
 
         if (template == null) {
             throw new CodeGenError(
                     CompilerSettings.templatesDir
-                            .resolve(renderRequest.templateName())
+                            .resolve(
+                                    renderRequest.templateName()
+                            )
                             .toString(),
-                    call.line(),
+                    -1,
                     "The parsed template AST is unavailable"
             );
         }
 
         RenderContext renderContext =
-                RenderContext.root(renderRequest.context(),renderRequest.environment());
+                RenderContext.root(
+                        renderRequest.context(),
+                        renderRequest.environment()
+                );
 
         return templateRenderer.render(
-                call.templateName(),
+                renderRequest.templateName(),
                 templates,
                 renderContext
         );

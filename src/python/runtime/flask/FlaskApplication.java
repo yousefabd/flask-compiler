@@ -103,9 +103,27 @@ public final class FlaskApplication implements PythonAttributeContainer {
     }
 
     public List<RouteDefinition> renderRoutes() {
-        return routes.stream()
-                .map(FlaskRoute::toRenderRoute)
-                .toList();
+        List<RouteDefinition> renderRoutes =
+                new ArrayList<>();
+
+        /*
+         * Flask creates this route automatically.
+         */
+        renderRoutes.add(
+                new RouteDefinition(
+                        "static",
+                        "/static/<path:filename>",
+                        List.of("filename")
+                )
+        );
+
+        for (FlaskRoute route : routes) {
+            renderRoutes.add(
+                    route.toRenderRoute()
+            );
+        }
+
+        return List.copyOf(renderRoutes);
     }
 
     private Object createRouteDecorator(
