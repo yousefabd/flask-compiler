@@ -8,6 +8,7 @@ import jinja2.renderer.RenderContext;
 import jinja2.renderer.TemplateRenderer;
 import python.runtime.PythonApplicationRuntime;
 import python.runtime.flask.FlaskRoute;
+import python.runtime.flask.FlaskRouteMatch;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -72,6 +73,17 @@ public final class CompiledApplication {
                 functionName,
                 positional,
                 keywords
+        );
+    }
+    public Object invokeRoute(
+            FlaskRouteMatch match
+    ) {
+        Objects.requireNonNull(match);
+
+        return pythonRuntime.invoke(
+                match.route().handler(),
+                List.of(),
+                match.arguments()
         );
     }
     public List<FlaskRoute> routes() {

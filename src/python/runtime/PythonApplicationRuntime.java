@@ -56,8 +56,6 @@ public final class PythonApplicationRuntime {
             Map<String, Object> keywords
     ) {
         Objects.requireNonNull(functionName);
-        Objects.requireNonNull(positional);
-        Objects.requireNonNull(keywords);
 
         Object runtimeValue =
                 module.resolve(functionName);
@@ -72,6 +70,21 @@ public final class PythonApplicationRuntime {
             );
         }
 
+        return invoke(
+                callable,
+                positional,
+                keywords
+        );
+    }
+    public Object invoke(
+            PythonCallable callable,
+            List<Object> positional,
+            Map<String, Object> keywords
+    ) {
+        Objects.requireNonNull(callable);
+        Objects.requireNonNull(positional);
+        Objects.requireNonNull(keywords);
+
         return callable.call(
                 new PythonCallArguments(
                         positional,
@@ -80,7 +93,6 @@ public final class PythonApplicationRuntime {
                 )
         );
     }
-
     public TemplateRenderRequest invokeRenderFunction(
             String functionName
     ) {
