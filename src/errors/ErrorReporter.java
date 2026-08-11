@@ -88,6 +88,7 @@ public class ErrorReporter {
             case SEMANTIC_ANALYSIS -> "Semantic Errors";
             case CODE_GENERATION -> "Code Generation Errors";
             case IO -> "I/O Errors";
+            case PYTHON_EXECUTION -> "Python Execution Errors";
             default -> stage.name();
         };
     }

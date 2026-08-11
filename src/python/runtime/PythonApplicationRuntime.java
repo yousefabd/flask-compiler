@@ -2,6 +2,7 @@ package python.runtime;
 
 import compiler.generation.TemplateRenderRequest;
 import python.models.root.Program;
+import python.runtime.flask.FlaskApplication;
 import python.runtime.flask.FlaskRuntimeBindings;
 
 import java.nio.file.Path;
@@ -118,6 +119,9 @@ public final class PythonApplicationRuntime {
 
     public PythonEnvironment moduleEnvironment() {
         return module;
+    }
+    public FlaskApplication flaskApplication() {
+        return flaskBindings.currentApplication();
     }
 
     private String deriveModuleName(

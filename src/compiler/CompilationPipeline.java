@@ -2,6 +2,7 @@ package compiler;
 
 import compiler.generation.TemplateRenderRequest;
 import compiler.preparation.*;
+import compiler.runtime.CompiledApplication;
 import errors.CodeGenError;
 import errors.CompilerException;
 import errors.CompilerStage;
@@ -16,6 +17,7 @@ import jinja2.tests.JinjaTestRegistry;
 import python.runtime.PythonApplicationRuntime;
 import utils.CompilerSettings;
 import java.util.Map;
+import java.util.Objects;
 
 public final class CompilationPipeline {
 
@@ -89,33 +91,33 @@ public final class CompilationPipeline {
      * interpreter is being implemented.
      */
     public void compileSnapshot(
+            CompiledApplication application,
             String ownerFunctionName
     ) {
-        PreparedApplication application =
-                prepare();
+        Objects.requireNonNull(application);
 
-        if (application == null) {
-            finishCompilation();
-            return;
-        }
+        CompilerStage currentStage =
+                CompilerStage.PYTHON_EXECUTION;
+
+        String currentSource =
+                CompilerSettings.appSource.toString();
 
         try {
-            PythonApplicationRuntime runtime =
-                    new PythonApplicationRuntime(
-                            CompilerSettings.appSource,
-                            application.backend().program()
-                    );
-
             TemplateRenderRequest renderRequest =
-                    runtime.invokeRenderFunction(
+                    application.invokeRenderFunction(
                             ownerFunctionName
                     );
 
+            currentStage =
+                    CompilerStage.CODE_GENERATION;
+
+            currentSource =
+                    CompilerSettings.templatesDir
+                            .resolve(renderRequest.templateName())
+                            .toString();
+
             String renderedHtml =
-                    renderTemplateRequest(
-                            renderRequest,
-                            application.frontend().templates()
-                    );
+                    application.render(renderRequest);
 
             System.out.println();
 
@@ -132,15 +134,45 @@ public final class CompilationPipeline {
 
         } catch (RuntimeException exception) {
             reporter.reportUnexpected(
-                    CompilerStage.CODE_GENERATION,
-                    CompilerSettings.appSource.toString(),
+                    currentStage,
+                    currentSource,
                     exception
             );
         }
 
         finishCompilation();
     }
+    public CompiledApplication compileApplication() {
+        PreparedApplication preparation =
+                prepare();
 
+        if (preparation == null) {
+            finishCompilation();
+            return null;
+        }
+
+        try {
+            return new CompiledApplication(
+                    CompilerSettings.appSource,
+                    CompilerSettings.templatesDir,
+                    preparation,
+                    templateRenderer
+            );
+
+        } catch (CompilerException exception) {
+            reporter.report(exception);
+
+        } catch (RuntimeException exception) {
+            reporter.reportUnexpected(
+                    CompilerStage.PYTHON_EXECUTION,
+                    CompilerSettings.appSource.toString(),
+                    exception
+            );
+        }
+
+        finishCompilation();
+        return null;
+    }
     private String renderTemplateRequest(
             TemplateRenderRequest renderRequest,
             Map<String, TemplateFile> templates

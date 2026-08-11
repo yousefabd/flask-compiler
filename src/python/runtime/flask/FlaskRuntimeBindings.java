@@ -151,4 +151,13 @@ public final class FlaskRuntimeBindings {
                 renderEnvironment
         );
     }
+    public FlaskApplication currentApplication() {
+        if (currentApplication == null) {
+            throw new IllegalStateException(
+                    "Python code did not create a Flask application"
+            );
+        }
+
+        return currentApplication;
+    }
 }

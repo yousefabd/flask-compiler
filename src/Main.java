@@ -1,4 +1,5 @@
 import compiler.CompilationPipeline;
+import compiler.runtime.CompiledApplication;
 
 public class Main {
 
@@ -11,7 +12,15 @@ public class Main {
         CompilationPipeline pipeline =
                 new CompilationPipeline();
 
+        CompiledApplication application =
+                pipeline.compileApplication();
+
+        if (application == null) {
+            return;
+        }
+
         pipeline.compileSnapshot(
+                application,
                 functionToRender
         );
     }

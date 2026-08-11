@@ -5,5 +5,6 @@ public enum CompilerStage {
     PARSING,
     SEMANTIC_ANALYSIS,
     CODE_GENERATION,
-    IO
+    IO,
+    PYTHON_EXECUTION
 }
