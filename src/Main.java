@@ -1,7 +1,13 @@
 import compiler.CompilationPipeline;
+import compiler.generation.HtmlFileGenerator;
+import compiler.generation.SupportingFilesCopier;
 import compiler.runtime.CompiledApplication;
+import html.formatting.HtmlFormatter;
+import python.runtime.flask.FlaskRuntimeDefaults;
 import server.ApplicationRequestDispatcher;
 import server.JavaApplicationServer;
+import server.staticfiles.StaticFileService;
+import utils.CompilerSettings;
 
 import java.io.IOException;
 
@@ -19,10 +25,32 @@ public class Main {
         if (application == null) {
             return;
         }
+        SupportingFilesCopier supportingFilesCopier =
+                new SupportingFilesCopier(
+                        CompilerSettings.appSource,
+                        CompilerSettings.staticDir,
+                        CompilerSettings.outputDir
+                );
 
+        supportingFilesCopier.copy();
+
+        HtmlFileGenerator htmlFileGenerator =
+                new HtmlFileGenerator(
+                        CompilerSettings.outputDir,
+                        HtmlFormatter.unchanged()
+                );
+        StaticFileService staticFileService =
+                new StaticFileService(
+                        CompilerSettings.outputDir.resolve(
+                                FlaskRuntimeDefaults
+                                        .STATIC_DIRECTORY_NAME
+                        )
+                );
         ApplicationRequestDispatcher dispatcher =
                 new ApplicationRequestDispatcher(
-                        application
+                        application,
+                        htmlFileGenerator,
+                        staticFileService
                 );
 
         JavaApplicationServer server =

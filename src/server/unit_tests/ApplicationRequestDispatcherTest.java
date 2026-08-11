@@ -1,9 +1,14 @@
 package server.unit_tests;
 
 import compiler.CompilationPipeline;
+import compiler.generation.HtmlFileGenerator;
 import compiler.runtime.CompiledApplication;
+import html.formatting.HtmlFormatter;
+import python.runtime.flask.FlaskRuntimeDefaults;
 import server.ApplicationRequestDispatcher;
 import server.http.ServerResponse;
+import server.staticfiles.StaticFileService;
+import utils.CompilerSettings;
 
 public final class ApplicationRequestDispatcherTest {
 
@@ -19,9 +24,23 @@ public final class ApplicationRequestDispatcherTest {
                 "Application compilation failed"
         );
 
+        HtmlFileGenerator htmlFileGenerator =
+                new HtmlFileGenerator(
+                        CompilerSettings.outputDir,
+                        HtmlFormatter.unchanged()
+                );
+        StaticFileService staticFileService =
+                new StaticFileService(
+                        CompilerSettings.outputDir.resolve(
+                                FlaskRuntimeDefaults
+                                        .STATIC_DIRECTORY_NAME
+                        )
+                );
         ApplicationRequestDispatcher dispatcher =
                 new ApplicationRequestDispatcher(
-                        application
+                        application,
+                        htmlFileGenerator,
+                        staticFileService
                 );
 
         ServerResponse catalog =

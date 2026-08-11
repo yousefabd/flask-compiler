@@ -111,9 +111,11 @@ public final class FlaskApplication implements PythonAttributeContainer {
          */
         renderRoutes.add(
                 new RouteDefinition(
-                        "static",
-                        "/static/<path:filename>",
-                        List.of("filename")
+                        FlaskRuntimeDefaults.STATIC_ENDPOINT,
+                        FlaskRuntimeDefaults.STATIC_RULE,
+                        List.of(
+                                FlaskRuntimeDefaults.STATIC_ARGUMENT
+                        )
                 )
         );
 

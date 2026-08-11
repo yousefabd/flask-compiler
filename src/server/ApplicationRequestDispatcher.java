@@ -1,11 +1,18 @@
 package server;
 
+import compiler.generation.HtmlFileGenerator;
 import compiler.generation.TemplateRenderRequest;
 import compiler.runtime.CompiledApplication;
+import errors.CodeGenError;
 import python.runtime.flask.FlaskRouteMatch;
 import python.runtime.flask.FlaskRouteMatcher;
 import server.http.ServerResponse;
+import server.staticfiles.StaticFileService;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -13,31 +20,57 @@ public final class ApplicationRequestDispatcher {
 
     private final CompiledApplication application;
     private final FlaskRouteMatcher routeMatcher;
+    private final HtmlFileGenerator htmlFileGenerator;
+    private final StaticFileService staticFileService;
 
     public ApplicationRequestDispatcher(
-            CompiledApplication application
+            CompiledApplication application,
+            HtmlFileGenerator htmlFileGenerator,
+            StaticFileService staticFileService
     ) {
         this(
                 application,
-                new FlaskRouteMatcher()
+                new FlaskRouteMatcher(),
+                htmlFileGenerator,
+                staticFileService
         );
     }
 
     public ApplicationRequestDispatcher(
             CompiledApplication application,
-            FlaskRouteMatcher routeMatcher
+            FlaskRouteMatcher routeMatcher,
+            HtmlFileGenerator htmlFileGenerator,
+            StaticFileService staticFileService
     ) {
         this.application =
                 Objects.requireNonNull(application);
 
         this.routeMatcher =
                 Objects.requireNonNull(routeMatcher);
-    }
 
+        this.htmlFileGenerator =
+                Objects.requireNonNull(
+                        htmlFileGenerator
+                );
+
+        this.staticFileService =
+                Objects.requireNonNull(
+                        staticFileService
+                );
+    }
     public ServerResponse dispatch(
             String method,
             String path
     ) {
+        Optional<ServerResponse> staticResponse =
+                staticFileService.tryServe(
+                        method,
+                        path
+                );
+
+        if (staticResponse.isPresent()) {
+            return staticResponse.orElseThrow();
+        }
         Optional<FlaskRouteMatch> possibleMatch =
                 routeMatcher.match(
                         application.routes(),
@@ -69,11 +102,14 @@ public final class ApplicationRequestDispatcher {
         if (handlerResult
                 instanceof TemplateRenderRequest request) {
 
-            String renderedHtml =
-                    application.render(request);
+            Path generatedFile =
+                    htmlFileGenerator.generate(
+                            application,
+                            request
+                    );
 
-            return ServerResponse.html(
-                    renderedHtml
+            return generatedHtmlResponse(
+                    generatedFile
             );
         }
 
@@ -94,5 +130,31 @@ public final class ApplicationRequestDispatcher {
                                 .getSimpleName()
                 )
         );
+    }
+    private ServerResponse generatedHtmlResponse(
+            Path generatedFile
+    ) {
+        try {
+            byte[] generatedHtml =
+                    Files.readAllBytes(
+                            generatedFile
+                    );
+
+            return new ServerResponse(
+                    200,
+                    Map.of(
+                            "Content-Type",
+                            "text/html; charset=utf-8"
+                    ),
+                    generatedHtml
+            );
+
+        } catch (IOException exception) {
+            throw new CodeGenError(
+                    generatedFile.toString(),
+                    "Could not read generated HTML file",
+                    exception
+            );
+        }
     }
 }
