@@ -2,6 +2,7 @@ package server;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import server.http.BadRequestException;
 import server.http.ServerResponse;
 
 import java.io.IOException;
@@ -17,6 +18,7 @@ public final class JavaApplicationServer {
     private final HttpServer httpServer;
     private final ExecutorService executor;
     private final ApplicationRequestDispatcher dispatcher;
+    private final FlaskRequestReader requestReader = new FlaskRequestReader();
 
     private boolean running;
 
@@ -97,12 +99,21 @@ public final class JavaApplicationServer {
         try {
             response =
                     dispatcher.dispatch(
-                            method,
-                            path
+                            requestReader.read(exchange)
                     );
 
-        } catch (RuntimeException exception) {
-            exception.printStackTrace(System.err);
+        }
+        catch (
+            BadRequestException exception) {
+            response =
+                ServerResponse.text(
+                        400,
+                        "Bad Request"
+                );
+
+        }
+        catch (RuntimeException exception2) {
+            exception2.printStackTrace(System.err);
 
             response =
                     ServerResponse.text(

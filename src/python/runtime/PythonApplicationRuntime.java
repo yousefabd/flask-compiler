@@ -3,6 +3,7 @@ package python.runtime;
 import compiler.generation.TemplateRenderRequest;
 import python.models.root.Program;
 import python.runtime.flask.FlaskApplication;
+import python.runtime.flask.FlaskRequestData;
 import python.runtime.flask.FlaskRuntimeBindings;
 
 import java.nio.file.Path;
@@ -15,6 +16,7 @@ public final class PythonApplicationRuntime {
     private final PythonEnvironment module;
     private final PythonInterpreter interpreter;
     private final FlaskRuntimeBindings flaskBindings;
+
 
     public PythonApplicationRuntime(
             Path appSource,
@@ -151,5 +153,14 @@ public final class PythonApplicationRuntime {
                 0,
                 extensionIndex
         );
+    }
+    public void beginRequest(
+            FlaskRequestData request
+    ) {
+        flaskBindings.beginRequest(request);
+    }
+
+    public void endRequest() {
+        flaskBindings.endRequest();
     }
 }

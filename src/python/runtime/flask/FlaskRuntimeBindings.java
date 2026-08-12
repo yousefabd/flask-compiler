@@ -14,6 +14,8 @@ public final class FlaskRuntimeBindings {
 
     private final Supplier<RenderEnvironment>
             renderEnvironmentSupplier;
+    private final FlaskRequestProxy requestProxy =
+            new FlaskRequestProxy();
 
     private final PythonCallable flaskConstructor;
 
@@ -54,6 +56,11 @@ public final class FlaskRuntimeBindings {
         module.defineLocal(
                 "Flask",
                 flaskConstructor
+        );
+
+        module.defineLocal(
+                "request",
+                requestProxy
         );
 
         module.defineLocal(
@@ -159,5 +166,14 @@ public final class FlaskRuntimeBindings {
         }
 
         return currentApplication;
+    }
+    public void beginRequest(
+            FlaskRequestData request
+    ) {
+        requestProxy.bind(request);
+    }
+
+    public void endRequest() {
+        requestProxy.clear();
     }
 }

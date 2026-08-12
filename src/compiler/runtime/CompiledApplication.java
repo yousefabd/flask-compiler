@@ -7,6 +7,7 @@ import jinja2.models.file.TemplateFile;
 import jinja2.renderer.RenderContext;
 import jinja2.renderer.TemplateRenderer;
 import python.runtime.PythonApplicationRuntime;
+import python.runtime.flask.FlaskRequestData;
 import python.runtime.flask.FlaskRoute;
 import python.runtime.flask.FlaskRouteMatch;
 
@@ -85,6 +86,26 @@ public final class CompiledApplication {
                 List.of(),
                 match.arguments()
         );
+    }
+    public Object invokeRoute(
+            FlaskRouteMatch match,
+            FlaskRequestData request
+    ) {
+        Objects.requireNonNull(match);
+        Objects.requireNonNull(request);
+
+        pythonRuntime.beginRequest(request);
+
+        try {
+            return invokeRoute(match);
+
+        } finally {
+            /*
+             * Always prevent request data from leaking into
+             * the next browser request.
+             */
+            pythonRuntime.endRequest();
+        }
     }
     public List<FlaskRoute> routes() {
         return pythonRuntime

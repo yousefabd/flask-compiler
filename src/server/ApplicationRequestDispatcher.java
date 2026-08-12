@@ -4,6 +4,7 @@ import compiler.generation.HtmlFileGenerator;
 import compiler.generation.TemplateRenderRequest;
 import compiler.runtime.CompiledApplication;
 import errors.CodeGenError;
+import python.runtime.flask.FlaskRequestData;
 import python.runtime.flask.FlaskRouteMatch;
 import python.runtime.flask.FlaskRouteMatcher;
 import server.http.ServerResponse;
@@ -62,20 +63,35 @@ public final class ApplicationRequestDispatcher {
             String method,
             String path
     ) {
+        return dispatch(
+                new FlaskRequestData(
+                        method,
+                        path,
+                        Map.of()
+                )
+        );
+    }
+
+    public ServerResponse dispatch(
+            FlaskRequestData request
+    ) {
+        Objects.requireNonNull(request);
+
         Optional<ServerResponse> staticResponse =
                 staticFileService.tryServe(
-                        method,
-                        path
+                        request.method(),
+                        request.path()
                 );
 
         if (staticResponse.isPresent()) {
             return staticResponse.orElseThrow();
         }
+
         Optional<FlaskRouteMatch> possibleMatch =
                 routeMatcher.match(
                         application.routes(),
-                        method,
-                        path
+                        request.method(),
+                        request.path()
                 );
 
         if (possibleMatch.isEmpty()) {
@@ -89,7 +105,10 @@ public final class ApplicationRequestDispatcher {
                 possibleMatch.orElseThrow();
 
         Object handlerResult =
-                application.invokeRoute(match);
+                application.invokeRoute(
+                        match,
+                        request
+                );
 
         return convertHandlerResult(
                 handlerResult
