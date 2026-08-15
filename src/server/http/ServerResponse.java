@@ -73,4 +73,35 @@ public record ServerResponse(
                 text.getBytes(StandardCharsets.UTF_8)
         );
     }
+
+    public static ServerResponse redirect(
+            String location,
+            int statusCode
+    ) {
+        Objects.requireNonNull(location);
+
+        if (location.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Redirect location cannot be blank"
+            );
+        }
+
+        if (statusCode < 300
+                || statusCode >= 400) {
+
+            throw new IllegalArgumentException(
+                    "Invalid redirect status: "
+                            + statusCode
+            );
+        }
+
+        return new ServerResponse(
+                statusCode,
+                Map.of(
+                        "Location",
+                        location
+                ),
+                new byte[0]
+        );
+    }
 }

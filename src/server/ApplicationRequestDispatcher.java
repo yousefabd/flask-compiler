@@ -4,6 +4,7 @@ import compiler.generation.HtmlFileGenerator;
 import compiler.generation.TemplateRenderRequest;
 import compiler.runtime.CompiledApplication;
 import errors.CodeGenError;
+import python.runtime.flask.FlaskRedirectResponse;
 import python.runtime.flask.FlaskRequestData;
 import python.runtime.flask.FlaskRouteMatch;
 import python.runtime.flask.FlaskRouteMatcher;
@@ -129,6 +130,12 @@ public final class ApplicationRequestDispatcher {
 
             return generatedHtmlResponse(
                     generatedFile
+            );
+        }
+        if (handlerResult instanceof FlaskRedirectResponse(String location, int statusCode)) {
+            return ServerResponse.redirect(
+                    location,
+                    statusCode
             );
         }
 

@@ -195,6 +195,27 @@ def macro_test():
             "second"
         ]
     )
+@app.route("/url-for-test")
+def url_for_test():
+    return render_template(
+        "url_for_test.html",
+        product={
+            "id": 2
+        }
+    )
+@app.route("/python-url-for-test")
+def python_url_for_test():
+    generated_url = url_for(
+        "product_details",
+        product_id=2,
+        source="python runtime",
+        _anchor="details"
+    )
+
+    return render_template(
+        "python_url_for_test.html",
+        generated_url=generated_url
+    )
 @app.route("/include-test")
 def include_test():
     return render_template(
@@ -203,4 +224,19 @@ def include_test():
             "name": "Yousef"
         },
         badge_text="Compiler student"
+    )
+@app.route("/redirect-test")
+def redirect_test():
+    return redirect(
+        url_for("view_products")
+    )
+
+@app.route("/flash-redirect-test")
+def flash_redirect_test():
+    flash(
+        "Flash survived the Java redirect"
+    )
+
+    return redirect(
+        url_for("index")
     )

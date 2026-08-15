@@ -1,0 +1,66 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+
+    <title>url_for integration test</title>
+
+    <link
+            rel="stylesheet"
+            href="{{ url_for('static', filename='styles.css') }}"
+    />
+</head>
+
+<body>
+<div class="container">
+    <h1>url_for integration test</h1>
+
+    <div class="nav">
+        <a href="{{ url_for('index') }}">
+            Home
+        </a>
+
+        <a href="{{ url_for('view_products') }}">
+            Products
+        </a>
+
+        <a href="{{ url_for('add_product') }}">
+            Add Product
+        </a>
+    </div>
+
+    <div class="product-card">
+        <div class="product-name">
+            Dynamic route argument
+        </div>
+
+        <p>
+            Expected product ID: {{ product.id }}
+        </p>
+
+        <a
+                class="btn"
+                href="{{ url_for(
+                    'product_details',
+                    product_id=product.id
+                ) }}"
+        >
+            Open Product 2
+        </a>
+    </div>
+
+    <div class="actions">
+        <a
+                class="btn btn-secondary"
+                href="{{ url_for(
+                    'index',
+                    search='gaming laptop',
+                    page=2,
+                    _anchor='results'
+                ) }}"
+        >
+            Query and Anchor Test
+        </a>
+    </div>
+</div>
+</body>
+</html>
