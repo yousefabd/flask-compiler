@@ -5,9 +5,8 @@ import java.util.ArrayList;
 import python.models.ASTNode;
 import python.models.atom_statement.ID;
 
-// AST node for `global x, y, z` (new: see global_stmt in PythonParser.g4).
-// Carries the declared names; semantic meaning (redirecting assignments to the
-// module scope) is applied later by SymbolTable/SymbolTableBuilder.
+// AST node for `global x, y, z`.
+// Semantic declaration collection applies its meaning across the whole function.
 public class GlobalStatement extends SmallStatement {
     public ArrayList<ID> names;
 

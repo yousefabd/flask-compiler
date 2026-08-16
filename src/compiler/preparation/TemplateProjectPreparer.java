@@ -1,22 +1,20 @@
 package compiler.preparation;
 
-import compiler.template.TemplateCall;
+import compiler.template.TemplateContextValidator;
 import errors.CompilerException;
+import errors.CompilerProblem;
 import errors.CompilerStage;
 import errors.ErrorReporter;
 import jinja2.TemplateFrontend;
-import jinja2.dependency.TemplateDependencyFinder;
 import jinja2.models.file.TemplateFile;
+import jinja2.semantic.JinjaFreeVariableResult;
 import jinja2.symbol_table.SymbolTable;
 import jinja2.tests.JinjaTestRegistry;
 
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
 /**
  * Handles project-wide parsing and semantic analysis
@@ -65,15 +63,47 @@ public final class TemplateProjectPreparer {
                                     .keySet()
                     );
 
+            if (reporter.hasErrors()) {
+                return null;
+            }
+
             currentStage =
                     CompilerStage.SEMANTIC_ANALYSIS;
+
+            Map<String, JinjaFreeVariableResult> freeVariables =
+                    collectFreeVariables(
+                            templateFrontend,
+                            templates
+                    );
 
             Map<String, SymbolTable> symbolTables =
                     analyzeTemplates(
                             templateFrontend,
                             templates,
-                            backend.callsByTemplate()
+                            freeVariables
                     );
+
+            if (reporter.hasErrors()) {
+                return null;
+            }
+
+            TemplateContextValidator contextValidator =
+                    new TemplateContextValidator(
+                            templatesDirectory
+                    );
+
+            for (CompilerProblem problem
+                    : contextValidator.validate(
+                            templates,
+                            freeVariables,
+                            backend.callsByTemplate()
+                    )) {
+                reporter.report(problem);
+            }
+
+            if (reporter.hasErrors()) {
+                return null;
+            }
 
             TemplateCompilationResult result =
                     new TemplateCompilationResult(
@@ -84,10 +114,6 @@ public final class TemplateProjectPreparer {
             printSymbolTables(
                     result.symbolTables()
             );
-
-            if (reporter.hasErrors()) {
-                return null;
-            }
 
             return result;
 
@@ -105,19 +131,33 @@ public final class TemplateProjectPreparer {
         return null;
     }
 
+    private Map<String, JinjaFreeVariableResult> collectFreeVariables(
+            TemplateFrontend templateFrontend,
+            Map<String, TemplateFile> templates
+    ) {
+        Map<String, JinjaFreeVariableResult> freeVariables =
+                new LinkedHashMap<>();
+
+        for (Map.Entry<String, TemplateFile> entry
+                : templates.entrySet()) {
+            freeVariables.put(
+                    entry.getKey(),
+                    templateFrontend.collectFreeVariables(
+                            entry.getValue()
+                    )
+            );
+        }
+
+        return freeVariables;
+    }
+
     private Map<String, SymbolTable> analyzeTemplates(
             TemplateFrontend templateFrontend,
             Map<String, TemplateFile> templates,
-            Map<String, List<TemplateCall>> callsByTemplate
+            Map<String, JinjaFreeVariableResult> freeVariables
     ) {
         Map<String, SymbolTable> symbolTables =
                 new LinkedHashMap<>();
-
-        Map<String, Set<String>> contextByTemplate =
-                buildTemplateContexts(
-                        templates,
-                        callsByTemplate
-                );
 
         for (Map.Entry<String, TemplateFile> entry
                 : templates.entrySet()) {
@@ -128,26 +168,34 @@ public final class TemplateProjectPreparer {
             TemplateFile template =
                     entry.getValue();
 
-            Set<String> contextVariables =
-                    contextByTemplate.get(templateName);
+            JinjaFreeVariableResult templateFreeVariables =
+                    freeVariables.get(templateName);
 
             System.out.printf(
-                    "Analyzing template: %s with context=%s%n",
+                    "Analyzing template: %s with external variables=%s%n",
                     templateName,
-                    contextVariables
+                    templateFreeVariables
+                            .externalVariables()
+                            .keySet()
             );
 
             SymbolTable symbolTable =
                     templateFrontend.analyzeTemplate(
                             templateName,
                             template,
-                            contextVariables
+                            templateFreeVariables
+                                    .externalVariables()
+                                    .keySet()
                     );
 
             symbolTables.put(
                     templateName,
                     symbolTable
             );
+
+            if (reporter.hasErrors()) {
+                return symbolTables;
+            }
         }
 
         System.out.printf(
@@ -156,83 +204,6 @@ public final class TemplateProjectPreparer {
         );
 
         return symbolTables;
-    }
-
-    private Map<String, Set<String>> buildTemplateContexts(
-            Map<String, TemplateFile> templates,
-            Map<String, List<TemplateCall>> callsByTemplate
-    ) {
-        Map<String, Set<String>> contextByTemplate =
-                new LinkedHashMap<>();
-
-        for (String templateName : templates.keySet()) {
-            contextByTemplate.put(
-                    templateName,
-                    collectContextVariables(
-                            templateName,
-                            callsByTemplate
-                    )
-            );
-        }
-
-        boolean contextChanged;
-
-        do {
-            contextChanged = false;
-
-            for (Map.Entry<String, TemplateFile> entry
-                    : templates.entrySet()) {
-
-                Set<String> parentContext =
-                        contextByTemplate.get(
-                                entry.getKey()
-                        );
-
-                for (String includedTemplate :
-                        TemplateDependencyFinder
-                                .findStaticIncludes(
-                                        entry.getValue()
-                                )) {
-
-                    Set<String> includedContext =
-                            contextByTemplate.get(
-                                    includedTemplate
-                            );
-
-                    if (includedContext != null
-                            && includedContext.addAll(
-                            parentContext
-                    )) {
-
-                        contextChanged = true;
-                    }
-                }
-            }
-        } while (contextChanged);
-
-        return contextByTemplate;
-    }
-
-    private Set<String> collectContextVariables(
-            String templateName,
-            Map<String, List<TemplateCall>> callsByTemplate
-    ) {
-        Set<String> contextVariables =
-                new LinkedHashSet<>();
-
-        for (TemplateCall call :
-                callsByTemplate.getOrDefault(
-                        templateName,
-                        List.of()
-                )) {
-
-            contextVariables.addAll(
-                    call.contextArguments()
-                            .keySet()
-            );
-        }
-
-        return contextVariables;
     }
 
     private void printSymbolTables(

@@ -7,6 +7,9 @@ import errors.ErrorReporter;
 import errors.SyntaxErrorListener;
 import jinja2.dependency.TemplateDependencyFinder;
 import jinja2.models.file.TemplateFile;
+import jinja2.semantic.JinjaBuiltinCatalog;
+import jinja2.semantic.JinjaFreeVariableCollector;
+import jinja2.semantic.JinjaFreeVariableResult;
 import jinja2.symbol_table.*;
 import jinja2.symbol_table.semantic_rules.ISemanticRule;
 import jinja2.symbol_table.semantic_rules.TypeCheckerRule;
@@ -22,19 +25,6 @@ import java.nio.file.Path;
 import java.util.*;
 
 public final class TemplateFrontend {
-
-    private static final List<String> TEMPLATE_BUILTINS =
-            List.of(
-                    "url_for",
-                    "get_flashed_messages",
-                    "request",
-                    "session",
-                    "config",
-                    "g",
-                    "range",
-                    "dict",
-                    "namespace"
-            );
 
     private final Path templatesDirectory;
     private final ErrorReporter reporter;
@@ -94,6 +84,8 @@ public final class TemplateFrontend {
                         pendingTemplates.addLast(includedTemplate);
                     }
                 }
+            } else {
+                break;
             }
         }
 
@@ -132,15 +124,21 @@ public final class TemplateFrontend {
 
         return (TemplateFile) visitor.visit(tree);
     }
+    public JinjaFreeVariableResult collectFreeVariables(
+            TemplateFile template
+    ) {
+        return new JinjaFreeVariableCollector().collect(template);
+    }
+
     public SymbolTable analyzeTemplate(
             String templateName,
             TemplateFile template,
-            Collection<String> contextVariables
+            Collection<String> externalVariables
     ) {
         SymbolTable symbolTable = new SymbolTable();
 
         // Names automatically available to Jinja templates.
-        for (String builtin : TEMPLATE_BUILTINS) {
+        for (String builtin : JinjaBuiltinCatalog.names()) {
             symbolTable.define(
                     new Symbol(
                             builtin,
@@ -151,8 +149,14 @@ public final class TemplateFrontend {
             );
         }
 
-        // Names supplied through render_template(...).
-        for (String variable : contextVariables) {
+        /*
+         * External template requirements are defined here so ordinary Jinja
+         * type/structure analysis can proceed without misclassifying a Flask
+         * context omission as a Jinja UNDEFINED_VARIABLE. The separate
+         * TemplateContextValidator checks which of these names are actually
+         * supplied by render_template calls.
+         */
+        for (String variable : externalVariables) {
             symbolTable.define(
                     new Symbol(
                             variable,

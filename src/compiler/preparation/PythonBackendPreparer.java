@@ -7,7 +7,7 @@ import errors.CompilerStage;
 import errors.ErrorReporter;
 import python.PythonFrontend;
 import python.models.root.Program;
-import python.symbol_table.SymbolTable;
+import python.semantic.PythonSemanticResult;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -55,8 +55,12 @@ public final class PythonBackendPreparer {
             currentStage =
                     CompilerStage.SEMANTIC_ANALYSIS;
 
-            SymbolTable symbolTable =
+            PythonSemanticResult semanticResult =
                     pythonFrontend.analyzePython(program);
+
+            if (semanticResult.hasErrors() || reporter.hasErrors()) {
+                return null;
+            }
 
             /*
              * Extract Flask/Jinja connections from the validated
@@ -64,8 +68,14 @@ public final class PythonBackendPreparer {
              */
             List<TemplateCall> templateCalls =
                     TemplateCallFinder.findTemplateCalls(
-                            program
+                            program,
+                            appSource.toString(),
+                            reporter
                     );
+
+            if (reporter.hasErrors()) {
+                return null;
+            }
 
             Map<String, List<TemplateCall>> callsByTemplate =
                     TemplateCallFinder.groupTemplateCalls(
@@ -74,7 +84,7 @@ public final class PythonBackendPreparer {
 
             return new PythonCompilationResult(
                     program,
-                    symbolTable,
+                    semanticResult,
                     templateCalls,
                     callsByTemplate
             );

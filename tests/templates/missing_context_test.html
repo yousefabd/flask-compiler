@@ -1,0 +1,19 @@
+<section>
+  {% set local_value = seed_value %}
+  {% macro show(name, prefix=default_prefix) %}
+  <p>{{ prefix }} {{ name }} {{ local_value }}</p>
+  {% endmacro %}
+
+  {% for item in supplied_items %}
+  <p>{{ loop.index }} {{ item.label }} {{ show(item) }}</p>
+  {% endfor %}
+
+  <a href="{{ url_for('index') }}">Home</a>
+
+  {% if optional_value is defined %}
+  <p>Optional value may be absent.</p>
+  {% endif %}
+
+  <h1>{{ required_title }}</h1>
+  <p>{{ required_title }}</p>
+</section>

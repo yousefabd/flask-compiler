@@ -1,6 +1,9 @@
 package compiler.template;
 
 import errors.SemanticError;
+import errors.CompilerProblem;
+import errors.CompilerStage;
+import errors.ErrorReporter;
 import python.models.ASTNode;
 import python.models.atom_statement.StringAtom;
 import python.models.expr_statement.Condition;
@@ -23,12 +26,37 @@ public class TemplateCallFinder {
     public static List<TemplateCall> findTemplateCalls(
             ASTNode root
     ) {
+        ErrorReporter reporter = new ErrorReporter();
+        List<TemplateCall> calls = findTemplateCalls(
+                root,
+                CompilerSettings.appSource.toString(),
+                reporter
+        );
+        if (reporter.hasErrors()) {
+            CompilerProblem problem = reporter.getProblems().getFirst();
+            throw new SemanticError(
+                    problem.getFile(),
+                    problem.getLine(),
+                    problem.getKind(),
+                    problem.getMessage()
+            );
+        }
+        return calls;
+    }
+
+    public static List<TemplateCall> findTemplateCalls(
+            ASTNode root,
+            String sourceFile,
+            ErrorReporter reporter
+    ) {
         List<TemplateCall> calls = new ArrayList<>();
 
         collectTemplateCalls(
                 root,
                 MODULE_SCOPE,
-                calls
+                calls,
+                sourceFile,
+                reporter
         );
 
         return calls;
@@ -37,7 +65,9 @@ public class TemplateCallFinder {
     private static void collectTemplateCalls(
             ASTNode node,
             String currentFunction,
-            List<TemplateCall> calls
+            List<TemplateCall> calls,
+            String sourceFile,
+            ErrorReporter reporter
     ) {
         String functionForChildren = currentFunction;
 
@@ -49,7 +79,9 @@ public class TemplateCallFinder {
         if (node instanceof IDTrailer expression) {
             TemplateCall call = readTemplateCall(
                     expression,
-                    currentFunction
+                    currentFunction,
+                    sourceFile,
+                    reporter
             );
 
             if (call != null) {
@@ -62,14 +94,18 @@ public class TemplateCallFinder {
                 collectTemplateCalls(
                         child,
                         functionForChildren,
-                        calls
+                        calls,
+                        sourceFile,
+                        reporter
                 );
             }
         }
     }
     private static TemplateCall readTemplateCall(
             IDTrailer expression,
-            String ownerFunctionName
+            String ownerFunctionName,
+            String sourceFile,
+            ErrorReporter reporter
     ) {
         if (expression.id == null ||
                 !"render_template".equals(expression.id.name)) {
@@ -88,22 +124,18 @@ public class TemplateCallFinder {
         }
 
         if (callArguments.args == null || callArguments.args.isEmpty()) {
-            throw new SemanticError(
-                    CompilerSettings.appSource.toString(),
-                    expression.getLine(),
-                    "render_template requires a template filename"
-            );
+            reportInvalid(reporter, sourceFile, expression.getLine(),
+                    "render_template requires a template filename");
+            return null;
         }
 
         Argument templateArgument = callArguments.args.getFirst();
 
         if (templateArgument.isAssigned() ||
                 !(templateArgument.arg instanceof StringAtom templateString)) {
-            throw new SemanticError(
-                    CompilerSettings.appSource.toString(),
-                    expression.getLine(),
-                    "The template filename must be a string literal"
-            );
+            reportInvalid(reporter, sourceFile, expression.getLine(),
+                    "The template filename must be a string literal");
+            return null;
         }
 
         String templateName = CompilerUtils.stripStringQuotes(templateString.value);
@@ -117,11 +149,9 @@ public class TemplateCallFinder {
                     keyword.id == null ||
                     (keyword.trailers != null &&
                             !keyword.trailers.isEmpty())) {
-                throw new SemanticError(
-                        CompilerSettings.appSource.toString(),
-                        argument.getLine(),
-                        "Template context arguments must use name=value syntax"
-                );
+                reportInvalid(reporter, sourceFile, argument.getLine(),
+                        "Template context arguments must use name=value syntax");
+                return null;
             }
 
             contextArguments.put(
@@ -136,6 +166,17 @@ public class TemplateCallFinder {
                 contextArguments,
                 expression.getLine()
         );
+    }
+
+    private static void reportInvalid(
+            ErrorReporter reporter, String sourceFile, int line, String message) {
+        reporter.report(new CompilerProblem(
+                CompilerStage.SEMANTIC_ANALYSIS,
+                "INVALID_TEMPLATE_CALL",
+                sourceFile,
+                line,
+                message
+        ));
     }
     public static Map<String, List<TemplateCall>> groupTemplateCalls(
             List<TemplateCall> calls

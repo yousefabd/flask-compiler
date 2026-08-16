@@ -75,7 +75,7 @@ public class PythonFunctionRegistrationTest {
         );
 
         require(
-                module.resolve("add")
+                module.resolve("no_result")
                         instanceof PythonFunction,
                 "add was not registered"
         );

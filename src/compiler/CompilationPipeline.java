@@ -3,20 +3,19 @@ package compiler;
 import compiler.generation.TemplateRenderRequest;
 import compiler.preparation.*;
 import compiler.runtime.CompiledApplication;
-import errors.CodeGenError;
 import errors.CompilerException;
+import errors.CompilerProblem;
 import errors.CompilerStage;
 import errors.ErrorReporter;
 import jinja2.filters.JinjaFilterRegistry;
 import jinja2.functions.JinjaFunctionRegistry;
-import jinja2.models.file.TemplateFile;
 import jinja2.renderer.ExpressionEvaluator;
-import jinja2.renderer.RenderContext;
 import jinja2.renderer.TemplateRenderer;
 import jinja2.tests.JinjaTestRegistry;
-import python.runtime.PythonApplicationRuntime;
 import utils.CompilerSettings;
-import java.util.Map;
+
+import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 
 public final class CompilationPipeline {
@@ -25,8 +24,16 @@ public final class CompilationPipeline {
     private final PythonBackendPreparer backendPreparer;
     private final TemplateProjectPreparer templatePreparer;
     private final TemplateRenderer templateRenderer;
+    private final Path appSource;
+    private final Path templatesDirectory;
 
     public CompilationPipeline() {
+        this(CompilerSettings.appSource, CompilerSettings.templatesDir);
+    }
+
+    public CompilationPipeline(Path appSource, Path templatesDirectory) {
+        this.appSource = Objects.requireNonNull(appSource);
+        this.templatesDirectory = Objects.requireNonNull(templatesDirectory);
         this.reporter =
                 new ErrorReporter();
 
@@ -35,13 +42,13 @@ public final class CompilationPipeline {
 
         this.backendPreparer =
                 new PythonBackendPreparer(
-                        CompilerSettings.appSource,
+                        this.appSource,
                         this.reporter
                 );
 
         this.templatePreparer =
                 new TemplateProjectPreparer(
-                        CompilerSettings.templatesDir,
+                        this.templatesDirectory,
                         this.reporter,
                         testRegistry
                 );
@@ -56,10 +63,6 @@ public final class CompilationPipeline {
                 );
     }
 
-    /**
-     * Performs parsing, AST construction, symbol-table construction,
-     * and semantic analysis for both sides of the application.
-     * No Python execution or HTML generation happens here.
     /**
      * Prepares both sides of the application without executing
      * Python or generating HTML.
@@ -86,9 +89,7 @@ public final class CompilationPipeline {
     }
 
     /**
-     * Temporary snapshot generation entry point.
-     * This still uses CPython for comparison while the Java Python
-     * interpreter is being implemented.
+     * Renders one function result through the Java interpreter and renderer.
      */
     public void compileSnapshot(
             CompiledApplication application,
@@ -100,7 +101,7 @@ public final class CompilationPipeline {
                 CompilerStage.PYTHON_EXECUTION;
 
         String currentSource =
-                CompilerSettings.appSource.toString();
+                appSource.toString();
 
         try {
             TemplateRenderRequest renderRequest =
@@ -112,7 +113,7 @@ public final class CompilationPipeline {
                     CompilerStage.CODE_GENERATION;
 
             currentSource =
-                    CompilerSettings.templatesDir
+                    templatesDirectory
                             .resolve(renderRequest.templateName())
                             .toString();
 
@@ -146,15 +147,15 @@ public final class CompilationPipeline {
         PreparedApplication preparation =
                 prepare();
 
-        if (preparation == null) {
+        if (preparation == null || reporter.hasErrors()) {
             finishCompilation();
             return null;
         }
 
         try {
             return new CompiledApplication(
-                    CompilerSettings.appSource,
-                    CompilerSettings.templatesDir,
+                    appSource,
+                    templatesDirectory,
                     preparation,
                     templateRenderer
             );
@@ -165,7 +166,7 @@ public final class CompilationPipeline {
         } catch (RuntimeException exception) {
             reporter.reportUnexpected(
                     CompilerStage.PYTHON_EXECUTION,
-                    CompilerSettings.appSource.toString(),
+                    appSource.toString(),
                     exception
             );
         }
@@ -173,38 +174,8 @@ public final class CompilationPipeline {
         finishCompilation();
         return null;
     }
-    private String renderTemplateRequest(
-            TemplateRenderRequest renderRequest,
-            Map<String, TemplateFile> templates
-    ) {
-        TemplateFile template =
-                templates.get(
-                        renderRequest.templateName()
-                );
-
-        if (template == null) {
-            throw new CodeGenError(
-                    CompilerSettings.templatesDir
-                            .resolve(
-                                    renderRequest.templateName()
-                            )
-                            .toString(),
-                    -1,
-                    "The parsed template AST is unavailable"
-            );
-        }
-
-        RenderContext renderContext =
-                RenderContext.root(
-                        renderRequest.context(),
-                        renderRequest.environment()
-                );
-
-        return templateRenderer.render(
-                renderRequest.templateName(),
-                templates,
-                renderContext
-        );
+    public List<CompilerProblem> getProblems() {
+        return reporter.getProblems();
     }
 
 

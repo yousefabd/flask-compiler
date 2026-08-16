@@ -1,20 +1,15 @@
 package python.symbol_table;
 
-
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 
-public class Symbol
-{
+/** A static declaration and the source lines on which it is read. */
+public final class Symbol {
     private final String name;
-    private final SymbolKind kind; // VARIABLE, FUNCTION, PARAMETER, ...
-    private final int declarationLine; // -1 when unknown (pre-resolver symbols)
-
-    // added: filled in by python.resolver.PythonResolver, not by SymbolTableBuilder —
-    // a declaration alone doesn't tell you the value, only a second (resolution) pass does
-    private final Set<Integer> usageLines = new LinkedHashSet<>(); // every line this symbol was read on
+    private final SymbolKind kind;
+    private final int declarationLine;
+    private final Set<Integer> usageLines = new LinkedHashSet<>();
 
     public Symbol(String name, SymbolKind kind) {
         this(name, kind, -1);
@@ -30,16 +25,24 @@ public class Symbol
     public SymbolKind getKind() { return kind; }
     public int getDeclarationLine() { return declarationLine; }
 
+    public void addUsage(int line) {
+        usageLines.add(line);
+    }
 
-    public void addUsage(int line) { usageLines.add(line); }
-    public Set<Integer> getUsageLines() { return usageLines; }
+    public Set<Integer> getUsageLines() {
+        return Collections.unmodifiableSet(new LinkedHashSet<>(usageLines));
+    }
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(kind).append(' ').append(name);
-        if (declarationLine >= 0) sb.append(" (line ").append(declarationLine).append(')');
-        if (!usageLines.isEmpty()) sb.append(" | used at lines ").append(usageLines);
-        return sb.toString();
+        StringBuilder result = new StringBuilder();
+        result.append(kind).append(' ').append(name);
+        if (declarationLine >= 0) {
+            result.append(" (line ").append(declarationLine).append(')');
+        }
+        if (!usageLines.isEmpty()) {
+            result.append(" | used at lines ").append(usageLines);
+        }
+        return result.toString();
     }
 }

@@ -1,94 +1,134 @@
 package python.symbol_table;
 
+import python.models.funcdef.FunctionDef;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
-public class SymbolTable 
-{
-    private final Scope globalScope;
+/** Static declarations arranged in Python lexical scopes. */
+public final class SymbolTable {
+    private final Scope moduleScope =
+            new Scope("<module>", ScopeKind.MODULE, null);
     private final Deque<Scope> scopeStack = new ArrayDeque<>();
-    List<Scope> allScopes = new ArrayList<>();
+    private final List<Scope> allScopes = new ArrayList<>();
+    private final Map<FunctionDef, Scope> functionScopes =
+            new IdentityHashMap<>();
 
     public SymbolTable() {
-        globalScope = new Scope("global", null);
-        scopeStack.push(globalScope);
-        allScopes.add(getCurrentScope());
+        scopeStack.push(moduleScope);
+        allScopes.add(moduleScope);
     }
 
     public Scope getCurrentScope() {
         return scopeStack.peek();
     }
 
-    public Scope getGlobalScope() {
-        return globalScope;
+    public Scope getModuleScope() {
+        return moduleScope;
     }
 
-    public void enterScope(String name) {
-        Scope newScope = new Scope(name, getCurrentScope());
-        scopeStack.push(newScope);
-        
+    /** Compatibility alias for older callers. */
+    public Scope getGlobalScope() {
+        return moduleScope;
+    }
+
+    public Scope enterFunctionScope(FunctionDef function) {
+        Objects.requireNonNull(function);
+        if (functionScopes.containsKey(function)) {
+            throw new IllegalStateException("Function scope was already created");
+        }
+
+        Scope parent = getCurrentScope();
+        Scope scope = new Scope(
+                "function " + function.id.name,
+                ScopeKind.FUNCTION,
+                parent
+        );
+        parent.addChild(scope);
+        allScopes.add(scope);
+        functionScopes.put(function, scope);
+        scopeStack.push(scope);
+        return scope;
     }
 
     public void exitScope() {
-        allScopes.add(getCurrentScope());
-        if (scopeStack.size() > 1) {
-            scopeStack.pop();
+        if (scopeStack.size() == 1) {
+            throw new IllegalStateException("Cannot exit the Python module scope");
         }
+        scopeStack.pop();
     }
 
-    // تعريف رمز جديد في الـ scope الحالي
-    // (or in the global scope, if this name was declared with `global` in the current scope)
-    // added: when `name` was declared `global` in this scope, define it in globalScope
-    // instead of the current (function) scope, so an assignment after `global x` updates
-    // the module-level `x` rather than creating a local shadow.
+    public Scope getFunctionScope(FunctionDef function) {
+        return functionScopes.get(function);
+    }
+
     public boolean define(Symbol symbol) {
-        Scope current = getCurrentScope();
-        if (current != globalScope && current.isGlobal(symbol.getName()))
-            return globalScope.define(symbol);
-        return current.define(symbol);
+        return getCurrentScope().define(symbol);
     }
 
-    // البحث عن اسم في الـ scope الحالي وما فوق
-    public Symbol resolve(String name) {
-        return getCurrentScope().resolve(name);
-    }
-
-    // added: used by PythonResolver, where re-assigning an existing name (completely
-    // normal in Python — `x = 1` then `x = 2`) must return the SAME Symbol so usage
-    // lines/values accumulate on it, instead of define()'s "reject duplicates" behavior
-    // (which exists for the builder's *declaration* checks, not for plain reassignment).
-    // Respects the same `global`-redirection rule as define().
-    public Symbol defineOrGet(Symbol candidate) {
-        Scope current = getCurrentScope();
-        Scope target = (current != globalScope && current.isGlobal(candidate.getName()))
-                ? globalScope : current;
-        Symbol existing = target.resolveLocal(candidate.getName());
+    public Symbol declareOrGet(Scope scope, Symbol candidate) {
+        Objects.requireNonNull(scope);
+        Objects.requireNonNull(candidate);
+        Symbol existing = scope.resolveLocal(candidate.getName());
         if (existing != null) return existing;
-        target.define(candidate);
+        scope.define(candidate);
         return candidate;
     }
 
-    // added: entry point used by SymbolTableBuilder when it visits a GlobalStatement
-    /** Records that {@code name} refers to the module-level variable for the rest of the current scope. */
-    public void declareGlobal(String name) {
-        getCurrentScope().declareGlobal(name);
+    public Scope assignmentScope(Scope scope, String name) {
+        if (scope.getKind() == ScopeKind.FUNCTION && scope.isGlobal(name)) {
+            return moduleScope;
+        }
+        return scope;
     }
 
-    // added: exposes every scope opened during the walk (global + all entered/exited
-    // scopes) so PythonResolver.report() and other tooling can inspect the whole table
-    // after build() has run, without depending on the (by-then-collapsed) scope stack.
+    public Symbol resolve(Scope startingScope, String name) {
+        Objects.requireNonNull(startingScope);
+        Scope scope = startingScope;
+
+        while (scope != null) {
+            if (scope.getKind() == ScopeKind.FUNCTION && scope.isGlobal(name)) {
+                return moduleScope.resolveLocal(name);
+            }
+            Symbol symbol = scope.resolveLocal(name);
+            if (symbol != null) return symbol;
+            scope = scope.getParent();
+        }
+        return null;
+    }
+
+    public Symbol resolve(String name) {
+        return resolve(getCurrentScope(), name);
+    }
+
+    public Symbol findDeclaredAnywhere(String name) {
+        for (Scope scope : allScopes) {
+            Symbol symbol = scope.resolveLocal(name);
+            if (symbol != null) return symbol;
+        }
+        return null;
+    }
+
     public List<Scope> getAllScopes() {
-        return allScopes;
+        return List.copyOf(allScopes);
     }
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        for (Scope scope : allScopes) {
-            sb.append(scope.toString()).append("\n");
+        StringBuilder result = new StringBuilder();
+        appendScope(moduleScope, "", result);
+        return result.toString();
+    }
+
+    private void appendScope(Scope scope, String indent, StringBuilder result) {
+        result.append(indent).append(scope).append('\n');
+        for (Scope child : scope.getChildren()) {
+            appendScope(child, indent + "  ", result);
         }
-        return sb.toString();
     }
 }

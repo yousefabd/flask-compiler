@@ -1,6 +1,7 @@
 package python.models.expr_statement;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import python.models.ASTNode;
 import python.models.enums.Operation;
@@ -22,6 +23,35 @@ public class ExpressionStatement extends SmallStatement {
     public boolean HaveEquals()
     {
         return this.haveEquals == Operation.EQUALS;
+    }
+
+    /**
+     * Clear semantic-facing name for the historical {@link #HaveEquals()} API.
+     * The parser and interpreter still use the original public fields.
+     */
+    public boolean isAssignment() {
+        return haveEquals == Operation.EQUALS;
+    }
+
+    /** Assignment targets. Historically stored in {@link #conditions}. */
+    public List<Condition> getTargets() {
+        return isAssignment() && conditions != null
+                ? List.copyOf(conditions)
+                : List.of();
+    }
+
+    /** Assignment right-hand sides. Historically stored in {@link #assigns}. */
+    public List<Condition> getValues() {
+        return isAssignment() && assigns != null
+                ? List.copyOf(assigns)
+                : List.of();
+    }
+
+    /** Expressions in a non-assignment expression statement. */
+    public List<Condition> getExpressions() {
+        return !isAssignment() && conditions != null
+                ? List.copyOf(conditions)
+                : List.of();
     }
 
     public ExpressionStatement(ArrayList<Condition> conditions, int line) {
@@ -62,14 +92,12 @@ public class ExpressionStatement extends SmallStatement {
     public ArrayList<ASTNode> getChildren() 
     {
         ArrayList<ASTNode> res = new ArrayList<>(); 
-        if(haveEquals == Operation.EQUALS) 
-        {
-            for(int i = 0; i < conditions.size(); i++) {
-                res.add(conditions.get(i));
-                res.add(assigns.get(i));
-            }
+        if (isAssignment()) {
+            res.addAll(getTargets());
+            res.addAll(getValues());
+        } else {
+            res.addAll(getExpressions());
         }
-        else res.addAll(conditions);
         return res;
     }
 }

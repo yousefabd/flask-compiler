@@ -7,7 +7,7 @@ import java.util.List;
  * Central collector for every problem found during a compilation run.
  *
  * <p>Each sub-pipeline keeps its own native error type
- * ({@code jinja2.symbol_table.CompilerError}, {@code python.symbol_table.CompilerError});
+ * ({@code jinja2.symbol_table.CompilerError});
  * the pipeline driver funnels them into this reporter, which prints one
  * consistent report and decides whether code generation may proceed.</p>
  */
@@ -33,16 +33,6 @@ public class ErrorReporter {
                 error.getMessage()));
     }
 
-    /** Adopts a Python semantic error, preserving its kind and line. */
-    public void report(String file, python.symbol_table.CompilerError error) {
-        problems.add(new CompilerProblem(
-                CompilerStage.SEMANTIC_ANALYSIS,
-                error.getKind().name(),
-                file,
-                error.getLine(),
-                error.getMessage()));
-    }
-
     /** Wraps an unexpected exception so it is reported instead of crashing. */
     public void reportUnexpected(CompilerStage stage, String file, Throwable t) {
         String message = t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName();
@@ -55,7 +45,7 @@ public class ErrorReporter {
     }
 
     public List<CompilerProblem> getProblems() {
-        return problems;
+        return List.copyOf(problems);
     }
 
     /** Prints all collected problems grouped by stage, in the existing display format. */

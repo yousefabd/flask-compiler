@@ -8,14 +8,11 @@ import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import python.models.root.Program;
-import python.symbol_table.CompilerError;
-import python.symbol_table.SymbolTable;
-import python.symbol_table.SymbolTableBuilder;
+import python.semantic.PythonSemanticAnalyzer;
+import python.semantic.PythonSemanticResult;
 import python.visitor.PythonVisitor;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 import utils.CompilerUtils;
 
 public class PythonFrontend {
@@ -47,22 +44,13 @@ public class PythonFrontend {
 
         return (Program) new PythonVisitor().visit(tree);
     }
-    public SymbolTable analyzePython(Program program) {
+    public PythonSemanticResult analyzePython(Program program) {
+        PythonSemanticResult result =
+                new PythonSemanticAnalyzer(appSource.toString()).analyze(program);
 
-        List<CompilerError> errors =
-                new ArrayList<>();
-
-        SymbolTable symbolTable = new SymbolTable();
-
-        SymbolTableBuilder builder =
-                new SymbolTableBuilder(symbolTable, errors);
-
-        builder.build(program);
-
-        for (python.symbol_table.CompilerError error : errors) {
-            reporter.report(appSource.toString(), error);
+        for (var diagnostic : result.diagnostics()) {
+            reporter.report(diagnostic);
         }
-
-        return symbolTable;
+        return result;
     }
 }

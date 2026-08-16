@@ -2,6 +2,7 @@ package compiler.preparation;
 
 import compiler.template.TemplateCall;
 import python.models.root.Program;
+import python.semantic.PythonSemanticResult;
 import python.symbol_table.SymbolTable;
 
 import java.util.Collections;
@@ -17,13 +18,13 @@ import java.util.Objects;
  */
 public record PythonCompilationResult(
         Program program,
-        SymbolTable symbolTable,
+        PythonSemanticResult semanticResult,
         List<TemplateCall> templateCalls,
         Map<String, List<TemplateCall>> callsByTemplate
 ) {
     public PythonCompilationResult {
         Objects.requireNonNull(program);
-        Objects.requireNonNull(symbolTable);
+        Objects.requireNonNull(semanticResult);
         Objects.requireNonNull(templateCalls);
         Objects.requireNonNull(callsByTemplate);
 
@@ -44,5 +45,9 @@ public record PythonCompilationResult(
 
         callsByTemplate =
                 Collections.unmodifiableMap(copiedCalls);
+    }
+
+    public SymbolTable symbolTable() {
+        return semanticResult.symbolTable();
     }
 }

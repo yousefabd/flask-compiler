@@ -1,30 +1,34 @@
 package python.symbol_table;
 
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class Scope {
+public final class Scope {
     private final String name;
+    private final ScopeKind kind;
     private final Scope parent;
-    private final Map<String, Symbol> symbols = new HashMap<>();
-    // added: names declared with `global` inside this scope (see declareGlobal/isGlobal)
-    private final Set<String> globalNames = new HashSet<>();
+    private final Map<String, Symbol> symbols = new LinkedHashMap<>();
+    private final Set<String> globalNames = new LinkedHashSet<>();
+    private final List<Scope> children = new ArrayList<>();
 
-    public Scope(String name, Scope parent) {
+    public Scope(String name, ScopeKind kind, Scope parent) {
         this.name = name;
+        this.kind = kind;
         this.parent = parent;
     }
 
     public String getName() { return name; }
+    public ScopeKind getKind() { return kind; }
     public Scope getParent() { return parent; }
 
     public boolean define(Symbol symbol) {
-        if (symbols.containsKey(symbol.getName())) {
-            return false;
-        }
+        if (symbols.containsKey(symbol.getName())) return false;
         symbols.put(symbol.getName(), symbol);
         return true;
     }
@@ -34,35 +38,48 @@ public class Scope {
     }
 
     public Symbol resolve(String name) {
-        Symbol sym = symbols.get(name);
-        if (sym != null) return sym;
-        if (parent != null) return parent.resolve(name);
-        return null;
+        if (kind == ScopeKind.FUNCTION && globalNames.contains(name)) {
+            Scope root = this;
+            while (root.parent != null) root = root.parent;
+            return root.symbols.get(name);
+        }
+        Symbol symbol = symbols.get(name);
+        if (symbol != null) return symbol;
+        return parent == null ? null : parent.resolve(name);
     }
 
-    // added: record that `name` was declared `global` in this scope - SymbolTable.define()
-    // checks this to redirect later assignments to the module/global scope instead
-    /** Marks {@code name} as referring to the module-level scope for the rest of this scope. */
     public void declareGlobal(String name) {
         globalNames.add(name);
     }
 
-    // added: used by SymbolTable.define() to decide whether to define `name` here or in globalScope
     public boolean isGlobal(String name) {
         return globalNames.contains(name);
     }
 
-    // added: lets PythonResolver.report() enumerate every symbol declared directly
-    // in this scope (mirrors jinja2.symbol_table.Scope.getSymbols()).
     public Collection<Symbol> getSymbols() {
-        return symbols.values();
+        return List.copyOf(symbols.values());
+    }
+
+    public Map<String, Symbol> getSymbolsByName() {
+        return Collections.unmodifiableMap(new LinkedHashMap<>(symbols));
+    }
+
+    public Set<String> getGlobalNames() {
+        return Collections.unmodifiableSet(new LinkedHashSet<>(globalNames));
+    }
+
+    void addChild(Scope child) {
+        children.add(child);
+    }
+
+    public List<Scope> getChildren() {
+        return List.copyOf(children);
     }
 
     @Override
     public String toString() {
-        String base = "Scope(" + name + "): " + symbols.values();
-        // added: surface global declarations in printed output, e.g. "| global: [products]"
-        if (!globalNames.isEmpty()) base += " | global: " + globalNames;
-        return base;
+        String result = "Scope[" + kind + " " + name + "]: " + symbols.values();
+        if (!globalNames.isEmpty()) result += " | global: " + globalNames;
+        return result;
     }
 }
