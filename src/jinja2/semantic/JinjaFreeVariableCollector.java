@@ -1,5 +1,6 @@
 package jinja2.semantic;
 
+import jinja2.dependency.TemplateDependencyFinder;
 import jinja2.models.TemplateNode;
 import jinja2.models.attribute.HtmlAttributeNode;
 import jinja2.models.attribute.valuepart.AttributeExpressionNode;
@@ -87,6 +88,10 @@ public final class JinjaFreeVariableCollector {
                 new LinkedHashMap<>();
         private final Map<String, Integer> localDeclarations =
                 new LinkedHashMap<>();
+        private final Deque<Set<String>> definitionGuardScopes =
+                new ArrayDeque<>();
+        private final List<JinjaIncludeSite> includeSites =
+                new ArrayList<>();
 
         private Traversal(Set<String> builtins) {
             this.builtins = builtins;
@@ -106,7 +111,8 @@ public final class JinjaFreeVariableCollector {
             return new JinjaFreeVariableResult(
                     nameUses,
                     externalVariables,
-                    localDeclarations
+                    localDeclarations,
+                    includeSites
             );
         }
 
@@ -140,6 +146,19 @@ public final class JinjaFreeVariableCollector {
 
             if (node instanceof IncludeStatementNode statement) {
                 visitExpression(statement.getTemplateExpression());
+
+                TemplateDependencyFinder
+                        .findStaticIncludeName(statement)
+                        .ifPresent(templateName ->
+                                includeSites.add(
+                                        new JinjaIncludeSite(
+                                                templateName,
+                                                statement.getLineNumber(),
+                                                visibleLocalNames()
+                                        )
+                                )
+                        );
+
                 return;
             }
 
@@ -166,6 +185,16 @@ public final class JinjaFreeVariableCollector {
 
             visitChildren(node);
         }
+        private Set<String> visibleLocalNames() {
+            Set<String> names =
+                    new LinkedHashSet<>();
+
+            for (Map<String, Integer> scope : scopes) {
+                names.addAll(scope.keySet());
+            }
+
+            return names;
+        }
 
         private void visitForStatement(
                 ForStatementNode statement
@@ -189,15 +218,33 @@ public final class JinjaFreeVariableCollector {
         private void visitIfStatement(
                 IfStatementNode statement
         ) {
-            for (IfBranchNode branch : statement.getBranches()) {
-                if (branch.getCondition() != null) {
-                    visitExpression(branch.getCondition());
+            for (IfBranchNode branch :
+                    statement.getBranches()) {
+
+                ExpressionNode condition =
+                        branch.getCondition();
+
+                if (condition != null) {
+                    visitExpression(condition);
                 }
 
-                visitContents(branch.getBody());
+                Set<String> guardedNames =
+                        condition == null
+                                ? Set.of()
+                                : JinjaConditionFacts
+                                .definedWhenTrue(condition);
+
+                definitionGuardScopes.addLast(
+                        guardedNames
+                );
+
+                try {
+                    visitContents(branch.getBody());
+                } finally {
+                    definitionGuardScopes.removeLast();
+                }
             }
         }
-
         private void visitSetStatement(
                 SetStatementNode statement
         ) {
@@ -383,7 +430,8 @@ public final class JinjaFreeVariableCollector {
                 kind = JinjaNameUse.Kind.TEMPLATE_LOCAL;
             } else if (builtins.contains(identifier.getName())) {
                 kind = JinjaNameUse.Kind.BUILTIN;
-            } else if (definitionGuard) {
+            } else if (definitionGuard
+                    || isGuardedAsDefined(identifier.getName())) {
                 kind = JinjaNameUse.Kind.DEFINITION_GUARD;
             } else {
                 kind = JinjaNameUse.Kind.EXTERNAL;
@@ -401,6 +449,7 @@ public final class JinjaFreeVariableCollector {
                     )
             );
         }
+
 
         private void recordProperty(IdentifierNode property) {
             nameUses.add(
@@ -461,5 +510,19 @@ public final class JinjaFreeVariableCollector {
 
             scopes.removeLast();
         }
+        private boolean isGuardedAsDefined(
+                String name
+        ) {
+            for (Set<String> guardedNames :
+                    definitionGuardScopes) {
+
+                if (guardedNames.contains(name)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
+
 }

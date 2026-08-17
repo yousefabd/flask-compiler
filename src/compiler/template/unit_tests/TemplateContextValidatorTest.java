@@ -29,6 +29,8 @@ public final class TemplateContextValidatorTest {
         missingContextProducesOnePreciseDiagnostic();
         productTemplateUsesUnionOfRenderContexts();
         pipelineStopsOnMissingContext();
+        definitionGuardMakesBranchValueOptional();
+        staticIncludesInheritVisibleJinjaLocals();
 
         System.out.println(
                 "Template context validation passed."
@@ -234,6 +236,81 @@ public final class TemplateContextValidatorTest {
                         + problems
         );
     }
+    private static void definitionGuardMakesBranchValueOptional() {
+        String templateName =
+                "defined_guard_context.html";
+
+        ParsedTemplate parsed =
+                parse(templateName);
+
+        JinjaFreeVariableResult freeVariables =
+                parsed.frontend().collectFreeVariables(
+                        parsed.template()
+                );
+
+        require(
+                freeVariables.externalVariables()
+                        .keySet()
+                        .equals(Set.of("required_title")),
+                "Definition-guarded variables became required: "
+                        + freeVariables.externalVariables()
+        );
+
+        requireUse(
+                freeVariables,
+                "optional_value",
+                JinjaNameUse.Kind.DEFINITION_GUARD
+        );
+
+        requireUse(
+                freeVariables,
+                "second_value",
+                JinjaNameUse.Kind.DEFINITION_GUARD
+        );
+
+        parsed.frontend().analyzeTemplate(
+                templateName,
+                parsed.template(),
+                freeVariables.externalVariables().keySet()
+        );
+
+        require(
+                !parsed.reporter().hasErrors(),
+                "Definition guard caused Jinja semantic errors: "
+                        + parsed.reporter().formatReport()
+        );
+
+        TemplateCall call =
+                call(
+                        templateName,
+                        "required_title"
+                );
+
+        List<CompilerProblem> problems =
+                new TemplateContextValidator(
+                        TEMPLATES_DIRECTORY
+                ).validate(
+                        Map.of(
+                                templateName,
+                                parsed.template()
+                        ),
+                        Map.of(
+                                templateName,
+                                freeVariables
+                        ),
+                        Map.of(
+                                templateName,
+                                List.of(call)
+                        )
+                );
+
+        require(
+                problems.isEmpty(),
+                "Definition-guarded values were reported as "
+                        + "missing Flask variables: "
+                        + problems
+        );
+    }
 
     private static ParsedTemplate parse(String templateName) {
         ErrorReporter reporter = new ErrorReporter();
@@ -322,5 +399,82 @@ public final class TemplateContextValidatorTest {
             ErrorReporter reporter,
             TemplateFile template
     ) {
+    }
+    private static void staticIncludesInheritVisibleJinjaLocals() {
+        String rootTemplate =
+                "include_context_parent.html";
+
+        ErrorReporter reporter =
+                new ErrorReporter();
+
+        TemplateFrontend frontend =
+                new TemplateFrontend(
+                        TEMPLATES_DIRECTORY,
+                        reporter,
+                        new JinjaTestRegistry()
+                );
+
+        Map<String, TemplateFile> templates =
+                frontend.parseTemplates(
+                        List.of(rootTemplate)
+                );
+
+        require(
+                !reporter.hasErrors(),
+                "Include templates failed to parse: "
+                        + reporter.formatReport()
+        );
+
+        Map<String, JinjaFreeVariableResult> freeVariables =
+                new LinkedHashMap<>();
+
+        for (Map.Entry<String, TemplateFile> entry
+                : templates.entrySet()) {
+            JinjaFreeVariableResult result =
+                    frontend.collectFreeVariables(
+                            entry.getValue()
+                    );
+
+            freeVariables.put(
+                    entry.getKey(),
+                    result
+            );
+
+            frontend.analyzeTemplate(
+                    entry.getKey(),
+                    entry.getValue(),
+                    result.externalVariables().keySet()
+            );
+        }
+
+        require(
+                !reporter.hasErrors(),
+                "Include templates failed semantic analysis: "
+                        + reporter.formatReport()
+        );
+
+        TemplateCall rootCall =
+                call(
+                        rootTemplate,
+                        "products"
+                );
+
+        List<CompilerProblem> problems =
+                new TemplateContextValidator(
+                        TEMPLATES_DIRECTORY
+                ).validate(
+                        templates,
+                        freeVariables,
+                        Map.of(
+                                rootTemplate,
+                                List.of(rootCall)
+                        )
+                );
+
+        require(
+                problems.isEmpty(),
+                "Static includes did not inherit visible Jinja locals: "
+                        + problems
+        );
     }
 }

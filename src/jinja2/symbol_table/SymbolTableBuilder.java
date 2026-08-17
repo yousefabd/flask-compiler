@@ -8,14 +8,15 @@ import jinja2.models.expression.*;
 import jinja2.models.expression.literal.*;
 import jinja2.models.file.TemplateFile;
 import jinja2.models.statement.*;
+import jinja2.semantic.JinjaConditionFacts;
 import jinja2.symbol_table.semantic_rules.*;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class SymbolTableBuilder {
     private final SymbolTable  symbolTable;
+    private final Deque<Set<String>> definitionGuardScopes =
+            new ArrayDeque<>();
     private final List<CompilerError> errors;
     private final List<ISemanticRule> semanticRules;
 
@@ -115,17 +116,45 @@ public class SymbolTableBuilder {
         symbolTable.exitScope();
     }
 
-    private void visitIfStatement(IfStatementNode is) {
-        // {% if %} does not create a scope in Jinja2
-        for (IfBranchNode branch : is.getBranches()) {
-            if (branch.getCondition() != null)
-                visitExpression(branch.getCondition());
+    private void visitIfStatement(
+            IfStatementNode statement
+    ) {
+        /*
+         * Jinja if does not create a runtime variable scope.
+         * This stack only stores semantic facts guaranteed
+         * while checking an individual branch.
+         */
+        for (IfBranchNode branch :
+                statement.getBranches()) {
 
-            for (ContentNode child : branch.getBody())
-                visitContent(child);
+            ExpressionNode condition =
+                    branch.getCondition();
+
+            if (condition != null) {
+                visitExpression(condition);
+            }
+
+            Set<String> guardedNames =
+                    condition == null
+                            ? Set.of()
+                            : JinjaConditionFacts
+                            .definedWhenTrue(condition);
+
+            definitionGuardScopes.addLast(
+                    guardedNames
+            );
+
+            try {
+                for (ContentNode child :
+                        branch.getBody()) {
+
+                    visitContent(child);
+                }
+            } finally {
+                definitionGuardScopes.removeLast();
+            }
         }
     }
-
     private void visitSetStatement(
             SetStatementNode statement
     ) {
@@ -340,6 +369,13 @@ public class SymbolTableBuilder {
             visible.addUsage(id.getLineNumber());
             return;
         }
+        if (isGuardedAsDefined(id.getName())) {
+            /*
+             * This is an optional external value whose existence
+             * is guaranteed on the current branch.
+             */
+            return;
+        }
 
         Symbol declaredSomewhere =
                 symbolTable.resolveGlobal(id.getName());
@@ -356,6 +392,19 @@ public class SymbolTableBuilder {
                     "Undefined variable '" + id.getName() + "'",
                     id.getLineNumber()));
         }
+    }
+    private boolean isGuardedAsDefined(
+            String name
+    ) {
+        for (Set<String> guardedNames :
+                definitionGuardScopes) {
+
+            if (guardedNames.contains(name)) {
+                return true;
+            }
+        }
+
+        return false;
     }
     private void visitTestExpression(TestExpressionNode test) {
 

@@ -1,0 +1,12 @@
+<section>
+    {% if optional_value is defined %}
+    <p>{{ optional_value }}</p>
+    <p>{{ optional_value.name }}</p>
+    {% endif %}
+
+    {% if second_value is not undefined %}
+    <p>{{ second_value }}</p>
+    {% endif %}
+
+    <h1>{{ required_title }}</h1>
+</section>

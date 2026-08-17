@@ -3,16 +3,36 @@
   "WorkspaceRootPath": "C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\docs\\RESOLVER_AND_BYTECODE.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:docs\\RESOLVER_AND_BYTECODE.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\src\\errors\\CompilerProblem.java||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\errors\\CompilerProblem.java||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\docs\\PROJECT_OVERVIEW.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:docs\\PROJECT_OVERVIEW.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\grammars\\html\\HTMLParser.g4||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:grammars\\html\\HTMLParser.g4||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\src\\python\\symbol_table\\CompilerError.java||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\python\\symbol_table\\CompilerError.java||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\src\\jinja2\\symbol_table\\CompilerError.java||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\jinja2\\symbol_table\\CompilerError.java||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\src\\python\\symbol_table\\Symbol.java||{3B902123-F8A7-4915-9F01-361F908088D0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\python\\symbol_table\\Symbol.java||{3B902123-F8A7-4915-9F01-361F908088D0}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\src\\jinja2\\symbol_table\\Symbol.java||{3B902123-F8A7-4915-9F01-361F908088D0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\jinja2\\symbol_table\\Symbol.java||{3B902123-F8A7-4915-9F01-361F908088D0}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\docs\\RESOLVER_AND_BYTECODE.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:docs\\RESOLVER_AND_BYTECODE.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\garbage\\gui.py||{3B902123-F8A7-4915-9F01-361F908088D0}",
@@ -26,24 +46,102 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 5,
           "Children": [
             {
               "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "PROJECT_OVERVIEW.md",
+              "DocumentMoniker": "C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\docs\\PROJECT_OVERVIEW.md",
+              "RelativeDocumentMoniker": "docs\\PROJECT_OVERVIEW.md",
+              "ToolTip": "C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\docs\\PROJECT_OVERVIEW.md",
+              "RelativeToolTip": "docs\\PROJECT_OVERVIEW.md",
+              "ViewState": "AgIAAG0BAAAAAAAAAAAAAG0BAADAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001818|",
+              "WhenOpened": "2026-07-27T10:11:03.396Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "HTMLParser.g4",
+              "DocumentMoniker": "C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\grammars\\html\\HTMLParser.g4",
+              "RelativeDocumentMoniker": "grammars\\html\\HTMLParser.g4",
+              "ToolTip": "C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\grammars\\html\\HTMLParser.g4",
+              "RelativeToolTip": "grammars\\html\\HTMLParser.g4",
+              "ViewState": "AgIAAB4AAAAAAAAAAAAIwDwAAAALAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2026-07-27T10:11:01.5Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "CompilerProblem.java",
+              "DocumentMoniker": "C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\src\\errors\\CompilerProblem.java",
+              "RelativeDocumentMoniker": "src\\errors\\CompilerProblem.java",
+              "ToolTip": "C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\src\\errors\\CompilerProblem.java",
+              "RelativeToolTip": "src\\errors\\CompilerProblem.java",
+              "ViewState": "AgIAABUAAAAAAAAAAAD4vyQAAAA2AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001630|",
+              "WhenOpened": "2026-07-27T10:10:42.903Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "CompilerError.java",
+              "DocumentMoniker": "C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\src\\python\\symbol_table\\CompilerError.java",
+              "RelativeDocumentMoniker": "src\\python\\symbol_table\\CompilerError.java",
+              "ToolTip": "C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\src\\python\\symbol_table\\CompilerError.java",
+              "RelativeToolTip": "src\\python\\symbol_table\\CompilerError.java",
+              "ViewState": "AgIAAAoAAAAAAAAAAAAAABAAAAAaAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001630|",
+              "WhenOpened": "2026-07-27T10:10:39.897Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "CompilerError.java",
+              "DocumentMoniker": "C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\src\\jinja2\\symbol_table\\CompilerError.java",
+              "RelativeDocumentMoniker": "src\\jinja2\\symbol_table\\CompilerError.java",
+              "ToolTip": "C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\src\\jinja2\\symbol_table\\CompilerError.java",
+              "RelativeToolTip": "src\\jinja2\\symbol_table\\CompilerError.java",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAAaAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001630|",
+              "WhenOpened": "2026-07-27T10:10:36.645Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "RESOLVER_AND_BYTECODE.md",
+              "DocumentMoniker": "C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\docs\\RESOLVER_AND_BYTECODE.md",
+              "RelativeDocumentMoniker": "docs\\RESOLVER_AND_BYTECODE.md",
+              "ToolTip": "C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\docs\\RESOLVER_AND_BYTECODE.md",
+              "RelativeToolTip": "docs\\RESOLVER_AND_BYTECODE.md",
+              "ViewState": "AgIAAFcBAAAAAAAAAAAnwG0BAAAlAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001818|",
+              "WhenOpened": "2026-07-26T08:21:51.905Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
               "Title": "Symbol.java",
               "DocumentMoniker": "C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\src\\python\\symbol_table\\Symbol.java",
               "RelativeDocumentMoniker": "src\\python\\symbol_table\\Symbol.java",
               "ToolTip": "C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\src\\python\\symbol_table\\Symbol.java",
               "RelativeToolTip": "src\\python\\symbol_table\\Symbol.java",
-              "ViewState": "AgIAABcAAAAAAAAAAAAAACgAAABCAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAuAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001630|",
               "WhenOpened": "2026-07-26T08:22:19.095Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 7,
               "Title": "Symbol.java",
               "DocumentMoniker": "C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\src\\jinja2\\symbol_table\\Symbol.java",
               "RelativeDocumentMoniker": "src\\jinja2\\symbol_table\\Symbol.java",
@@ -55,19 +153,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "RESOLVER_AND_BYTECODE.md",
-              "DocumentMoniker": "C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\docs\\RESOLVER_AND_BYTECODE.md",
-              "RelativeDocumentMoniker": "docs\\RESOLVER_AND_BYTECODE.md",
-              "ToolTip": "C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\docs\\RESOLVER_AND_BYTECODE.md",
-              "RelativeToolTip": "docs\\RESOLVER_AND_BYTECODE.md",
-              "ViewState": "AgIAAF0BAAAAAAAAAAAnwHcBAAA5AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001818|",
-              "WhenOpened": "2026-07-26T08:21:51.905Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 8,
               "Title": "gui.py",
               "DocumentMoniker": "C:\\Users\\Yousef.Abdulmonaem\\Documents\\GitHub\\flask-compiler\\garbage\\gui.py",
               "RelativeDocumentMoniker": "garbage\\gui.py",

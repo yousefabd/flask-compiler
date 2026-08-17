@@ -32,6 +32,7 @@ public final class PythonSemanticAnalyzerTest {
         semanticFailureStopsThePipelineBeforeTemplatesAndRuntime();
         templateDiscoveryCollectsSourceAccurateDiagnostics();
         useBeforeAssignmentIsUndefined();
+        ifBranchesMergeInitializedSymbols();
         System.out.println("Python semantic analysis passed.");
     }
 
@@ -345,4 +346,40 @@ public final class PythonSemanticAnalyzerTest {
             ErrorReporter reporter,
             PythonSemanticResult result
     ) { }
+    private static void ifBranchesMergeInitializedSymbols() {
+        Analysis analysis =
+                analyze("if_definite_assignment.py");
+
+        List<CompilerProblem> problems =
+                problemsOfKind(
+                        analysis.result(),
+                        "UNDEFINED_VARIABLE"
+                );
+
+        require(
+                problems.size() == 3,
+                "Expected 3 if-flow errors: "
+                        + problems
+        );
+
+        require(
+                problemNames(problems).equals(
+                        Set.of(
+                                "maybe",
+                                "branch_later",
+                                "earlier_branch"
+                        )
+                ),
+                "Wrong if-flow names: "
+                        + problems
+        );
+
+        requireNoDuplicateProblems(problems);
+
+        requirePreciseDiagnostics(
+                analysis.source(),
+                problems,
+                "UNDEFINED_VARIABLE"
+        );
+    }
 }

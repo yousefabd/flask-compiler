@@ -16,12 +16,14 @@ import java.util.Objects;
 public record JinjaFreeVariableResult(
         List<JinjaNameUse> nameUses,
         Map<String, Integer> externalVariables,
-        Map<String, Integer> localDeclarations
+        Map<String, Integer> localDeclarations,
+        List<JinjaIncludeSite> includeSites
 ) {
     public JinjaFreeVariableResult {
         Objects.requireNonNull(nameUses);
         Objects.requireNonNull(externalVariables);
         Objects.requireNonNull(localDeclarations);
+        Objects.requireNonNull(includeSites);
 
         nameUses = List.copyOf(nameUses);
         externalVariables = Collections.unmodifiableMap(
@@ -30,5 +32,6 @@ public record JinjaFreeVariableResult(
         localDeclarations = Collections.unmodifiableMap(
                 new LinkedHashMap<>(localDeclarations)
         );
+        includeSites = List.copyOf(includeSites);
     }
 }

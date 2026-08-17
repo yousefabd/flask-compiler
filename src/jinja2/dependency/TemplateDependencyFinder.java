@@ -8,6 +8,7 @@ import utils.CompilerUtils;
 
 import java.util.LinkedHashSet;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -41,15 +42,9 @@ public final class TemplateDependencyFinder {
             TemplateNode node,
             Set<String> templateNames
     ) {
-        if (node instanceof IncludeStatementNode include
-                && include.getTemplateExpression()
-                instanceof StringLiteralNode stringLiteral) {
-
-            templateNames.add(
-                    CompilerUtils.stripStringQuotes(
-                            stringLiteral.getValue()
-                    )
-            );
+        if (node instanceof IncludeStatementNode include) {
+            findStaticIncludeName(include)
+                    .ifPresent(templateNames::add);
         }
 
         for (TemplateNode child : node.getChildren()) {
@@ -58,5 +53,22 @@ public final class TemplateDependencyFinder {
                     templateNames
             );
         }
+    }
+    public static Optional<String> findStaticIncludeName(
+            IncludeStatementNode include
+    ) {
+        Objects.requireNonNull(include);
+
+        if (include.getTemplateExpression()
+                instanceof StringLiteralNode stringLiteral) {
+
+            return Optional.of(
+                    CompilerUtils.stripStringQuotes(
+                            stringLiteral.getValue()
+                    )
+            );
+        }
+
+        return Optional.empty();
     }
 }

@@ -1,0 +1,8 @@
+<section>
+    {% set heading = "Visible from parent" %}
+    {% include "partials/include_context_middle.html" %}
+
+    {% for product in products %}
+    {% include "partials/include_context_product.html" %}
+    {% endfor %}
+</section>

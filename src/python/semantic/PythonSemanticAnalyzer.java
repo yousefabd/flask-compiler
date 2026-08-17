@@ -43,6 +43,12 @@ public final class PythonSemanticAnalyzer {
                 globalValidation.identifiersToSuppress()
         );
         Map<ID, Symbol> bindings = resolver.resolve(program);
+        new PythonDefiniteAssignmentValidator(
+                sourceFile,
+                symbolTable,
+                bindings,
+                diagnostics
+        ).validate(program);
 
         PythonTypeChecker typeChecker = new PythonTypeChecker(
                 sourceFile, symbolTable, bindings, builtins, diagnostics);

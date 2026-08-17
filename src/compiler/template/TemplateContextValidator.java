@@ -5,6 +5,7 @@ import errors.CompilerStage;
 import jinja2.dependency.TemplateDependencyFinder;
 import jinja2.models.file.TemplateFile;
 import jinja2.semantic.JinjaFreeVariableResult;
+import jinja2.semantic.JinjaIncludeSite;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -45,6 +46,7 @@ public final class TemplateContextValidator {
         Map<String, Set<String>> contextsByTemplate =
                 buildTemplateContexts(
                         templates,
+                        freeVariablesByTemplate,
                         callsByTemplate
                 );
 
@@ -91,23 +93,28 @@ public final class TemplateContextValidator {
 
         return List.copyOf(problems);
     }
-
     private Map<String, Set<String>> buildTemplateContexts(
             Map<String, TemplateFile> templates,
+            Map<String, JinjaFreeVariableResult> freeVariablesByTemplate,
             Map<String, List<TemplateCall>> callsByTemplate
     ) {
         Map<String, Set<String>> contextsByTemplate =
                 new LinkedHashMap<>();
 
+        /*
+         * First, collect the variables supplied directly through
+         * render_template(...).
+         */
         for (String templateName : templates.keySet()) {
             Set<String> suppliedVariables =
                     new LinkedHashSet<>();
 
             for (TemplateCall call
                     : callsByTemplate.getOrDefault(
-                            templateName,
-                            List.of()
-                    )) {
+                    templateName,
+                    List.of()
+            )) {
+
                 suppliedVariables.addAll(
                         call.contextArguments().keySet()
                 );
@@ -119,25 +126,64 @@ public final class TemplateContextValidator {
             );
         }
 
+        /*
+         * Then propagate inherited context and visible Jinja locals
+         * through static include statements.
+         *
+         * Repeating this handles nested includes:
+         * parent -> middle -> child.
+         */
         boolean changed;
 
         do {
             changed = false;
 
-            for (Map.Entry<String, TemplateFile> entry
-                    : templates.entrySet()) {
+            for (String includingTemplate
+                    : templates.keySet()) {
+
                 Set<String> includingContext =
-                        contextsByTemplate.get(entry.getKey());
+                        contextsByTemplate.get(
+                                includingTemplate
+                        );
 
-                for (String includedTemplate
-                        : TemplateDependencyFinder.findStaticIncludes(
-                                entry.getValue()
-                        )) {
+                JinjaFreeVariableResult freeVariables =
+                        Objects.requireNonNull(
+                                freeVariablesByTemplate.get(
+                                        includingTemplate
+                                ),
+                                "Missing free-variable result for template '"
+                                        + includingTemplate
+                                        + "'"
+                        );
+
+                for (JinjaIncludeSite includeSite
+                        : freeVariables.includeSites()) {
+
                     Set<String> includedContext =
-                            contextsByTemplate.get(includedTemplate);
+                            contextsByTemplate.get(
+                                    includeSite.templateName()
+                            );
 
-                    if (includedContext != null
-                            && includedContext.addAll(includingContext)) {
+                    /*
+                     * A missing parsed template should already be reported
+                     * by the template frontend.
+                     */
+                    if (includedContext == null) {
+                        continue;
+                    }
+
+                    boolean inheritedContextAdded =
+                            includedContext.addAll(
+                                    includingContext
+                            );
+
+                    boolean visibleLocalsAdded =
+                            includedContext.addAll(
+                                    includeSite.visibleLocals()
+                            );
+
+                    if (inheritedContextAdded
+                            || visibleLocalsAdded) {
                         changed = true;
                     }
                 }
