@@ -7,7 +7,6 @@ after_item = item
 after_inside = inside_value
 
 seed = 10
-
 for replacement in items:
     seed = replacement
 
