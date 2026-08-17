@@ -9,6 +9,7 @@ import python.models.Import_statement.SimpleImportStatement;
 import python.models.atom_statement.ID;
 import python.models.compound_statement.Decorator;
 import python.models.compound_statement.DecoratorStatement;
+import python.models.compound_statement.ForStatement;
 import python.models.compound_statement.IfStatement;
 import python.models.expr_statement.Condition;
 import python.models.expr_statement.ExpressionStatement;
@@ -132,8 +133,13 @@ public final class PythonDefiniteAssignmentValidator {
                     initialized
             );
         }
-
-        // For and while are added next.
+        else if (statement instanceof ForStatement loop) {
+            visitForStatement(
+                    loop,
+                    scope,
+                    initialized
+            );
+        }
     }
 
     private void visitSmallStatement(
@@ -707,7 +713,66 @@ public final class PythonDefiniteAssignmentValidator {
             initialized.addAll(branchIntersection);
         }
     }
+    private void visitForStatement(
+            ForStatement loop,
+            Scope scope,
+            Set<Symbol> initialized
+    ) {
+        /*
+         * Python evaluates the iterable before assigning any
+         * iteration target.
+         */
+        visitCondition(
+                loop.iterable,
+                scope,
+                initialized
+        );
 
+        /*
+         * The loop body receives everything initialized before
+         * the loop plus its iteration variables.
+         */
+        Set<Symbol> bodyInitialized =
+                copyInitializedSet(initialized);
+
+        for (ID iterator : loop.iterators) {
+            markInitialized(
+                    iterator,
+                    scope,
+                    bodyInitialized
+            );
+        }
+
+        visitStatements(
+                loop.body.statements,
+                scope,
+                bodyInitialized
+        );
+
+        /*
+         * The else body can run when the iterable is empty.
+         * Therefore, it cannot assume the iterator or anything
+         * assigned exclusively in the loop body exists.
+         */
+        if (loop.last != null) {
+            Set<Symbol> elseInitialized =
+                    copyInitializedSet(initialized);
+
+            visitStatements(
+                    loop.last.statements,
+                    scope,
+                    elseInitialized
+            );
+        }
+
+        /*
+         * Do not merge bodyInitialized back into initialized.
+         * The loop may execute zero times.
+         *
+         * The original initialized set remains unchanged, so names
+         * assigned before the loop, such as seed, stay valid.
+         */
+    }
     private Set<Symbol> intersectBranchStates(
             Set<Symbol> currentIntersection,
             Set<Symbol> branchState

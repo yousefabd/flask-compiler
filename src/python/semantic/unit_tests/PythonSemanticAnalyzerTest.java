@@ -32,6 +32,7 @@ public final class PythonSemanticAnalyzerTest {
         semanticFailureStopsThePipelineBeforeTemplatesAndRuntime();
         templateDiscoveryCollectsSourceAccurateDiagnostics();
         useBeforeAssignmentIsUndefined();
+        forLoopAssignmentsRequirePriorInitialization();
         ifBranchesMergeInitializedSymbols();
         System.out.println("Python semantic analysis passed.");
     }
@@ -371,6 +372,53 @@ public final class PythonSemanticAnalyzerTest {
                         )
                 ),
                 "Wrong if-flow names: "
+                        + problems
+        );
+
+        requireNoDuplicateProblems(problems);
+
+        requirePreciseDiagnostics(
+                analysis.source(),
+                problems,
+                "UNDEFINED_VARIABLE"
+        );
+    }
+    private static void forLoopAssignmentsRequirePriorInitialization() {
+        Analysis analysis =
+                analyze("for_definite_assignment.py");
+
+        List<CompilerProblem> problems =
+                problemsOfKind(
+                        analysis.result(),
+                        "UNDEFINED_VARIABLE"
+                );
+
+        require(
+                problems.size() == 3,
+                "Expected 3 for-loop definite-assignment errors: "
+                        + problems
+        );
+
+        require(
+                problemNames(problems).equals(
+                        Set.of(
+                                "item",
+                                "inside_value",
+                                "maybe"
+                        )
+                ),
+                "Wrong for-loop undefined variables: "
+                        + problems
+        );
+
+        require(
+                problems.stream()
+                        .map(CompilerProblem::getLine)
+                        .collect(
+                                java.util.stream.Collectors.toSet()
+                        )
+                        .equals(Set.of(6, 7, 18)),
+                "Wrong for-loop diagnostic lines: "
                         + problems
         );
 
