@@ -28,16 +28,51 @@ public final class CompilationPipeline {
     private final Path appSource;
     private final Path templatesDirectory;
     private final AnalysisLog analysisLog;
+    private final CssProjectPreparer cssPreparer;
+    private final Path staticDirectory;
 
     public CompilationPipeline() {
-        this(CompilerSettings.appSource, CompilerSettings.templatesDir);
+        this(
+                CompilerSettings.appSource,
+                CompilerSettings.templatesDir,
+                CompilerSettings.staticDir
+        );
     }
 
-    public CompilationPipeline(Path appSource, Path templatesDirectory) {
-        this.appSource = Objects.requireNonNull(appSource);
-        this.templatesDirectory = Objects.requireNonNull(templatesDirectory);
+    public CompilationPipeline(
+            Path appSource,
+            Path templatesDirectory
+    ) {
+        this(
+                appSource,
+                templatesDirectory,
+                templatesDirectory.resolveSibling(
+                        "static"
+                )
+        );
+    }
+
+    public CompilationPipeline(
+            Path appSource,
+            Path templatesDirectory,
+            Path staticDirectory
+    ) {
+        this.appSource =
+                Objects.requireNonNull(appSource);
+
+        this.templatesDirectory =
+                Objects.requireNonNull(
+                        templatesDirectory
+                );
+
+        this.staticDirectory =
+                Objects.requireNonNull(
+                        staticDirectory
+                );
+
         this.reporter =
                 new ErrorReporter();
+
         this.analysisLog =
                 new AnalysisLog();
 
@@ -58,6 +93,14 @@ public final class CompilationPipeline {
                         testRegistry,
                         this.analysisLog
                 );
+
+        this.cssPreparer =
+                new CssProjectPreparer(
+                        this.staticDirectory,
+                        this.reporter,
+                        this.analysisLog
+                );
+
         this.templateRenderer =
                 new TemplateRenderer(
                         new ExpressionEvaluator(
@@ -87,9 +130,17 @@ public final class CompilationPipeline {
             return null;
         }
 
+        CssCompilationResult css =
+                cssPreparer.prepare();
+
+        if (css == null) {
+            return null;
+        }
+
         return new PreparedApplication(
                 backend,
-                frontend
+                frontend,
+                css
         );
     }
 

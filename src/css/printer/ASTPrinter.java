@@ -1,4 +1,4 @@
-package css;
+package css.printer;
 
 import css.models.Node;
 

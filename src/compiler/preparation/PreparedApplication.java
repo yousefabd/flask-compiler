@@ -8,10 +8,12 @@ import java.util.Objects;
  */
 public record PreparedApplication(
         PythonCompilationResult backend,
-        TemplateCompilationResult frontend
+        TemplateCompilationResult frontend,
+        CssCompilationResult css
 ) {
     public PreparedApplication {
         Objects.requireNonNull(backend);
         Objects.requireNonNull(frontend);
+        Objects.requireNonNull(css);
     }
 }

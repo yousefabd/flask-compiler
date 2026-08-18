@@ -1,8 +1,11 @@
 import compiler.CompilationPipeline;
+import compiler.artifacts.AstJsonSerializer;
 import compiler.artifacts.CompilerArtifactWriter;
 import compiler.generation.HtmlFileGenerator;
 import compiler.generation.SupportingFilesCopier;
+import compiler.preparation.PreparedApplication;
 import compiler.runtime.CompiledApplication;
+import errors.CompilerException;
 import errors.CompilerIoError;
 import html.formatting.HtmlFormatter;
 import python.runtime.flask.FlaskRuntimeDefaults;
@@ -28,7 +31,13 @@ public class Main {
                         CompilerSettings.compilerOutputDir
                 );
 
+        AstJsonSerializer astJsonSerializer =
+                new AstJsonSerializer();
         try {
+            /*
+             * These two artifacts are available even when compilation
+             * fails.
+             */
             artifactWriter.writeSemanticReport(
                     pipeline.formatReport()
             );
@@ -37,13 +46,47 @@ public class Main {
                     pipeline.formatAnalysisLog()
             );
 
-        } catch (CompilerIoError exception) {
+            /*
+             * Complete AST artifacts are written only after both
+             * frontends prepared successfully.
+             */
+            if (application != null) {
+                PreparedApplication preparation =
+                        application.preparation();
+
+                artifactWriter.writePythonAst(
+                        astJsonSerializer.serializePython(
+                                preparation
+                                        .backend()
+                                        .program()
+                        )
+                );
+
+                artifactWriter.writeJinjaAst(
+                        astJsonSerializer.serializeJinja(
+                                preparation
+                                        .frontend()
+                                        .templates()
+                        )
+                );
+
+                artifactWriter.writeCssAst(
+                        astJsonSerializer.serializeCss(
+                                preparation
+                                        .css()
+                                        .stylesheets()
+                        )
+                );
+            }
+
+        } catch (CompilerException exception) {
             System.err.println(
                     exception.toProblem()
             );
 
             return;
         }
+
 
         if (application == null) {
             return;

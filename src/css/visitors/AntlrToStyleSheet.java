@@ -1,4 +1,4 @@
-package css;
+package css.visitors;
 
 import antlr.css.CSSParser;
 import antlr.css.CSSParserBaseVisitor;
@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class AntlrToStyleSheet extends CSSParserBaseVisitor<Stylesheet> {
-    private Stylesheet stylesheet;
 
     @Override
     public Stylesheet visitStylesheet(CSSParser.StylesheetContext ctx) {
@@ -19,6 +18,9 @@ public class AntlrToStyleSheet extends CSSParserBaseVisitor<Stylesheet> {
             var ruleset = rulesetVisitor.visitRuleset(rulesetCtx);
             rulesets.add(ruleset);
         }
-        return new Stylesheet(rulesets);
+        return new Stylesheet(
+                rulesets,
+                ctx.getStart().getLine()
+        );
     }
 }

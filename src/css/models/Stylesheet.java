@@ -6,8 +6,23 @@ import java.util.List;
 public class Stylesheet extends Node{
     private final List<Ruleset> rulesets;
 
-    public Stylesheet(List<Ruleset> rulesets) {
-        this.rulesets = rulesets;
+    public Stylesheet(
+            List<Ruleset> rulesets,
+            int line
+    ) {
+        this.rulesets =
+                List.copyOf(rulesets);
+
+        this.line = line;
+    }
+
+    public Stylesheet(
+            List<Ruleset> rulesets
+    ) {
+        this(
+                rulesets,
+                1
+        );
     }
     public List<Ruleset> getRulesets() {
         return rulesets;

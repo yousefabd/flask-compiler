@@ -16,8 +16,17 @@ public final class CompilerArtifactWriter {
 
     private static final String ANALYSIS_LOG =
             "analysis_log.txt";
+    private static final String PYTHON_AST =
+            "ast_python.json";
+
+    private static final String JINJA_AST =
+            "ast_jinja.json";
+
+    private static final String CSS_AST =
+            "ast_css.json";
 
     private final Path outputDirectory;
+
 
     public CompilerArtifactWriter(
             Path outputDirectory
@@ -47,7 +56,31 @@ public final class CompilerArtifactWriter {
                 log
         );
     }
+    public Path writePythonAst(
+            String json
+    ) {
+        return writeText(
+                PYTHON_AST,
+                json
+        );
+    }
 
+    public Path writeJinjaAst(
+            String json
+    ) {
+        return writeText(
+                JINJA_AST,
+                json
+        );
+    }
+    public Path writeCssAst(
+            String json
+    ) {
+        return writeText(
+                CSS_AST,
+                json
+        );
+    }
     private Path writeText(
             String fileName,
             String content

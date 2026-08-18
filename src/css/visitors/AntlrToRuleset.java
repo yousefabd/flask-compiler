@@ -1,4 +1,4 @@
-package css;
+package css.visitors;
 
 import antlr.css.CSSParser;
 import antlr.css.CSSParserBaseVisitor;
