@@ -12,5 +12,7 @@ public class CompilerSettings {
             Path.of("runtime", "capture_render.py");
     public static Path outputDir =
             Path.of("output");
+    public static Path compilerOutputDir =
+            Path.of("compiler_output");
 
 }

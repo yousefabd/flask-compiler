@@ -34,6 +34,7 @@ public final class PythonSemanticAnalyzerTest {
         useBeforeAssignmentIsUndefined();
         forLoopAssignmentsRequirePriorInitialization();
         ifBranchesMergeInitializedSymbols();
+        whileLoopAssignmentsRequirePriorInitialization();
         System.out.println("Python semantic analysis passed.");
     }
 
@@ -419,6 +420,52 @@ public final class PythonSemanticAnalyzerTest {
                         )
                         .equals(Set.of(6, 7, 18)),
                 "Wrong for-loop diagnostic lines: "
+                        + problems
+        );
+
+        requireNoDuplicateProblems(problems);
+
+        requirePreciseDiagnostics(
+                analysis.source(),
+                problems,
+                "UNDEFINED_VARIABLE"
+        );
+    }
+    private static void whileLoopAssignmentsRequirePriorInitialization() {
+        Analysis analysis =
+                analyze("while_definite_assignment.py");
+
+        List<CompilerProblem> problems =
+                problemsOfKind(
+                        analysis.result(),
+                        "UNDEFINED_VARIABLE"
+                );
+
+        require(
+                problems.size() == 2,
+                "Expected 2 while-loop definite-assignment errors: "
+                        + problems
+        );
+
+        require(
+                problemNames(problems).equals(
+                        Set.of(
+                                "inside_value",
+                                "body_only"
+                        )
+                ),
+                "Wrong while-loop undefined variables: "
+                        + problems
+        );
+
+        require(
+                problems.stream()
+                        .map(CompilerProblem::getLine)
+                        .collect(
+                                java.util.stream.Collectors.toSet()
+                        )
+                        .equals(Set.of(6, 18)),
+                "Wrong while-loop diagnostic lines: "
                         + problems
         );
 

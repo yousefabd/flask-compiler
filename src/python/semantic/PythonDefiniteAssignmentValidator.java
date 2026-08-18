@@ -7,10 +7,7 @@ import python.models.Import_statement.FromImportStatement;
 import python.models.Import_statement.ImportStatement;
 import python.models.Import_statement.SimpleImportStatement;
 import python.models.atom_statement.ID;
-import python.models.compound_statement.Decorator;
-import python.models.compound_statement.DecoratorStatement;
-import python.models.compound_statement.ForStatement;
-import python.models.compound_statement.IfStatement;
+import python.models.compound_statement.*;
 import python.models.expr_statement.Condition;
 import python.models.expr_statement.ExpressionStatement;
 import python.models.expr_statement.IDTrailer;
@@ -135,6 +132,13 @@ public final class PythonDefiniteAssignmentValidator {
         }
         else if (statement instanceof ForStatement loop) {
             visitForStatement(
+                    loop,
+                    scope,
+                    initialized
+            );
+        }
+        else if (statement instanceof WhileStatement loop) {
+            visitWhileStatement(
                     loop,
                     scope,
                     initialized
@@ -793,5 +797,40 @@ public final class PythonDefiniteAssignmentValidator {
 
         copy.addAll(source);
         return copy;
+    }
+    private void visitWhileStatement(
+            WhileStatement loop,
+            Scope scope,
+            Set<Symbol> initialized
+    ) {
+        /*
+         * The condition is evaluated before the first iteration,
+         * so it may only use values initialized before the loop.
+         */
+        visitCondition(
+                loop.condition,
+                scope,
+                initialized
+        );
+
+        Set<Symbol> bodyInitialized =
+                copyInitializedSet(initialized);
+
+        visitStatements(
+                loop.body.statements,
+                scope,
+                bodyInitialized
+        );
+
+        if (loop.last != null) {
+            Set<Symbol> elseInitialized =
+                    copyInitializedSet(initialized);
+
+            visitStatements(
+                    loop.last.statements,
+                    scope,
+                    elseInitialized
+            );
+        }
     }
 }
