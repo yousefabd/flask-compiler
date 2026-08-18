@@ -28,9 +28,7 @@ public class SymbolTableBuilder {
     }
 
     private void visitDeclaration(Declaration declaration) {
-        System.out.println("Visit decl");
         if (declaration.isVariable()) {
-            System.out.println("Define variable");
             table.define(
                     declaration.getProperty().getName().substring(2),
                     declaration.getValue()

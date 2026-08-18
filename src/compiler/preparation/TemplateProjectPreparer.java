@@ -1,5 +1,6 @@
 package compiler.preparation;
 
+import compiler.logging.AnalysisLog;
 import compiler.template.TemplateContextValidator;
 import errors.CompilerException;
 import errors.CompilerProblem;
@@ -25,20 +26,27 @@ public final class TemplateProjectPreparer {
     private final Path templatesDirectory;
     private final ErrorReporter reporter;
     private final JinjaTestRegistry testRegistry;
+    private final AnalysisLog analysisLog;
 
     public TemplateProjectPreparer(
             Path templatesDirectory,
             ErrorReporter reporter,
-            JinjaTestRegistry testRegistry
+            JinjaTestRegistry testRegistry,
+            AnalysisLog analysisLog
     ) {
         this.templatesDirectory =
-                Objects.requireNonNull(templatesDirectory);
+                Objects.requireNonNull(
+                        templatesDirectory
+                );
 
         this.reporter =
                 Objects.requireNonNull(reporter);
 
         this.testRegistry =
                 Objects.requireNonNull(testRegistry);
+
+        this.analysisLog =
+                Objects.requireNonNull(analysisLog);
     }
 
     public TemplateCompilationResult prepare(
@@ -54,7 +62,8 @@ public final class TemplateProjectPreparer {
                     new TemplateFrontend(
                             templatesDirectory,
                             reporter,
-                            testRegistry
+                            testRegistry,
+                            analysisLog
                     );
 
             Map<String, TemplateFile> templates =
@@ -110,10 +119,6 @@ public final class TemplateProjectPreparer {
                             templates,
                             symbolTables
                     );
-
-            printSymbolTables(
-                    result.symbolTables()
-            );
 
             return result;
 
@@ -171,10 +176,12 @@ public final class TemplateProjectPreparer {
             JinjaFreeVariableResult templateFreeVariables =
                     freeVariables.get(templateName);
 
-            System.out.printf(
-                    "Analyzing template: %s with external variables=%s%n",
-                    templateName,
-                    templateFreeVariables
+            analysisLog.record(
+                    CompilerStage.SEMANTIC_ANALYSIS,
+                    "Analyzing Jinja template: "
+                            + templateName
+                            + " with external variables="
+                            + templateFreeVariables
                             .externalVariables()
                             .keySet()
             );
@@ -198,28 +205,15 @@ public final class TemplateProjectPreparer {
             }
         }
 
-        System.out.printf(
-                "Analyzed %d unique template(s).%n",
-                symbolTables.size()
+        analysisLog.record(
+                CompilerStage.SEMANTIC_ANALYSIS,
+                "Analyzed "
+                        + symbolTables.size()
+                        + " unique Jinja template(s)."
         );
 
         return symbolTables;
     }
 
-    private void printSymbolTables(
-            Map<String, SymbolTable> symbolTables
-    ) {
-        for (Map.Entry<String, SymbolTable> entry
-                : symbolTables.entrySet()) {
 
-            System.out.println();
-
-            System.out.println(
-                    "Jinja Symbol Table: "
-                            + entry.getKey()
-            );
-
-            System.out.println(entry.getValue());
-        }
-    }
 }

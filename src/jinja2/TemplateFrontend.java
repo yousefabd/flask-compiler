@@ -2,7 +2,9 @@ package jinja2;
 
 import antlr.html.HTMLLexer;
 import antlr.html.HTMLParser;
+import compiler.logging.AnalysisLog;
 import errors.CompilerProblem;
+import errors.CompilerStage;
 import errors.ErrorReporter;
 import errors.SyntaxErrorListener;
 import jinja2.dependency.TemplateDependencyFinder;
@@ -29,20 +31,40 @@ public final class TemplateFrontend {
     private final Path templatesDirectory;
     private final ErrorReporter reporter;
     private final JinjaTestRegistry testRegistry;
+    private final AnalysisLog analysisLog;
 
     public TemplateFrontend(
             Path templatesDirectory,
             ErrorReporter reporter,
             JinjaTestRegistry testRegistry
     ) {
+        this(
+                templatesDirectory,
+                reporter,
+                testRegistry,
+                new AnalysisLog()
+        );
+    }
+
+    public TemplateFrontend(
+            Path templatesDirectory,
+            ErrorReporter reporter,
+            JinjaTestRegistry testRegistry,
+            AnalysisLog analysisLog
+    ) {
         this.templatesDirectory =
-                Objects.requireNonNull(templatesDirectory);
+                Objects.requireNonNull(
+                        templatesDirectory
+                );
 
         this.reporter =
                 Objects.requireNonNull(reporter);
 
         this.testRegistry =
                 Objects.requireNonNull(testRegistry);
+
+        this.analysisLog =
+                Objects.requireNonNull(analysisLog);
     }
 
     public Map<String, TemplateFile> parseTemplates(
@@ -67,10 +89,11 @@ public final class TemplateFrontend {
             Path templatePath =
                     templatesDirectory.resolve(templateName).normalize();
 
-            System.out.println(
-                    "Parsing template: " + templatePath
+            analysisLog.record(
+                    CompilerStage.PARSING,
+                    "Parsing Jinja template: "
+                            + templatePath
             );
-
             TemplateFile template = parseTemplate(templatePath);
 
             if (template != null) {

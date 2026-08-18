@@ -1,6 +1,7 @@
 package compiler;
 
 import compiler.generation.TemplateRenderRequest;
+import compiler.logging.AnalysisLog;
 import compiler.preparation.*;
 import compiler.runtime.CompiledApplication;
 import errors.CompilerException;
@@ -26,6 +27,7 @@ public final class CompilationPipeline {
     private final TemplateRenderer templateRenderer;
     private final Path appSource;
     private final Path templatesDirectory;
+    private final AnalysisLog analysisLog;
 
     public CompilationPipeline() {
         this(CompilerSettings.appSource, CompilerSettings.templatesDir);
@@ -36,6 +38,8 @@ public final class CompilationPipeline {
         this.templatesDirectory = Objects.requireNonNull(templatesDirectory);
         this.reporter =
                 new ErrorReporter();
+        this.analysisLog =
+                new AnalysisLog();
 
         JinjaTestRegistry testRegistry =
                 new JinjaTestRegistry();
@@ -43,16 +47,17 @@ public final class CompilationPipeline {
         this.backendPreparer =
                 new PythonBackendPreparer(
                         this.appSource,
-                        this.reporter
+                        this.reporter,
+                        this.analysisLog
                 );
 
         this.templatePreparer =
                 new TemplateProjectPreparer(
                         this.templatesDirectory,
                         this.reporter,
-                        testRegistry
+                        testRegistry,
+                        this.analysisLog
                 );
-
         this.templateRenderer =
                 new TemplateRenderer(
                         new ExpressionEvaluator(
@@ -91,58 +96,6 @@ public final class CompilationPipeline {
     /**
      * Renders one function result through the Java interpreter and renderer.
      */
-    public void compileSnapshot(
-            CompiledApplication application,
-            String ownerFunctionName
-    ) {
-        Objects.requireNonNull(application);
-
-        CompilerStage currentStage =
-                CompilerStage.PYTHON_EXECUTION;
-
-        String currentSource =
-                appSource.toString();
-
-        try {
-            TemplateRenderRequest renderRequest =
-                    application.invokeRenderFunction(
-                            ownerFunctionName
-                    );
-
-            currentStage =
-                    CompilerStage.CODE_GENERATION;
-
-            currentSource =
-                    templatesDirectory
-                            .resolve(renderRequest.templateName())
-                            .toString();
-
-            String renderedHtml =
-                    application.render(renderRequest);
-
-            System.out.println();
-
-            System.out.printf(
-                    "Rendered %s from function %s:%n",
-                    renderRequest.templateName(),
-                    ownerFunctionName
-            );
-
-            System.out.println(renderedHtml);
-
-        } catch (CompilerException exception) {
-            reporter.report(exception);
-
-        } catch (RuntimeException exception) {
-            reporter.reportUnexpected(
-                    currentStage,
-                    currentSource,
-                    exception
-            );
-        }
-
-        finishCompilation();
-    }
     public CompiledApplication compileApplication() {
         PreparedApplication preparation =
                 prepare();
@@ -177,7 +130,12 @@ public final class CompilationPipeline {
     public List<CompilerProblem> getProblems() {
         return reporter.getProblems();
     }
-
+    public String formatReport() {
+        return reporter.formatReport();
+    }
+    public String formatAnalysisLog() {
+        return analysisLog.format();
+    }
 
     private void finishCompilation() {
         if (reporter.hasErrors()) {

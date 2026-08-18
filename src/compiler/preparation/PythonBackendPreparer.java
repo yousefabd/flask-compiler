@@ -1,5 +1,6 @@
 package compiler.preparation;
 
+import compiler.logging.AnalysisLog;
 import compiler.template.TemplateCall;
 import compiler.template.TemplateCallFinder;
 import errors.CompilerException;
@@ -22,16 +23,21 @@ public final class PythonBackendPreparer {
 
     private final Path appSource;
     private final ErrorReporter reporter;
+    private final AnalysisLog analysisLog;
 
     public PythonBackendPreparer(
             Path appSource,
-            ErrorReporter reporter
+            ErrorReporter reporter,
+            AnalysisLog analysisLog
     ) {
         this.appSource =
                 Objects.requireNonNull(appSource);
 
         this.reporter =
                 Objects.requireNonNull(reporter);
+
+        this.analysisLog =
+                Objects.requireNonNull(analysisLog);
     }
 
     public PythonCompilationResult prepare() {
@@ -44,7 +50,11 @@ public final class PythonBackendPreparer {
                             appSource,
                             reporter
                     );
-
+            analysisLog.record(
+                    CompilerStage.PARSING,
+                    "Parsing Python source: "
+                            + appSource.normalize()
+            );
             Program program =
                     pythonFrontend.parsePython();
 
@@ -55,6 +65,11 @@ public final class PythonBackendPreparer {
             currentStage =
                     CompilerStage.SEMANTIC_ANALYSIS;
 
+            analysisLog.record(
+                    CompilerStage.SEMANTIC_ANALYSIS,
+                    "Analyzing Python source: "
+                            + appSource.normalize()
+            );
             PythonSemanticResult semanticResult =
                     pythonFrontend.analyzePython(program);
 

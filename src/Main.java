@@ -1,7 +1,9 @@
 import compiler.CompilationPipeline;
+import compiler.artifacts.CompilerArtifactWriter;
 import compiler.generation.HtmlFileGenerator;
 import compiler.generation.SupportingFilesCopier;
 import compiler.runtime.CompiledApplication;
+import errors.CompilerIoError;
 import html.formatting.HtmlFormatter;
 import python.runtime.flask.FlaskRuntimeDefaults;
 import server.ApplicationRequestDispatcher;
@@ -21,10 +23,32 @@ public class Main {
 
         CompiledApplication application =
                 pipeline.compileApplication();
+        CompilerArtifactWriter artifactWriter =
+                new CompilerArtifactWriter(
+                        CompilerSettings.compilerOutputDir
+                );
+
+        try {
+            artifactWriter.writeSemanticReport(
+                    pipeline.formatReport()
+            );
+
+            artifactWriter.writeAnalysisLog(
+                    pipeline.formatAnalysisLog()
+            );
+
+        } catch (CompilerIoError exception) {
+            System.err.println(
+                    exception.toProblem()
+            );
+
+            return;
+        }
 
         if (application == null) {
             return;
         }
+
         SupportingFilesCopier supportingFilesCopier =
                 new SupportingFilesCopier(
                         CompilerSettings.appSource,
@@ -33,6 +57,7 @@ public class Main {
                 );
 
         supportingFilesCopier.copy();
+
 
         HtmlFileGenerator htmlFileGenerator =
                 new HtmlFileGenerator(
